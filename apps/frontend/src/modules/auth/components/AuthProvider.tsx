@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import React, { createContext, useEffect, useState } from 'react';
 import type { AuthContextType, User } from '../types';
 import { login as loginAPI, logout as logoutAPI } from '../api/authApi';
@@ -29,8 +29,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
-      {children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={{ user, loading, login, logout }}>{children}</AuthContext.Provider>
   );
 }

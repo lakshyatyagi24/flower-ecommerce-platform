@@ -9,7 +9,12 @@ export function useCheckout() {
   const [order, setOrder] = useState<Order | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const checkout = async (cartItems: Array<{ productId: string; quantity: number }>, address: Address, paymentInfo: PaymentInfo, total: number) => {
+  const checkout = async (
+    cartItems: Array<{ productId: string; quantity: number }>,
+    address: Address,
+    paymentInfo: PaymentInfo,
+    total: number,
+  ) => {
     setLoading(true);
     setError(null);
     try {

@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
   --background: #f9f5f0;
@@ -11,8 +11,11 @@ body {
   font-family: var(--font-sans), Arial, sans-serif;
 }
 
-h1, h2, h3, .font-serif {
-  font-family: var(--font-serif, "Playfair Display", serif);
+h1,
+h2,
+h3,
+.font-serif {
+  font-family: var(--font-serif, 'Playfair Display', serif);
   font-weight: 700;
 }
 
@@ -26,7 +29,6 @@ h1, h2, h3, .font-serif {
   padding-bottom: 0.5rem;
   font-weight: 600;
 }
-
 
 hr {
   border-color: #e6dfc8;
@@ -43,7 +45,8 @@ a:hover {
 }
 
 /* Navbar, footer etc */
-.navbar, .footer {
+.navbar,
+.footer {
   background: #f9f5f0; /* beige */
   border-color: #e6dfc8; /* olive-200 */
 }

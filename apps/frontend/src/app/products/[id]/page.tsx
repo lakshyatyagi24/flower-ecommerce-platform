@@ -1,8 +1,9 @@
-"use client";
+'use client';
 import { useParams, useRouter } from 'next/navigation';
 import { useProducts } from '@/modules/products';
 import { useCartContext } from '@/modules/cart/components/CartProvider';
 import React, { useState } from 'react';
+import Image from 'next/image';
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -31,7 +32,7 @@ export default function ProductDetailPage() {
   return (
     <div className="max-w-xl mx-auto p-6">
       <div className="rounded-lg overflow-hidden mb-4">
-        <img src={product.image} alt={product.name} className="w-full object-cover" />
+        <Image src={product.image} alt={product.name} className="w-full object-cover" />
       </div>
       <h1 className="text-2xl font-serif mb-2">{product.name}</h1>
       <p className="mb-3">{product.description}</p>

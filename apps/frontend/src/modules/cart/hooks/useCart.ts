@@ -11,9 +11,7 @@ export function useCart() {
       const exist = prev.find((item) => item.product.id === product.id);
       if (exist) {
         return prev.map((item) =>
-          item.product.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
+          item.product.id === product.id ? { ...item, quantity: item.quantity + quantity } : item,
         );
       }
       return [...prev, { product, quantity }];

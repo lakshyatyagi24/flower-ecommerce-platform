@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import { useProducts, ProductCard } from '@/modules/products';
 import React from 'react';
 
