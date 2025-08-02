@@ -1,26 +1,49 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 :root {
-  --background: #ffffff;
+  --background: #f9f5f0;
   --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, sans-serif;
+}
+
+h1, h2, h3, .font-serif {
+  font-family: var(--font-serif, "Playfair Display", serif);
+  font-weight: 700;
+}
+
+.button-primary {
+  background-color: #ec8112; /* Replace with your accent color */
+  color: #fff;
+  border-radius: 0.5rem;
+  padding-left: 1.25rem;
+  padding-right: 1.25rem;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+
+hr {
+  border-color: #e6dfc8;
+}
+
+a {
+  color: #9a6a3a;
+  font-weight: 500;
+  transition: color 0.15s;
+}
+a:hover {
+  text-decoration: underline;
+  color: #ec8112;
+}
+
+/* Navbar, footer etc */
+.navbar, .footer {
+  background: #f9f5f0; /* beige */
+  border-color: #e6dfc8; /* olive-200 */
 }
