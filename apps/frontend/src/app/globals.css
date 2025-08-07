@@ -1,8 +1,8 @@
 @import 'tailwindcss';
 
 :root {
-  --background: #f9f5f0;
-  --foreground: #171717;
+  --background: #fcfaf7;
+  --foreground: #1c140d;
 }
 
 body {
@@ -35,7 +35,7 @@ hr {
 }
 
 a {
-  color: #9a6a3a;
+  color: #1c140d;
   font-weight: 500;
   transition: color 0.15s;
 }
@@ -47,6 +47,6 @@ a:hover {
 /* Navbar, footer etc */
 .navbar,
 .footer {
-  background: #f9f5f0; /* beige */
+  background: #fcfaf7; /* beige */
   border-color: #e6dfc8; /* olive-200 */
 }

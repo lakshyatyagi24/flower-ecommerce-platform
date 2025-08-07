@@ -11,7 +11,7 @@ const config: Config = {
         sans: ['"Geist Sans"', "Arial", "sans-serif"],
       },
       colors: {
-        beige: "#f9f5f0",
+        beige: "#fcfaf7",
         olive: "#b9a179",
         "olive-200": "#e6dfc8",
         brown: "#9a6a3a",
@@ -20,6 +20,7 @@ const config: Config = {
         green: "#4e7039",
         "green-700": "#38613d",
         accent: "#ec8112",
+        primary: "#1C140D",
       },
     },
   },

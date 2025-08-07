@@ -9,15 +9,15 @@ export default function Navbar() {
 
   return (
     <nav className="navbar flex items-center justify-between py-6 px-12 border-b font-sans">
-      <span className="font-serif text-2xl font-bold text-brown-800">Rustic Blooms</span>
+      <span className="font-serif text-2xl font-bold text-primary">Rustic Blooms</span>
       <div className="flex gap-7 text-lg items-center">
-        <Link href="/products" className="hover:underline text-brown-800">
+        <Link href="/products" className="hover:underline text-primary">
           Products
         </Link>
-        <Link href="/events" className="hover:underline text-brown-800">
+        <Link href="/events" className="hover:underline text-primary">
           Events
         </Link>
-        <Link href="/cart" className="flex items-center gap-1 text-brown-800">
+        <Link href="/cart" className="flex items-center gap-1 text-primary">
           Cart
           <span className="bg-green-700 ml-1 text-white rounded-full px-2 text-xs">
             {items.length}
