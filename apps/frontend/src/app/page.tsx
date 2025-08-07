@@ -1,23 +1,44 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import heroImage from '../assets/hero.png';
+import heroImage from '../assets/hero.jpg';
 import { mockProducts } from '@/modules/products/mockProducts';
 import eventImage from '../assets/event.png';
 
 export default function Home() {
   return (
     <main className="max-w-6xl mx-auto py-10 px-4">
-      <section className="max-w-4xl mx-auto py-10 px-4">
-        <div className="rounded-xl overflow-hidden relative mb-12 shadow-lg">
-          <Image src={heroImage} alt="Rustic bouquet" className="w-full h-80 object-cover" />
-          <div className="absolute inset-0 flex flex-col justify-center items-center bg-black/30">
-            <h1 className="font-serif text-5xl font-bold text-white drop-shadow-lg mb-2">
+      <section className="relative max-w-4xl mx-auto py-10 px-4">
+        <div className="rounded-xl overflow-hidden relative mb-12 shadow-lg min-h-[320px]">
+          <Image
+            src={heroImage}
+            alt="Rustic bouquet on a wooden table"
+            fill
+            priority
+            className="object-cover brightness-90 saturate-150 w-full h-80"
+            style={{ minHeight: 320, minWidth: "100%" }}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-beige/90 via-beige/75 to-transparent" />
+          <div className="absolute inset-0 flex flex-col justify-center items-center z-10 text-center px-4">
+            <h1 className="font-serif text-4xl md:text-6xl font-bold text-white mb-2 drop-shadow-lg">
               Petal & Twine
             </h1>
-            <p className="text-xl text-white mb-4">Artisanal bouquets for every occasion</p>
-            <Link href="/products" className="button-primary">
-              Shop Now
-            </Link>
+            <p className="text-xl md:text-2xl text-white mb-1 font-medium drop-shadow-sm max-w-2xl">
+              Artisanal bouquets for every occasion
+            </p>
+            <span className="text-base md:text-lg text-white mb-4 block font-serif italic">
+              Lovingly crafted florals, delivered fresh
+            </span>
+            <div className="flex flex-col sm:flex-row gap-3 mt-1 justify-center">
+              <Link href="/products" className="button-primary text-base font-semibold px-8 py-3 shadow-md">
+                Shop Now
+              </Link>
+              <Link
+                href="/events"
+                className="border border-accent text-accent bg-white/70 hover:bg-accent hover:text-white transition font-semibold text-base rounded-lg px-8 py-3"
+              >
+                Plan an Event
+              </Link>
+            </div>
           </div>
         </div>
       </section>
