@@ -1,135 +1,122 @@
 'use client';
 import Link from 'next/link';
-import { useAuth } from '@/modules/auth';
-import { useCartContext } from '@/modules/cart/components/CartProvider';
-import { usePathname } from 'next/navigation';
 import { useState } from 'react';
+import { FaShoppingCart, FaUser } from 'react-icons/fa';
+import { HiMenu, HiX } from 'react-icons/hi';
+import clsx from 'clsx';
+
+const NAV_LINKS = [
+  { href: '/products', label: 'Shop' },
+  { href: '/events', label: 'Events' },
+  { href: '/gallery', label: 'Gallery' },
+  { href: '/about', label: 'About' },
+  { href: '/faq', label: 'FAQ' },
+  { href: '/contact', label: 'Contact Us' },
+];
 
 export default function Navbar() {
-  const { user, logout } = useAuth();
-  const { items } = useCartContext();
-  const pathname = usePathname();
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  // Nav links data for easy scalability
-  const navLinks = [
-    { href: '/products', text: 'Shop' },
-    { href: '/about', text: 'About' },
-    { href: '/contact', text: 'Contact' },
-  ];
+  const [open, setOpen] = useState(false);
 
   return (
-    <nav className="navbar sticky top-0 z-50 flex items-center justify-between py-6 px-4 md:px-10 bg-beige border-b border-olive-200 shadow-sm font-sans">
-      <Link
-        href="/"
-        className="font-serif text-2xl md:text-3xl font-bold tracking-tight text-primary hover:no-underline flex items-center gap-2"
-      >
-        <span aria-label="flower logo" className="text-accent text-2xl">
-          ✿
-        </span>
-        Petal & Twine
-      </Link>
-
-      {/* Desktop Nav */}
-      <div className="hidden md:flex gap-7 text-lg items-center">
-        {navLinks.map((link) => (
-          <Link
-            href={link.href}
-            key={link.href}
-            className={`hover:underline text-primary ${
-              pathname.startsWith(link.href) ? 'font-semibold underline underline-offset-4' : ''
-            }`}
-          >
-            {link.text}
-          </Link>
-        ))}
-        <Link href="/cart" className="flex items-center gap-1 text-primary relative">
-          Cart
-          {items.length > 0 && (
-            <span className="bg-green-700 ml-1 text-white rounded-full px-2 py-0.5 text-xs absolute -top-3 left-9">
-              {items.length}
-            </span>
-          )}
-        </Link>
-        {user ? (
-          <>
-            <span className="ml-4 hidden lg:inline">Hi, {user.name}</span>
-            <button onClick={logout} className="ml-2 text-accent hover:underline">
-              Logout
-            </button>
-          </>
-        ) : (
-          <Link href="/login" className="text-accent hover:underline">
-            Login
-          </Link>
-        )}
-      </div>
-
-      {/* Mobile Hamburger */}
-      <button
-        className="md:hidden p-2 text-primary rounded hover:bg-olive-200 focus:outline-none"
-        aria-label="Open navigation menu"
-        onClick={() => setMenuOpen((show) => !show)}
-      >
-        <svg
-          className="h-6 w-6"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2}
-          viewBox="0 0 24 24"
+    <header>
+      <nav className="bg-beige border-b border-olive-200 px-4 py-4 flex items-center justify-between shadow-md z-[100] fixed top-0 left-0 w-full backdrop-blur-lg bg-opacity-40">
+        {/* Logo */}
+        <Link
+          href="/"
+          className="flex items-center font-serif text-2xl font-bold tracking-tight text-brown-800 gap-2"
         >
-          {menuOpen ? (
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-          ) : (
-            <path strokeLinecap="round" strokeLinejoin="round" d="M4 8h16M4 16h16" />
-          )}
-        </svg>
-      </button>
+          <span aria-label="flower logo" className="text-accent text-2xl">
+            ✿
+          </span>
+          Petal & Twine
+        </Link>
 
-      {/* Mobile Drawer */}
-      {menuOpen && (
-        <div className="absolute top-full left-0 w-full bg-beige border-t border-olive-200 flex flex-col gap-4 py-5 px-6 md:hidden shadow-lg z-50">
-          {navLinks.map((link) => (
+        {/* Desktop nav */}
+        <div className="hidden md:flex items-center gap-6">
+          {NAV_LINKS.map((link) => (
             <Link
-              href={link.href}
               key={link.href}
-              className={`py-1 text-lg font-medium text-primary hover:text-accent ${
-                pathname.startsWith(link.href) ? 'font-semibold underline underline-offset-4' : ''
-              }`}
-              onClick={() => setMenuOpen(false)}
+              href={link.href}
+              className="text-primary hover:text-accent font-semibold transition"
             >
-              {link.text}
+              {link.label}
             </Link>
           ))}
-          <Link
-            href="/cart"
-            className="flex items-center gap-1 text-primary"
-            onClick={() => setMenuOpen(false)}
-          >
-            Cart
-            {items.length > 0 && (
-              <span className="bg-green-700 ml-1 text-white rounded-full px-2 py-0.5 text-xs">
-                {items.length}
-              </span>
-            )}
+          <Link href="/cart" aria-label="Cart" className="ml-3">
+            <FaShoppingCart className="w-5 h-5 text-accent hover:text-primary" />
           </Link>
-          {user ? (
-            <button
-              onClick={() => {
-                logout();
-                setMenuOpen(false);
-              }}
-              className="text-accent text-left mt-2"
-            >
-              Logout
-            </button>
-          ) : (
-            <Link href="/login" className="text-accent" onClick={() => setMenuOpen(false)}>
-              Login
-            </Link>
-          )}
+          <Link href="/login" aria-label="Account" className="ml-2">
+            <FaUser className="w-5 h-5 text-brown-800 hover:text-accent" />
+          </Link>
         </div>
+
+        {/* Hamburger for mobile */}
+        <button
+          className="md:hidden text-brown-800 p-2 rounded focus:outline-none focus:ring"
+          onClick={() => setOpen(true)}
+          aria-label="Open navigation menu"
+        >
+          <HiMenu className="w-7 h-7" />
+        </button>
+      </nav>
+
+      {/* Slide-in Mobile Menu */}
+      <aside
+        className={clsx(
+          'fixed top-0 left-0 w-72 h-full bg-beige shadow-2xl border-r border-olive-200 z-[999] flex flex-col transition-transform duration-300',
+          open ? 'translate-x-0' : '-translate-x-full',
+        )}
+      >
+        <div className="flex items-center justify-between px-5 py-5 border-b border-olive-200">
+          <Link
+            href="/"
+            className="flex items-center font-serif text-xl font-bold tracking-tight text-brown-800 gap-2"
+            onClick={() => setOpen(false)}
+          >
+            <span className="text-accent text-xl">✿</span> Petal & Twine
+          </Link>
+          <button
+            className="text-primary p-1"
+            onClick={() => setOpen(false)}
+            aria-label="Close menu"
+          >
+            <HiX className="w-7 h-7" />
+          </button>
+        </div>
+        <ul className="flex-1 flex flex-col gap-1 mt-5 ml-2">
+          {NAV_LINKS.map((link) => (
+            <li key={link.href}>
+              <Link
+                href={link.href}
+                className="block px-7 py-3 text-lg font-semibold text-brown-800 rounded hover:bg-accent/10"
+                onClick={() => setOpen(false)}
+              >
+                {link.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <div className="flex gap-4 px-7 pb-6 mt-auto">
+          <Link href="/cart" aria-label="Cart" className="block">
+            <FaShoppingCart className="w-6 h-6 text-accent" />
+          </Link>
+          <Link href="/login" aria-label="Account" className="block">
+            <FaUser className="w-6 h-6 text-brown-800" />
+          </Link>
+        </div>
+      </aside>
+
+      {/* Overlay when menu is open */}
+      {open && (
+        <div
+          className="fixed inset-0 bg-black/30 z-[900] md:hidden"
+          onClick={() => setOpen(false)}
+          aria-hidden
+        />
       )}
-    </nav>
+
+      {/* Spacer for sticky/fixed nav */}
+      <div className="h-20 md:h-20"></div>
+    </header>
   );
 }

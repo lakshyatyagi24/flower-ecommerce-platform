@@ -50,3 +50,27 @@ a:hover {
   background: #fcfaf7; /* beige */
   border-color: #e6dfc8; /* olive-200 */
 }
+
+@layer utilities {
+  @keyframes fadeInUp {
+    0% {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .animate-fadeInUp {
+    animation: fadeInUp 0.7s cubic-bezier(0.65, 0, 0.21, 1) both;
+  }
+}
+
+::-webkit-scrollbar {
+  display: none !important;
+}
+.scrollbar-hide {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}

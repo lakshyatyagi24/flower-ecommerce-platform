@@ -1,9 +1,12 @@
 import { StaticImageData } from 'next/dist/shared/lib/image-external';
 
-export interface Product {
+export type Product = {
   id: string;
   name: string;
   price: number;
-  image: string | StaticImageData;
+  image: StaticImageData | string;
   description: string;
-}
+  tags?: string[];
+  salesCount?: number;
+};
+
