@@ -8,7 +8,7 @@ export const mockProducts = [
     image: productImage,
     description: 'A hand-tied bouquet of natural wildflowers, perfect for rustic weddings.',
     tags: ['rustic', 'wedding', 'wildflowers', 'seasonal', 'artisan', 'eco'],
-    salesCount: 120
+    salesCount: 120,
   },
   {
     id: '2',
@@ -17,7 +17,7 @@ export const mockProducts = [
     image: productImage,
     description: 'Classic and elegant rose arrangement in a natural, artisanal style.',
     tags: ['roses', 'elegant', 'romantic', 'premium', 'artisan', 'best-seller'],
-    salesCount: 310
+    salesCount: 310,
   },
   {
     id: '3',
@@ -26,7 +26,7 @@ export const mockProducts = [
     image: productImage,
     description: 'A fragrant mix of lavender and eucalyptus for calming occasions.',
     tags: ['lavender', 'aromatic', 'calming', 'gift', 'eco'],
-    salesCount: 55
+    salesCount: 55,
   },
   {
     id: '4',
@@ -35,7 +35,7 @@ export const mockProducts = [
     image: productImage,
     description: 'Vibrant arrangement featuring exotic tropical flowers and bird of paradise.',
     tags: ['tropical', 'exotic', 'colorful', 'luxury', 'new', 'artisan'],
-    salesCount: 85
+    salesCount: 85,
   },
   {
     id: '5',
@@ -44,7 +44,7 @@ export const mockProducts = [
     image: productImage,
     description: 'Fresh seasonal tulips in a rainbow of spring colors.',
     tags: ['tulips', 'spring', 'seasonal', 'colorful', 'on-sale', 'eco'],
-    salesCount: 135
+    salesCount: 135,
   },
   {
     id: '6',
@@ -53,7 +53,7 @@ export const mockProducts = [
     image: productImage,
     description: 'Pure white roses and lilies perfect for wedding ceremonies.',
     tags: ['wedding', 'white', 'formal', 'elegant', 'artisan'],
-    salesCount: 97
+    salesCount: 97,
   },
   {
     id: '7',
@@ -62,7 +62,7 @@ export const mockProducts = [
     image: productImage,
     description: 'Cheerful arrangement of sunflowers with rustic accents.',
     tags: ['sunflowers', 'bright', 'cheerful', 'summer', 'artisan', 'eco'],
-    salesCount: 160
+    salesCount: 160,
   },
   {
     id: '8',
@@ -71,7 +71,7 @@ export const mockProducts = [
     image: productImage,
     description: 'Fragrant oriental lilies with mixed seasonal greens.',
     tags: ['lilies', 'fragrant', 'oriental', 'premium', 'new', 'artisan'],
-    salesCount: 90
+    salesCount: 90,
   },
   {
     id: '9',
@@ -80,7 +80,7 @@ export const mockProducts = [
     image: productImage,
     description: 'Colorful mixed flowers perfect for birthday celebrations.',
     tags: ['birthday', 'celebration', 'mixed', 'bright', 'on-sale', 'eco'],
-    salesCount: 120
+    salesCount: 120,
   },
   {
     id: '10',
@@ -89,7 +89,7 @@ export const mockProducts = [
     image: productImage,
     description: 'Elegant white and green arrangement expressing sympathy and peace.',
     tags: ['sympathy', 'peaceful', 'white', 'elegant'],
-    salesCount: 45
+    salesCount: 45,
   },
   {
     id: '11',
@@ -98,7 +98,7 @@ export const mockProducts = [
     image: productImage,
     description: 'A charming bouquet of rustic roses with natural accents.',
     tags: ['best-seller', 'new', 'artisan', 'eco'],
-    salesCount: 260
+    salesCount: 260,
   },
   {
     id: '12',
@@ -107,6 +107,6 @@ export const mockProducts = [
     price: 49,
     description: 'A serene arrangement of winter blooms and greenery.',
     tags: ['seasonal', 'eco'],
-    salesCount: 95
+    salesCount: 95,
   },
 ];

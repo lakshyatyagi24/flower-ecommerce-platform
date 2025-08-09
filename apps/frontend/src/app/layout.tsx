@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
+import '../styles/hero-animations.css';
 import { AuthProvider } from '@/modules/auth';
 import { CartProvider } from '@/modules/cart/components/CartProvider';
 import Navbar from '@/components/Navbar';

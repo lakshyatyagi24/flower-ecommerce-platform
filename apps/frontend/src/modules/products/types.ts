@@ -9,4 +9,3 @@ export type Product = {
   tags?: string[];
   salesCount?: number;
 };
-

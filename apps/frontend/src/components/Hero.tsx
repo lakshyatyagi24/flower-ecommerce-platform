@@ -6,26 +6,39 @@ import 'swiper/css';
 import { mockHeroSlides } from '../modules/hero/mockHeroSlides';
 
 export default function Hero() {
+
   return (
-    <section className="relative max-w-4xl mx-auto py-10 px-4">
-      <div className="rounded-xl overflow-hidden relative mb-12 shadow-lg min-h-[320px]">
+    <section className="relative max-w-4xl mx-auto py-8 px-2 sm:py-10 sm:px-4">
+      <div
+        className="rounded-xl overflow-hidden relative mb-8 min-h-[220px] sm:min-h-[320px] border transition-all duration-200"
+        style={{
+          boxShadow: 'var(--shadow-olive)',
+          border: '1px solid var(--olive)',
+          transition: 'box-shadow 0.2s, border-color 0.2s',
+        }}
+      >
+        <div className="absolute inset-0 bg-black/50 z-0" aria-hidden="true"></div>
         <Swiper
           spaceBetween={0}
           slidesPerView={1}
           loop={true}
           autoplay={{ delay: 5000 }}
-          className="w-full h-80"
+          keyboard={{ enabled: true }}
+          role="region"
+          className="w-full h-[220px] sm:h-80"
         >
           {mockHeroSlides.map((slide, i) => (
-            <SwiperSlide key={i}>
-              <div className="relative w-full h-80">
+            <SwiperSlide key={i} tabIndex={0} role="group">
+              <div className="relative w-full h-[220px] sm:h-80">
                 <Image
                   src={slide.image}
                   alt={slide.alt}
                   fill
-                  priority
-                  className="object-cover brightness-90 saturate-150 w-full h-80"
-                  style={{ minHeight: 320, minWidth: '100%' }}
+                  {...(i === 0 ? { priority: true } : { loading: 'lazy', placeholder: 'blur' })}
+                  className="object-cover brightness-90 saturate-150 w-full h-full"
+                  style={{ minHeight: 220, minWidth: '100%', objectPosition: 'center top' }}
+                  sizes="(max-width: 640px) 100vw, 640px"
+                  aria-label={slide.alt}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-beige/90 via-beige/75 to-transparent" />
                 <div className="absolute inset-0 flex flex-col justify-center items-center z-10 text-center px-4">
@@ -37,11 +50,12 @@ export default function Hero() {
                   </p>
                   <span className="text-base md:text-lg text-white mb-2 block font-serif italic">
                     Lovingly crafted florals, delivered fresh
-                  </span>
-                  <span className="text-accent font-medium mt-1 text-lg drop-shadow-sm">
-                    {slide.note}
-                  </span>
-                  <div className="flex flex-col sm:flex-row gap-3 mt-2 justify-center">
+                    </span>
+                  </div>
+                  <div
+                    className="flex flex-col xs:flex-row gap-4 xs:gap-6 mt-8 mb-2 w-full justify-center items-center"
+                    style={{ zIndex: 20, position: 'relative' }}
+                  >
                     <Link
                       href="/products"
                       className="border border-black text-base font-semibold px-8 py-3 shadow-md rounded-lg bg-accent text-white hover:bg-white hover:text-accent transition"
@@ -56,7 +70,6 @@ export default function Hero() {
                     </Link>
                   </div>
                 </div>
-              </div>
             </SwiperSlide>
           ))}
         </Swiper>

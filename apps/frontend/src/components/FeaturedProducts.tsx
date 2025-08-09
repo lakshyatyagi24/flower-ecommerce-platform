@@ -16,28 +16,101 @@ const FILTERS = [
 ];
 
 // For sorting best sellers
+function getSortScore(product: Product) {
+  let score = 0;
+  if (product.tags?.includes('best-seller')) score += 100;
+  if (product.tags?.includes('artisan')) score += 10;
+  score += product.salesCount ?? 0;
+  return score;
+}
+
 function sortProducts(products: Product[], activeFilter: string): Product[] {
+  // Only do complex sort when filter is 'all'
   if (activeFilter === 'all') {
-    return products
-      .slice()
-      .sort((a, b) => {
-        const aBest = a.tags?.includes('best-seller') ? 1 : 0;
-        const bBest = b.tags?.includes('best-seller') ? 1 : 0;
-        const aArtisan = a.tags?.includes('artisan') ? 1 : 0;
-        const bArtisan = b.tags?.includes('artisan') ? 1 : 0;
-        if (bBest !== aBest) return bBest - aBest;
-        if (bArtisan !== aArtisan) return bArtisan - aArtisan;
-        return (b.salesCount ?? 0) - (a.salesCount ?? 0);
-      });
+    return products.slice().sort((a, b) => getSortScore(b) - getSortScore(a));
   }
   return products;
 }
 
+function ProductBadges({ tags }: { tags?: string[] }) {
+  return (
+    <>
+      {tags?.includes('on-sale') && (
+        <span
+          className={clsx(
+            'min-w-[270px] max-w-[320px] flex-shrink-0 bg-white rounded-2xl shadow-md border border-olive-200 flex flex-col transition-transform duration-300 snap-center relative overflow-hidden group hover:-translate-y-2',
+          )}
+          tabIndex={0}
+          style={{
+            boxShadow: '0 12px 32px 2px rgba(236,129,18,0.17)',
+          }}
+          aria-label={tags?.includes('on-sale') ? 'On Sale' : undefined}
+        >
+          On Sale
+        </span>
+      )}
+      {tags?.includes('new') && (
+        <span
+          className={clsx(
+            'min-w-[270px] max-w-[320px] flex-shrink-0 bg-white rounded-2xl shadow-md border border-olive-200 flex flex-col transition-transform duration-300 snap-center relative overflow-hidden group hover:-translate-y-2',
+          )}
+          tabIndex={0}
+          style={{
+            boxShadow: '0 12px 32px 2px rgba(236,129,18,0.17)',
+          }}
+          aria-label={tags?.includes('new') ? 'New' : undefined}
+        >
+          New
+        </span>
+      )}
+      {tags?.includes('artisan') && (
+        <span
+          className={clsx(
+            'min-w-[270px] max-w-[320px] flex-shrink-0 bg-white rounded-2xl shadow-md border border-olive-200 flex flex-col transition-transform duration-300 snap-center relative overflow-hidden group hover:-translate-y-2',
+          )}
+          tabIndex={0}
+          style={{
+            boxShadow: '0 12px 32px 2px rgba(236,129,18,0.17)',
+          }}
+          aria-label={tags?.includes('artisan') ? 'Artisan Pick' : undefined}
+        >
+          Artisan Pick
+        </span>
+      )}
+      {tags?.includes('eco') && (
+        <span
+          className={clsx(
+            'min-w-[270px] max-w-[320px] flex-shrink-0 bg-white rounded-2xl shadow-md border border-olive-200 flex flex-col transition-transform duration-300 snap-center relative overflow-hidden group hover:-translate-y-2',
+          )}
+          tabIndex={0}
+          style={{
+            boxShadow: '0 12px 32px 2px rgba(236,129,18,0.17)',
+          }}
+          aria-label={tags?.includes('eco') ? 'Eco-Friendly' : undefined}
+        >
+          Eco-Friendly
+        </span>
+      )}
+      {tags?.includes('seasonal') && (
+        <span
+          className={clsx(
+            'min-w-[270px] max-w-[320px] flex-shrink-0 bg-white rounded-2xl shadow-md border border-olive-200 flex flex-col transition-transform duration-300 snap-center relative overflow-hidden group hover:-translate-y-2',
+          )}
+          tabIndex={0}
+          style={{
+            boxShadow: '0 12px 32px 2px rgba(236,129,18,0.17)',
+          }}
+          aria-label={tags?.includes('seasonal') ? 'Seasonal Pick' : undefined}
+        >
+          Seasonal Pick
+        </span>
+      )}
+    </>
+  );
+}
+
 // Animate filter indicator bar
-function useMeasure(
-  ref: RefObject<HTMLElement>,
-  deps: unknown[]
-): { width: number; left: number } {
+function useMeasure(ref: RefObject<HTMLElement>, deps: unknown[]): { width: number; left: number } {
   const [rect, setRect] = useState({ width: 0, left: 0 });
   // Combine deps into a stable string to avoid spread in dependency array
   const depsKey = JSON.stringify(deps);
@@ -59,26 +132,26 @@ export default function FeaturedProducts() {
 
   // Filter and sort products
   const filtered = sortProducts(
-    mockProducts.filter(product => filter === 'all' || product.tags?.includes(filter)),
-    filter
+    mockProducts.filter((product) => filter === 'all' || product.tags?.includes(filter)),
+    filter,
   );
   const filteredProducts = filtered.slice(0, 12);
 
   // Dynamic indicator position
-  const activeIdx = FILTERS.findIndex(f => f.value === filter);
+  const activeIdx = FILTERS.findIndex((f) => f.value === filter);
   const activeBtnRef = filterRefs.current[activeIdx]!;
   const { width, left } = useMeasure({ current: activeBtnRef }, [filter, animKey]);
-  const parentLeft = activeBtnRef && activeBtnRef.parentElement
-  ? activeBtnRef.parentElement.getBoundingClientRect().left
-  : 0;
+  const parentLeft =
+    activeBtnRef && activeBtnRef.parentElement
+      ? activeBtnRef.parentElement.getBoundingClientRect().left
+      : 0;
 
   // Scroll arrows
   function scrollBy(delta: number) {
-  if (containerRef.current) {
-    containerRef.current.scrollBy({ left: delta, behavior: 'smooth' });
+    if (containerRef.current) {
+      containerRef.current.scrollBy({ left: delta, behavior: 'smooth' });
+    }
   }
-}
-
 
   return (
     <section className="mt-16">
@@ -91,24 +164,24 @@ export default function FeaturedProducts() {
         <div className="flex gap-2 bg-[#fcf6ed]/80 px-3 py-1 rounded-full shadow-sm border border-olive-200 relative">
           {FILTERS.map((f, i) => (
             <button
-              ref={el => { filterRefs.current[i] = el; }}
+              ref={(el) => {
+                filterRefs.current[i] = el;
+              }}
               key={f.value}
               onClick={() => {
                 setFilter(f.value);
-                setAnimKey(k => k + 1);
+                setAnimKey((k) => k + 1);
               }}
               className={clsx(
                 'relative font-semibold rounded-full px-6 py-2 text-base outline-none focus:ring-2 focus:ring-accent z-10 transition-all duration-200',
                 filter === f.value ? 'text-white' : 'text-brown',
-                'hover:text-accent'
+                'hover:text-accent',
               )}
               style={{
                 zIndex: filter === f.value ? 20 : 10,
                 background: filter === f.value ? '#ec8112' : 'transparent',
-                boxShadow: filter === f.value
-                  ? '0 2px 18px 1px rgba(236,129,18,0.30)'
-                  : undefined,
-                transition: 'background 0.18s, color 0.18s, box-shadow 0.2s'
+                boxShadow: filter === f.value ? '0 2px 18px 1px rgba(236,129,18,0.30)' : undefined,
+                transition: 'background 0.18s, color 0.18s, box-shadow 0.2s',
               }}
             >
               {f.label}
@@ -138,7 +211,14 @@ export default function FeaturedProducts() {
           onClick={() => scrollBy(-360)}
           type="button"
         >
-          <svg width={20} height={20} fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+          <svg
+            width={20}
+            height={20}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={3}
+            viewBox="0 0 24 24"
+          >
             <path d="M15 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
@@ -147,8 +227,8 @@ export default function FeaturedProducts() {
           className="flex gap-8 overflow-x-auto pb-2 scroll-smooth snap-x snap-mandatory scrollbar-hide px-2"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', overscrollBehaviorX: 'none' }}
           tabIndex={0}
-          onWheel={e => e.preventDefault()}
-          onTouchMove={e => e.stopPropagation()}
+          onWheel={(e) => e.preventDefault()}
+          onTouchMove={(e) => e.stopPropagation()}
         >
           {filteredProducts.length === 0 && (
             <div className="flex-1 text-center text-gray-400 py-8 w-full">
@@ -159,7 +239,7 @@ export default function FeaturedProducts() {
             <div
               key={product.id}
               className={clsx(
-                'min-w-[270px] max-w-[320px] flex-shrink-0 bg-white rounded-2xl shadow-md border border-olive-200 flex flex-col transition-transform duration-300 snap-center relative overflow-hidden group hover:-translate-y-2'
+                'min-w-[270px] max-w-[320px] flex-shrink-0 bg-white rounded-2xl shadow-md border border-olive-200 flex flex-col transition-transform duration-300 snap-center relative overflow-hidden group hover:-translate-y-2',
               )}
               tabIndex={0}
               style={{
@@ -208,7 +288,10 @@ export default function FeaturedProducts() {
                 </span>
               )}
               {product.tags?.includes('seasonal') && (
-                <span className="absolute top-1 left-1 px-2 py-0.5 rounded bg-accent text-white text-xs font-bold z-30 shadow" aria-label="Seasonal Pick">
+                <span
+                  className="absolute top-1 left-1 px-2 py-0.5 rounded bg-accent text-white text-xs font-bold z-30 shadow"
+                  aria-label="Seasonal Pick"
+                >
                   Seasonal Pick
                 </span>
               )}
@@ -258,7 +341,14 @@ export default function FeaturedProducts() {
           onClick={() => scrollBy(+360)}
           type="button"
         >
-          <svg width={20} height={20} fill="none" stroke="currentColor" strokeWidth={3} viewBox="0 0 24 24">
+          <svg
+            width={20}
+            height={20}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={3}
+            viewBox="0 0 24 24"
+          >
             <path d="M9 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </button>
