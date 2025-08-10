@@ -34,6 +34,11 @@ const config: Config = {
       animation: {
         'fade-in-up': 'fade-in-up 0.8s cubic-bezier(0.4, 0, 0.2, 1) both',
       },
+      boxShadow: {
+        'sm': '0 2px 8px rgba(236,129,18,0.13)',
+        'md': '0 8px 32px -8px rgba(75,63,42,0.22)',
+        'lg': '0 12px 40px -10px rgba(75,63,42,0.3)',
+      }
     },
   },
   plugins: [
