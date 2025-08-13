@@ -1,4 +1,4 @@
-import hero1 from '../../assets/hero1.jpg';
+import hero1 from '../../assets/gallery2.jpg';
 import hero2 from '../../assets/hero2.jpg';
 
 export const mockHeroSlides = [
