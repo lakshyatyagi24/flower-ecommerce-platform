@@ -84,7 +84,7 @@ a:hover {
 
 /* Hero Component Styles */
 .hero-overlay {
-  background: linear-gradient(120deg, rgba(255,255,255,0.46) 65%, rgba(163,177,138,0.07) 100%);
+  background: rgba(44,36,24,0.15);
   backdrop-filter: blur(2.5px);
   box-shadow: 0 8px 36px 6px rgba(44,44,44,0.08);
   border-radius: 2rem;
@@ -98,8 +98,8 @@ a:hover {
 
 .hero-h1 {
   text-shadow: 0 3px 24px rgba(195, 231, 131, 0.16), 0 1px 0 #fff;
-  line-height: 1.1;
-  letter-spacing: -1.5px;
+  line-height: 1.05;
+  letter-spacing: 0.0025em;
   animation: slide-up 0.7s cubic-bezier(0.5, 0, 0.16, 1) both;
   margin-bottom: clamp(12px, 2.2vh, 20px);
   font-size: clamp(28px, 5.2vw, 56px);
@@ -108,15 +108,15 @@ a:hover {
 .hero-subtitle {
   letter-spacing: 0.4px;
   animation: fade-in 0.7s cubic-bezier(0.5,0,0.18,1) 0.3s both;
-  margin-bottom: clamp(8px, 1.6vh, 16px);
   background-color: var(--color-brown-80);
   color: #FFFFFF;
-  padding: 0.5em 1em;
+  padding: clamp(10px, 1.2vw, 14px) clamp(18px, 2.2vw, 26px);
   border-radius: 1em;
   text-shadow: 0 2px 10px rgba(0,0,0,.35);
   outline: 1px solid rgba(230,211,179,0.25);
   outline-offset: -1px;
   font-size: clamp(16px, 3.4vw, 28px);
+  box-shadow: 0 10px 30px -10px rgba(75,63,42,0.26);
 }
 
 .hero-value-line {
@@ -124,17 +124,24 @@ a:hover {
   animation: fade-in 0.9s cubic-bezier(0.5,0,0.18,1) 0.55s both;
   background-color: var(--color-brown-72);
   color: #FFFFFF;
-  padding: 0.25em 0.75em;
+  padding: clamp(8px, 1vw, 12px) clamp(16px, 1.8vw, 22px);
   border-radius: 0.75em;
   text-shadow: 0 2px 10px rgba(0,0,0,.35);
   outline: 1px solid rgba(230,211,179,0.25);
   outline-offset: -1px;
   font-size: clamp(14px, 2.8vw, 22px);
+  box-shadow: 0 10px 30px -10px rgba(75,63,42,0.26);
 }
 
 .hero-cta-container {
   animation: bottom-up 0.8s cubic-bezier(0.5,0,0.18,1) 0.8s both;
   gap: clamp(12px, 2vw, 20px);
+  border-radius: 9999px;
+}
+
+.hero-cta-container:focus-within {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 5px;
 }
 
 .hero-scroll-cue {
@@ -146,6 +153,10 @@ a:hover {
   padding: clamp(12px, 2vw, 20px);
   border-radius: 16px;
   box-shadow: 0 8px 28px -8px rgba(75,63,42,0.28);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(8px, 1.6vw, 12px);
 }
 
 /* CTA Styles */
@@ -167,6 +178,7 @@ a:hover {
   background-color: var(--color-brown);
   color: #FFFFFF;
   border: 2px solid #E6D3B3;
+  box-shadow: inset 0 0 0 1px rgba(230,211,179,0.25);
 }
 
 .cta-secondary {
@@ -177,7 +189,11 @@ a:hover {
 
 .cta:hover {
   transform: translateY(-1px) scale(1.03);
-  box-shadow: 0 12px 36px -10px rgba(75,63,42,0.26);
+  box-shadow: 0 14px 36px -12px rgba(75,63,42,0.28);
+}
+
+.cta-secondary:hover {
+  box-shadow: 0 12px 36px -10px rgba(75,63,42,0.15);
 }
 
 .cta:active {
@@ -262,6 +278,12 @@ a:hover {
 .object-cover { animation: heroParallax 12s ease-in-out infinite;}
 
 @media (max-width: 400px) {
+  .hero-content {
+    max-width: 92%;
+  }
+  .hero-h1 {
+    font-size: clamp(26px, 6vw, 44px);
+  }
   .hero-text-overlay {
     padding-top: 22px;
     padding-bottom: 22px;
