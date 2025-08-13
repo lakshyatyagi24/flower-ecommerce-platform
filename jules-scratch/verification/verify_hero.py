@@ -9,16 +9,16 @@ def run():
         # Target the hero section specifically for the screenshot
         hero_section = page.locator('section[aria-label="Homepage Hero"]')
 
-        # Before taking a screenshot, it's good practice to ensure the element is stable.
-        # For example, wait for an animation to complete if necessary.
-        # In this case, we'll just ensure the main heading is visible.
-        h1 = hero_section.locator('h1')
-        expect(h1).to_be_visible(timeout=15000) # 15s timeout
+        # Find the "Plan an Event" button
+        plan_event_button = page.get_by_role("link", name="Plan An Event")
+
+        # Hover over the button
+        plan_event_button.hover()
 
         # Give animations a moment to settle
-        page.wait_for_timeout(1000)
+        page.wait_for_timeout(500) # 500ms should be enough for the hover effect
 
-        hero_section.screenshot(path="jules-scratch/verification/verification.png")
+        hero_section.screenshot(path="verification_hover.png")
         browser.close()
 
 if __name__ == "__main__":
