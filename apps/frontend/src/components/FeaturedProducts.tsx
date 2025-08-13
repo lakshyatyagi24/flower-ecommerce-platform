@@ -29,7 +29,7 @@ const formatTabLabel = (tag: string): string => {
 
 // SKELETON LOADER
 const SkeletonCard = () => (
-  <li className="flex flex-col w-full animate-pulse">
+  <li className="flex flex-col w-[320px] flex-shrink-0 animate-pulse">
     <div className="aspect-[4/3] w-full rounded-t-xl bg-beige-300"></div>
     <div className="p-5">
       <div className="h-4 w-3/4 rounded bg-beige-300"></div>
@@ -126,7 +126,7 @@ export default function FeaturedProducts() {
                 key={tag}
                 id={`tab-${tag}`}
                 role="tab"
-                ref={el => tabRefs.current[index] = el}
+                ref={el => { tabRefs.current[index] = el; }}
                 aria-selected={filter === tag}
                 aria-controls="product-panel"
                 onClick={() => setFilter(tag)}
@@ -169,7 +169,11 @@ export default function FeaturedProducts() {
             {isLoading ? (
               Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
             ) : products.length > 0 ? (
-              products.map(product => <ProductCard key={product.id} product={product} />)
+              products.map(product => (
+                <li key={product.id} className="w-[320px] flex-shrink-0 flex flex-col">
+                  <ProductCard product={product} />
+                </li>
+              ))
             ) : (
               <div className="col-span-full flex flex-col items-center justify-center text-center py-16 w-full">
                 <h3 className="font-serif text-2xl text-brown">No Products Found</h3>
