@@ -3,7 +3,7 @@ import Image from 'next/image';
 import { useState } from 'react';
 import type { Product } from '@/modules/products/types';
 import { useCartContext } from '@/modules/cart/components/CartProvider';
-import { Star, Tag, Sparkles, Leaf, Brush } from 'lucide-react';
+import { Star, Tag, Sparkles, Leaf, Brush, Award } from 'lucide-react';
 
 // A simple utility to format price from cents to dollars
 const formatPrice = (priceInCents: number) => {
@@ -38,53 +38,61 @@ const Badge = ({ children, className, icon, ...props }: { children: React.ReactN
   </div>
 );
 
-const ProductBadges = ({ tags }: { tags: Product['tags'] }) => {
+const ProductBadges = ({ product }: { product: Product }) => {
+  const { tags, price, originalPrice } = product;
   if (!tags || tags.length === 0) return null;
 
-  const badgeMap: { [key: string]: { label: string; className: string; ariaLabel: string; icon: React.ReactNode } } = {
+  const badgeMap: { [key: string]: { getLabel: (p: Product) => string; className: string; ariaLabel: string; icon: React.ReactNode } } = {
     new: {
-      label: 'New',
-      className: 'bg-white/80 text-brown',
+      getLabel: () => 'New',
+      className: 'bg-blue-500/80 text-white',
       ariaLabel: 'New product',
-      icon: <Star className="h-3.5 w-3.5" />,
+      icon: <Award className="h-3.5 w-3.5" />,
     },
     'on-sale': {
-      label: 'On Sale',
-      className: 'bg-accent/80 text-brown',
+      getLabel: (p) => {
+        if (p.originalPrice) {
+          const discount = Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100);
+          return `${discount}% OFF`;
+        }
+        return 'On Sale';
+      },
+      className: 'bg-red-600/80 text-white',
       ariaLabel: 'This product is on sale',
       icon: <Tag className="h-3.5 w-3.5" />,
     },
     seasonal: {
-      label: 'Seasonal',
+      getLabel: () => 'Seasonal',
       className: 'bg-success-green/80 text-white',
       ariaLabel: 'Seasonal product',
       icon: <Sparkles className="h-3.5 w-3.5" />,
     },
     eco: {
-      label: 'Eco-Friendly',
+      getLabel: () => 'Eco-Friendly',
       className: 'bg-olive-700/80 text-white',
       ariaLabel: 'This is an eco-friendly product',
       icon: <Leaf className="h-3.5 w-3.5" />,
     },
     artisan: {
-        label: 'Artisan',
-        className: 'bg-brown/80 text-white',
-        ariaLabel: 'Artisan product',
-        icon: <Brush className="h-3.5 w-3.5" />,
-    }
+      getLabel: () => 'Artisan',
+      className: 'bg-brown/80 text-white',
+      ariaLabel: 'Artisan product',
+      icon: <Brush className="h-3.5 w-3.5" />,
+    },
   };
-
-  const relevantBadges = (tags || []).map(tag => badgeMap[tag]).filter(Boolean);
-
-  if (relevantBadges.length === 0) return null;
 
   return (
     <div className="absolute top-3 left-3 z-10 flex flex-col gap-2">
-      {relevantBadges.map(badge => (
-        <Badge key={badge.label} className={badge.className} aria-label={badge.ariaLabel} icon={badge.icon}>
-          {badge.label}
-        </Badge>
-      ))}
+      {(tags || []).map(tag => {
+        const badgeInfo = badgeMap[tag];
+        if (!badgeInfo) return null;
+        const label = badgeInfo.getLabel(product);
+        return (
+          <Badge key={tag} className={badgeInfo.className} aria-label={badgeInfo.ariaLabel} icon={badgeInfo.icon}>
+            {label}
+          </Badge>
+        );
+      })}
     </div>
   );
 };
@@ -104,7 +112,7 @@ export const ProductCard = ({ product }: { product: Product }) => {
       className="group relative flex flex-col rounded-xl border border-beige-300 bg-white shadow-elev-1 transition-all duration-300 hover:shadow-elev-2 motion-safe:hover:-translate-y-[2px]"
     >
       <div className="relative overflow-hidden rounded-t-xl">
-        <ProductBadges tags={product.tags} />
+        <ProductBadges product={product} />
         <WishlistButton />
 
         <Link href={`/products/${product.id}`} aria-label={`View details for ${product.name}`}>

@@ -29,7 +29,7 @@ const formatTabLabel = (tag: string): string => {
 
 // SKELETON LOADER
 const SkeletonCard = () => (
-  <li className="flex flex-col w-[320px] flex-shrink-0 animate-pulse">
+  <li className="flex flex-col w-full animate-pulse">
     <div className="aspect-[4/3] w-full rounded-t-xl bg-beige-300"></div>
     <div className="p-5">
       <div className="h-4 w-3/4 rounded bg-beige-300"></div>
@@ -47,6 +47,7 @@ export default function FeaturedProducts() {
   const [filter, setFilter] = useState('all');
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [indicatorStyle, setIndicatorStyle] = useState({});
 
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const scrollContainerRef = useRef<HTMLUListElement>(null);
@@ -56,6 +57,17 @@ export default function FeaturedProducts() {
 
   // Memoize filters so they are not recalculated on every render
   const availableFilters = useMemo(() => getUniqueTags(mockProducts), []);
+
+  useEffect(() => {
+    const activeTabIndex = availableFilters.findIndex(f => f === filter);
+    const activeTab = tabRefs.current[activeTabIndex];
+    if (activeTab) {
+      setIndicatorStyle({
+        left: activeTab.offsetLeft,
+        width: activeTab.offsetWidth,
+      });
+    }
+  }, [filter, availableFilters]);
 
   useEffect(() => {
     // Simulate loading
@@ -120,24 +132,28 @@ export default function FeaturedProducts() {
         </div>
 
         <div role="tablist" aria-label="Product categories" className="flex justify-center mb-12">
-          <div className="flex items-center space-x-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory p-1 bg-beige-100/50 rounded-full">
+          <div className="relative flex items-center space-x-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory p-1 bg-beige-100/50 rounded-full">
+            <div
+              className="absolute h-10 rounded-full bg-white shadow-md transition-all duration-300 ease-in-out"
+              style={indicatorStyle}
+            />
             {availableFilters.map((tag, index) => (
               <button
                 key={tag}
                 id={`tab-${tag}`}
                 role="tab"
-                ref={el => { tabRefs.current[index] = el; }}
+                ref={el => tabRefs.current[index] = el}
                 aria-selected={filter === tag}
                 aria-controls="product-panel"
                 onClick={() => setFilter(tag)}
                 onKeyDown={(e) => handleTabKeyDown(e, index)}
                 tabIndex={filter === tag ? 0 : -1}
                 className={clsx(
-                  'relative whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold transition-all duration-300 outline-none snap-center sm:px-5 sm:text-base',
+                  'relative z-10 whitespace-nowrap rounded-full border border-transparent px-4 py-2 text-sm font-semibold transition-colors duration-300 outline-none snap-center sm:px-5 sm:text-base',
                   'focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-3',
                   filter === tag
-                    ? 'bg-accent text-[#2C2418] border-accent shadow-elev-1 motion-safe:hover:-translate-y-px hover:shadow-elev-2'
-                    : 'border-beige-300 bg-transparent text-brown hover:bg-beige-100 active:scale-[.98] motion-safe:hover:-translate-y-px hover:shadow-elev-1',
+                    ? 'text-brown'
+                    : 'text-brown hover:text-accent',
                 )}
               >
                 {formatTabLabel(tag)}
@@ -169,11 +185,7 @@ export default function FeaturedProducts() {
             {isLoading ? (
               Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
             ) : products.length > 0 ? (
-              products.map(product => (
-                <li key={product.id} className="w-[320px] flex-shrink-0 flex flex-col">
-                  <ProductCard product={product} />
-                </li>
-              ))
+              products.map(product => <ProductCard key={product.id} product={product} />)
             ) : (
               <div className="col-span-full flex flex-col items-center justify-center text-center py-16 w-full">
                 <h3 className="font-serif text-2xl text-brown">No Products Found</h3>
