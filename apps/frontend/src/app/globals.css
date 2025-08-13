@@ -194,6 +194,7 @@ a:hover {
 
 .cta-secondary:hover {
   box-shadow: 0 12px 36px -10px rgba(75,63,42,0.15);
+  color: #2C2418;
 }
 
 .cta:active {
