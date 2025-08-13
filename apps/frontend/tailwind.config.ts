@@ -7,35 +7,36 @@ const config: Config = {
     "./src/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
-    extend: {
-      fontFamily: {
-        serif: ['"Playfair Display"', "serif"],
-        sans: ['"Geist Sans"', "Arial", "sans-serif"],
+  extend: {
+    colors: {
+      olive: {
+        900: "#3A3F2D",
+        700: "#6C7559",
       },
-      colors: {
-        beige: "#fcfaf7",
-        olive: "#b9a179",
-        "olive-200": "#e6dfc8",
-        brown: "#9a6a3a",
-        "brown-800": "#55341d",
-        "olive-dark": "#9a7d42",
-        green: "#4e7039",
-        "green-700": "#38613d",
-        accent: "#ec8112",
-        primary: "#1C140D",
-      },
-      keyframes: {
-        'fade-in-up': {
-          '0%': { opacity: '0', transform: 'translateY(2rem)' },
-          '60%': { opacity: '0.7', transform: 'translateY(0.25rem)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
-        },
-      },
-      animation: {
-        'fade-in-up': 'fade-in-up 0.8s cubic-bezier(0.4, 0, 0.2, 1) both',
+      neutral: {
+        100: "#F6F6F2",
+        700: "#6E7266",
+        900: "#22221B",
       },
     },
+    fontFamily: {
+      serif: ["'Playfair Display'", "serif"],
+      sans: ["'Geist Sans'", "Arial", "sans-serif"],
+    },
+    // Soft fade-in
+    keyframes: {
+      'fade-in-up': {
+        '0%': { opacity: '0', transform: 'translateY(24px)' },
+        '100%': { opacity: '1', transform: 'translateY(0)' },
+      },
+    },
+    animation: {
+      'fade-in-up': 'fade-in-up 1s cubic-bezier(0.4, 0, 0.2, 1) both',
+      'fade-in': 'fade-in 1.5s ease-in',
+    },
   },
+}
+,
   plugins: [
       tailwindScrollbarHide,
   ],

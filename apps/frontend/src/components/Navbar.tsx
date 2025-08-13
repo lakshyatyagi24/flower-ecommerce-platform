@@ -114,9 +114,6 @@ export default function Navbar() {
           aria-hidden
         />
       )}
-
-      {/* Spacer for sticky/fixed nav */}
-      <div className="h-20 md:h-20"></div>
     </header>
   );
 }

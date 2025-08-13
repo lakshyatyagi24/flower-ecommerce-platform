@@ -112,14 +112,17 @@ function ProductBadges({ tags }: { tags?: string[] }) {
 // Animate filter indicator bar
 function useMeasure(ref: RefObject<HTMLElement>, deps: unknown[]): { width: number; left: number } {
   const [rect, setRect] = useState({ width: 0, left: 0 });
-  // Combine deps into a stable string to avoid spread in dependency array
-  const depsKey = JSON.stringify(deps);
+
   useLayoutEffect(() => {
     if (ref.current) {
       const { width, left } = ref.current.getBoundingClientRect();
-      setRect({ width, left });
+      // Only update state if values have changed
+      if (rect.width !== width || rect.left !== left) {
+        setRect({ width, left });
+      }
     }
-  }, [ref, depsKey]);
+  }, [ref, ...deps]); // Spread deps directly to ensure stability
+
   return rect;
 }
 
