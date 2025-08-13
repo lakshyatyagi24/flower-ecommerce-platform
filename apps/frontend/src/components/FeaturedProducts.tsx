@@ -135,14 +135,9 @@ export default function FeaturedProducts() {
                 className={clsx(
                   'relative whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold transition-all duration-300 outline-none snap-center sm:px-5 sm:text-base',
                   'focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-3',
-                  {
-                    // Active state
-                    'bg-accent text-[#2C2418] border-accent shadow-elev-1 motion-safe:hover:-translate-y-px hover:shadow-elev-2':
-                      filter === tag,
-                    // Inactive state
-                    'border-beige-300 bg-transparent text-brown hover:bg-beige-100 active:scale-95 motion-safe:hover:-translate-y-px hover:shadow-elev-1':
-                      filter !== tag,
-                  },
+                  filter === tag
+                    ? 'bg-accent text-[#2C2418] border-accent shadow-elev-1 motion-safe:hover:-translate-y-px hover:shadow-elev-2'
+                    : 'border-beige-300 bg-transparent text-brown hover:bg-beige-100 active:scale-[.98] motion-safe:hover:-translate-y-px hover:shadow-elev-1',
                 )}
               >
                 {formatTabLabel(tag)}
@@ -152,20 +147,24 @@ export default function FeaturedProducts() {
         </div>
 
         <div id="product-panel" role="tabpanel" className="relative">
-          <div className="absolute inset-y-0 -left-8 w-8 hidden md:flex items-center justify-start">
+          <div className="pointer-events-none absolute inset-y-0 left-0 z-20 w-16 bg-gradient-to-r from-white via-white/80 to-transparent md:hidden" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 z-20 w-16 bg-gradient-to-l from-white via-white/80 to-transparent md:hidden" />
+
+          <div className="absolute inset-y-0 left-0 z-10 hidden items-center md:flex">
             <button
               onClick={() => scrollBy(-400)}
               aria-label="Scroll left"
               disabled={!showLeftArrow}
-              className="p-2 rounded-full bg-white border border-beige-300 shadow-md transition-all disabled:opacity-0 disabled:scale-50 hover:bg-beige-100"
+              className="group rounded-full bg-white/60 p-2 shadow-lg backdrop-blur-sm transition-all hover:bg-white/80 disabled:scale-50 disabled:opacity-0"
             >
-              <ChevronLeft className="h-6 w-6 text-brown" />
+              <ChevronLeft className="h-6 w-6 text-brown transition-transform group-hover:-translate-x-1" />
             </button>
           </div>
 
           <ul
             ref={scrollContainerRef}
-            className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] md:flex md:overflow-x-auto md:pb-8 md:snap-x md:snap-mandatory scrollbar-hide gap-6"
+            aria-live="polite"
+            className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-6 md:flex md:overflow-x-auto md:pb-8 md:snap-x md:snap-mandatory scrollbar-hide"
           >
             {isLoading ? (
               Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
@@ -182,14 +181,14 @@ export default function FeaturedProducts() {
             )}
           </ul>
 
-          <div className="absolute inset-y-0 -right-8 w-8 hidden md:flex items-center justify-end">
+          <div className="absolute inset-y-0 right-0 z-10 hidden items-center md:flex">
             <button
               onClick={() => scrollBy(400)}
               aria-label="Scroll right"
               disabled={!showRightArrow}
-              className="p-2 rounded-full bg-white border border-beige-300 shadow-md transition-all disabled:opacity-0 disabled:scale-50 hover:bg-beige-100"
+              className="group rounded-full bg-white/60 p-2 shadow-lg backdrop-blur-sm transition-all hover:bg-white/80 disabled:scale-50 disabled:opacity-0"
             >
-              <ChevronRight className="h-6 w-6 text-brown" />
+              <ChevronRight className="h-6 w-6 text-brown transition-transform group-hover:translate-x-1" />
             </button>
           </div>
         </div>
