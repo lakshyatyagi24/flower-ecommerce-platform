@@ -120,7 +120,7 @@ export default function FeaturedProducts() {
         </div>
 
         <div role="tablist" aria-label="Product categories" className="flex justify-center mb-12">
-          <div className="flex items-center space-x-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory p-2 rounded-full border border-beige-300 bg-beige-100/50">
+          <div className="flex items-center space-x-2 overflow-x-auto scrollbar-hide snap-x snap-mandatory p-1 bg-beige-100/50 rounded-full">
             {availableFilters.map((tag, index) => (
               <button
                 key={tag}
@@ -133,12 +133,16 @@ export default function FeaturedProducts() {
                 onKeyDown={(e) => handleTabKeyDown(e, index)}
                 tabIndex={filter === tag ? 0 : -1}
                 className={clsx(
-                  "relative whitespace-nowrap rounded-full px-5 py-2 text-sm sm:text-base font-semibold transition-all duration-300 outline-none snap-center",
-                  "focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2",
+                  'relative whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold transition-all duration-300 outline-none snap-center sm:px-5 sm:text-base',
+                  'focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-3',
                   {
-                    'bg-accent text-brown shadow-elev-1': filter === tag,
-                    'text-brown hover:bg-white/60 active:scale-95 motion-safe:hover:-translate-y-px': filter !== tag,
-                  }
+                    // Active state
+                    'bg-accent text-[#2C2418] border-accent shadow-elev-1 motion-safe:hover:-translate-y-px hover:shadow-elev-2':
+                      filter === tag,
+                    // Inactive state
+                    'border-beige-300 bg-transparent text-brown hover:bg-beige-100 active:scale-95 motion-safe:hover:-translate-y-px hover:shadow-elev-1':
+                      filter !== tag,
+                  },
                 )}
               >
                 {formatTabLabel(tag)}
