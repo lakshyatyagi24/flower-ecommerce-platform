@@ -2,10 +2,7 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import '../styles/hero-animations.css';
-import { AuthProvider } from '@/modules/auth';
-import { CartProvider } from '@/modules/cart/components/CartProvider';
 import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -35,13 +32,8 @@ export default function RootLayout({
         {/* Place any other meta tags or analytics scripts here */}
       </head>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <AuthProvider>
-          <CartProvider>
-            <Navbar />
-            {children}
-            <Footer />
-          </CartProvider>
-        </AuthProvider>
+              <Navbar />
+              {children}
       </body>
     </html>
   );
