@@ -1,6 +1,7 @@
 import React from "react";
 import Logo from "./Logo";
 import Link from "next/link";
+import LocationSelector from "./LocationSelector";
 
 const Navbar = () => {
   return (
@@ -11,7 +12,7 @@ const Navbar = () => {
             <Logo />
           </div>
           <div className="hidden md:block">
-            <div className="ml-10 flex items-baseline space-x-4">
+            <div className="ml-10 flex items-center space-x-4">
               <Link
                 href="#"
                 className="text-olive-green hover:text-light-brown px-3 py-2 rounded-md text-sm font-medium border-b-2 border-transparent hover:border-olive-green"
@@ -30,6 +31,7 @@ const Navbar = () => {
               >
                 Contact
               </Link>
+              <LocationSelector />
             </div>
           </div>
         </div>
