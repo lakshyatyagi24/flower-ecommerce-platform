@@ -6,6 +6,7 @@ import Image from "next/image";
 import LocationSelector from "./LocationSelector";
 import SearchBar from "./SearchBar";
 import Cart from "./Cart";
+import CurrencySelector from "./CurrencySelector";
 
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -38,6 +39,7 @@ const Navbar = () => {
                   Track Order
                 </Link>
                 <Cart />
+                <CurrencySelector />
               </div>
               <LocationSelector />
             </div>
@@ -77,6 +79,7 @@ const Navbar = () => {
               Track Order
             </Link>
             <Cart />
+            <CurrencySelector />
           </div>
           <div className="px-2 pt-2 pb-3">
             <LocationSelector />
