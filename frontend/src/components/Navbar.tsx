@@ -7,6 +7,7 @@ import LocationSelector from "./LocationSelector";
 import SearchBar from "./SearchBar";
 import Cart from "./Cart";
 import CurrencySelector from "./CurrencySelector";
+import UserSignIn from "./UserSignIn";
 
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -40,6 +41,7 @@ const Navbar = () => {
                 </Link>
                 <Cart />
                 <CurrencySelector />
+                <UserSignIn />
               </div>
               <LocationSelector />
             </div>
@@ -80,6 +82,7 @@ const Navbar = () => {
             </Link>
             <Cart />
             <CurrencySelector />
+            <UserSignIn />
           </div>
           <div className="px-2 pt-2 pb-3">
             <LocationSelector />
