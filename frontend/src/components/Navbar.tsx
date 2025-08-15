@@ -21,22 +21,16 @@ const Navbar = () => {
             <Logo />
           </div>
 
-          {/* Center Section */}
-          <div className="flex-1 flex justify-center px-2 lg:ml-6 lg:justify-center">
-            <div className="hidden md:block w-full max-w-md">
-              <SearchBar />
-            </div>
-          </div>
-
           {/* Right Section */}
           <div className="flex-1 flex items-center justify-end">
-            <div className="hidden md:flex items-center space-x-4">
-              <div className="flex items-center space-x-4">
+            <div className="hidden md:flex items-center space-x-6">
+              <div className="flex items-center space-x-6">
+                <SearchBar />
                 <Link href="#" className="text-olive-green hover:text-light-brown px-3 py-2 rounded-md text-sm font-medium">Home</Link>
                 <Link href="#" className="text-olive-green hover:text-light-brown px-3 py-2 rounded-md text-sm font-medium">About</Link>
                 <Link href="#" className="text-olive-green hover:text-light-brown px-3 py-2 rounded-md text-sm font-medium">Contact</Link>
                 <Link href="#" className="flex items-center text-olive-green hover:text-light-brown px-3 py-2 rounded-md text-sm font-medium">
-                  <Image src="/track-order-icon.svg" alt="Track Order" width={20} height={20} className="mr-2"/>
+                  <Image src="/track-order-icon.svg" alt="Track Order" width={20} height={20} className="mr-2 transition-transform hover:scale-110"/>
                   Track Order
                 </Link>
                 <Cart />

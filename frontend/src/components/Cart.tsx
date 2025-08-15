@@ -6,7 +6,7 @@ const Cart = () => {
 
   return (
     <div className="relative flex items-center">
-      <Image src="/cart-icon.svg" alt="Cart" width={24} height={24} />
+      <Image src="/cart-icon.svg" alt="Cart" width={24} height={24} className="transition-transform hover:scale-110" />
       {itemCount > 0 && (
         <span className="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-100 bg-red-600 rounded-full">
           {itemCount}
