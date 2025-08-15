@@ -17,6 +17,12 @@ const config: Config = {
         serif: ['Playfair Display', 'serif'],
         sans: ['var(--font-geist-sans)'],
       },
+      borderColor: {
+        DEFAULT: '#000000',
+      },
+      borderWidth: {
+        '1': '1px',
+      }
     },
   },
   plugins: [],
