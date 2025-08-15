@@ -19,7 +19,12 @@ const cities: City[] = [
 const LocationSelector = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const filteredCities = cities.filter((city) =>
+    city.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   useEffect(() => {
     // Simulate fetching user's current location
@@ -65,21 +70,42 @@ const LocationSelector = () => {
         </div>
       </button>
 
-      {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
-          <ul className="py-1">
-            {cities.map((city) => (
-              <li
-                key={city.name}
-                onClick={() => handleCitySelect(city)}
-                className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer"
-              >
-                {city.name}
-              </li>
-            ))}
-          </ul>
+      <div
+        className={`absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 transition-opacity duration-300 ease-in-out ${
+          isOpen ? "opacity-100" : "opacity-0"
+        }`}
+        style={{ pointerEvents: isOpen ? "auto" : "none" }}
+      >
+        <div className="p-2">
+          <input
+            type="text"
+            placeholder="Search city..."
+            className="w-full px-2 py-1 border border-gray-300 rounded-md"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
-      )}
+        <ul className="py-1 max-h-60 overflow-auto">
+          {filteredCities.map((city) => (
+            <li
+              key={city.name}
+              onClick={() => handleCitySelect(city)}
+              className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer flex items-center justify-between"
+            >
+              {city.name}
+              {selectedCity && selectedCity.name === city.name && (
+                <Image
+                  src="/checkmark.svg"
+                  alt="Selected"
+                  width={20}
+                  height={20}
+                  className="text-light-brown"
+                />
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 };
