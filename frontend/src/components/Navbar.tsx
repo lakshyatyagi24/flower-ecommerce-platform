@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import LocationSelector from "./LocationSelector";
 import SearchBar from "./SearchBar";
+import Cart from "./Cart";
 
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -36,6 +37,7 @@ const Navbar = () => {
                   <Image src="/track-order-icon.svg" alt="Track Order" width={20} height={20} className="mr-2"/>
                   Track Order
                 </Link>
+                <Cart />
               </div>
               <LocationSelector />
             </div>
@@ -74,6 +76,7 @@ const Navbar = () => {
               <Image src="/track-order-icon.svg" alt="Track Order" width={20} height={20} className="mr-2"/>
               Track Order
             </Link>
+            <Cart />
           </div>
           <div className="px-2 pt-2 pb-3">
             <LocationSelector />
