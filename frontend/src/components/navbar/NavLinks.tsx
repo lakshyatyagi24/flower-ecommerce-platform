@@ -4,7 +4,7 @@ import { NAV_LINKS } from '@/constants';
 
 const NavLinks = () => {
   return (
-    <div className="hidden md:flex items-center space-x-6">
+    <div className="flex items-center space-x-6">
       {NAV_LINKS.map((link) => (
         <Link
           key={link.key}

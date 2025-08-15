@@ -17,7 +17,7 @@ const ActionButtons = () => {
   return (
     <div className="flex items-center space-x-4">
       {/* Search Bar */}
-      <div className="hidden md:block">
+      <div>
         <input
           type="text"
           placeholder={SEARCH_PLACEHOLDER}
@@ -26,7 +26,7 @@ const ActionButtons = () => {
       </div>
 
       {/* Track Order */}
-      <button className="hidden md:block text-brand-brown hover:text-brand-olive transition-colors">
+      <button className="text-brand-brown hover:text-brand-olive transition-colors">
         {/* TODO: Add Track Order Icon */}
         {TRACK_ORDER}
       </button>
@@ -41,7 +41,7 @@ const ActionButtons = () => {
       </button>
 
       {/* Currency */}
-      <div className="hidden md:block">{CURRENCY}</div>
+      <div>{CURRENCY}</div>
 
       {/* User Auth */}
       {session ? (
