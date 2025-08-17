@@ -54,19 +54,19 @@ const LocationSelector = () => {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center space-x-2 p-2 rounded-md hover:bg-black/10"
+        className="flex items-center space-x-2 px-2 py-1 rounded-md hover:bg-black/5 h-10 min-w-[150px]"
+        aria-label={selectedCity ? `Deliver to ${selectedCity.name} ${selectedCity.pincode}` : 'Select location'}
       >
         <Image
           src="/india-flag.svg" // Placeholder flag
           alt="Country Flag"
-          width={24}
-          height={24}
+          width={20}
+          height={20}
+          className="w-5 h-5 flex-shrink-0"
         />
-        <div>
-          <span className="text-xs font-bold">Deliver to</span>
-          <p className="text-sm font-medium text-light-brown">
-            {selectedCity ? `${selectedCity.name} ${selectedCity.pincode}` : "Select Location"}
-          </p>
+        <div className="flex flex-col leading-tight">
+          <span className="text-sm font-medium hidden sm:inline">Deliver to</span>
+          <span className="text-sm font-medium text-light-brown truncate">{selectedCity ? `${selectedCity.name} ${selectedCity.pincode}` : "Select Location"}</span>
         </div>
       </button>
 

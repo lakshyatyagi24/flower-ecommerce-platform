@@ -6,6 +6,16 @@ const config: Config = {
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
+  // Tailwind JIT: ensure some dynamically-constructed utilities are always generated
+  // @ts-expect-error - `safelist` is used by Tailwind but not in the TS type definition here
+  safelist: [
+    { pattern: /olive-green/ },
+    { pattern: /from-olive-green/ },
+    { pattern: /to-olive-green/ },
+    { pattern: /text-olive-green/ },
+    { pattern: /ring-olive-green/ },
+    { pattern: /rose-/ },
+  ],
   theme: {
     extend: {
       colors: {

@@ -24,3 +24,196 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
 }
+
+/* Skip link for keyboard users */
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -40px;
+  background: #7C835A;
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  z-index: 10000;
+  text-decoration: none;
+  font-size: 14px;
+  transition: top .2s ease;
+}
+.skip-link:focus { top: 8px; outline: 2px solid #fff; }
+
+/* Classic / modern navbar utilities used across the app */
+:root {
+  --nav-bg: var(--background);
+  --nav-border: rgba(0,0,0,0.06);
+  --nav-shadow: rgba(0,0,0,0.04);
+  --nav-height: 76px;
+  /* reduced categories spacer to tighten gap beneath navbar */
+  --categories-height: 32px;
+}
+
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: var(--nav-bg);
+  color: var(--foreground);
+  border-bottom: 1px solid var(--nav-border);
+  box-shadow: 0 2px 8px var(--nav-shadow);
+}
+
+.navbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--nav-height);
+}
+
+.search-input {
+  background: #fff;
+  border-radius: 9999px;
+  padding: 0.5rem 0.9rem;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+  border: 1px solid rgba(0,0,0,0.04);
+}
+
+.categories-bar {
+  background: var(--nav-bg);
+  border-top: 1px solid var(--nav-border);
+}
+
+/* allow vertical overflow (mega menu) to be visible even when inside overflow-x containers */
+.categories-bar .overflow-x-auto {
+  overflow-x: auto;
+  overflow-y: visible;
+}
+
+/* Spacer equivalent to navbar + categories height used to push page content below sticky nav */
+.nav-spacer {
+  height: calc(var(--nav-height) + var(--categories-height));
+  width: 100%;
+}
+
+/* Tighter spacing on larger viewports: reduce the spacer so hero sits closer to categories
+   Keep the default for mobile where touch targets may need more room. */
+@media (min-width: 1024px) {
+  .nav-spacer {
+    height: calc(var(--categories-height));
+  }
+}
+
+/* Promo strip styling (catchy but minimal, sits above navbar) */
+.promo-strip {
+  background: linear-gradient(90deg, rgba(255,244,229,1) 0%, rgba(255,250,240,1) 50%, rgba(255,244,229,1) 100%);
+  border-bottom: 1px solid rgba(122,90,57,0.06);
+  color: #6b3e00;
+  box-shadow: 0 6px 18px rgba(107,62,0,0.04);
+}
+
+/* keep promo strip visible above navbar shadows */
+.promo-strip { position: relative; z-index: 60; }
+
+@media (max-width: 767px) {
+  .promo-strip .max-w-screen-xl { padding-left: 12px; padding-right: 12px; }
+}
+
+/* Entrance animation */
+.promo-hide { opacity: 0; transform: translateY(-6px); }
+.promo-enter { animation: promoFadeIn 420ms cubic-bezier(.2,.9,.2,1) both; }
+
+@keyframes promoFadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Icon pulse */
+.promo-icon { animation: promoIconBeat 1600ms infinite; }
+@keyframes promoIconBeat {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+.promo-cta {
+  display: inline-block;
+  background: linear-gradient(90deg,#c75a05,#ff8a00);
+  color: #fff;
+  padding: 8px 18px;
+  border-radius: 9999px;
+  font-weight: 700;
+  box-shadow: 0 8px 26px rgba(255,138,0,0.18);
+  transition: transform .14s ease, box-shadow .14s ease;
+}
+.promo-cta:hover { transform: translateY(-2px); box-shadow: 0 12px 36px rgba(255,138,0,0.22); }
+
+/* Slightly reduce navbar spacer when promo is present to avoid content jump */
+.promo-strip + .navbar { border-top: none; }
+
+/* Animated gradient background to draw attention (subtle) */
+.promo-strip {
+  background: linear-gradient(90deg, rgba(255,245,230,1) 0%, rgba(255,250,240,1) 50%, rgba(255,245,230,1) 100%);
+  background-size: 200% 100%;
+  animation: promoGradient 6s linear infinite;
+}
+
+@keyframes promoGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.promo-badge {
+  display: inline-block;
+  background: #fff3e0;
+  color: #b45309;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 999px;
+  box-shadow: 0 4px 10px rgba(180,83,9,0.08);
+}
+
+/* CTA shimmer */
+.promo-cta { position: relative; overflow: hidden; }
+.promo-cta::after {
+  content: "";
+  position: absolute;
+  top: -40%;
+  left: -40%;
+  width: 180%;
+  height: 180%;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.22), rgba(255,255,255,0) 25%);
+  transform: rotate(25deg) translateX(-100%);
+  transition: transform 0.9s ease;
+}
+.promo-cta:hover::after { transform: rotate(25deg) translateX(0%); }
+
+
+.nav-link {
+  color: var(--foreground);
+}
+
+.nav-link:hover {
+  color: #7a5a39; /* subtle hover similar to site tone */
+}
+
+/* Animations and small utilities used by BestInFlowers */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.focus-ring-olive:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(124,131,90,0.18);
+}
+
+/* small card shadow increase for hover */
+.card-elevate:hover {
+  box-shadow: 0 12px 30px rgba(10,10,10,0.08);
+}
+
+/* Utility to hide scrollbars while preserving scrollability (used for carousels) */
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.no-scrollbar::-webkit-scrollbar { display: none; } /* Chrome, Safari, Opera */

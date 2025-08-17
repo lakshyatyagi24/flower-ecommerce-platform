@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="g" x1="0" x2="1">
+      <stop offset="0" stop-color="#efe6d6" />
+      <stop offset="1" stop-color="#efe0c8" />
+    </linearGradient>
+    <filter id="grain">
+      <feTurbulence baseFrequency="0.8" numOctaves="2" stitchTiles="stitch" result="t" />
+      <feColorMatrix type="saturate" values="0" />
+      <feBlend in="SourceGraphic" in2="t" mode="overlay" />
+    </filter>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#g)" />
+  <g opacity="0.06" fill="#6f7750">
+    <circle cx="100" cy="120" r="38" />
+    <circle cx="260" cy="80" r="24" />
+    <circle cx="420" cy="160" r="30" />
+    <circle cx="720" cy="90" r="22" />
+    <circle cx="980" cy="140" r="28" />
+  </g>
+  <g transform="translate(80,220)" fill="#7c835a" opacity="0.18">
+    <path d="M0 120c40-60 120-80 200-60s140 60 200 80 140 0 200-30 120-30 160 10v220H0z" />
+  </g>
+  <g transform="translate(80,420)" fill="#efe6d6" opacity="0.9">
+    <rect x="0" y="0" width="420" height="220" rx="14" />
+  </g>
+  <g transform="translate(560,420)" fill="#efe6d6" opacity="0.9">
+    <rect x="0" y="0" width="520" height="220" rx="14" />
+  </g>
+  <g transform="translate(120,460)" fill="#6f7750" opacity="0.88">
+    <text x="0" y="36" font-family="Georgia,serif" font-size="32">Autumn Rustic</text>
+    <text x="0" y="72" font-family="Georgia,serif" font-size="16">Handcrafted stems & warm textures</text>
+  </g>
+</svg>
