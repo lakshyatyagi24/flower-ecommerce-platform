@@ -38,7 +38,7 @@ const Navbar = () => {
 
             <div className="hidden md:flex items-center gap-x-4 flex-none">
               <div className="flex items-center gap-x-3 whitespace-nowrap">
-                <Link href="#" className="flex items-center text-olive-green/80 hover:text-olive-green px-2 py-1 rounded-md text-sm font-medium whitespace-nowrap flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40">
+                <Link href="/track-order" className="flex items-center text-olive-green/80 hover:text-olive-green px-2 py-1 rounded-md text-sm font-medium whitespace-nowrap flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40" aria-label="Track Order">
                   <Image src="/track-order-icon.svg" alt="Track Order" width={20} height={20} className="w-5 h-5 mr-2 transition-transform hover:scale-110"/>
                   <span className="hidden md:inline">{'Track\u00A0Order'}</span>
                 </Link>
@@ -90,7 +90,7 @@ const Navbar = () => {
               <Link href="/" role="menuitem" className="text-olive-green hover:text-light-brown block px-3 py-2 rounded-md text-base font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40">Home</Link>
               <Link href="/about" role="menuitem" className="text-olive-green hover:text-light-brown block px-3 py-2 rounded-md text-base font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40">About</Link>
               <Link href="/contact" role="menuitem" className="text-olive-green hover:text-light-brown block px-3 py-2 rounded-md text-base font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40">Contact</Link>
-              <Link href="#" role="menuitem" className="flex items-center text-olive-green hover:text-light-brown px-3 py-2 rounded-md text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40">
+              <Link href="/track-order" role="menuitem" className="flex items-center text-olive-green hover:text-light-brown px-3 py-2 rounded-md text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40" aria-label="Track Order mobile">
                 <Image src="/track-order-icon.svg" alt="Track Order" width={20} height={20} className="mr-2"/>
                 Track Order
               </Link>

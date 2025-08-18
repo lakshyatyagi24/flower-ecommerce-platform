@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function CTA() {
   return (
@@ -10,9 +11,9 @@ export default function CTA() {
         <p className="text-gray-600 mb-6">Explore our shop, book an event consultation, follow us on social, or drop by the studio — we’d love to hear from you.</p>
 
         <div className="flex flex-col sm:flex-row justify-center gap-3 mb-6">
-          <a href="/products" className="px-5 py-3 bg-green-700 text-white rounded-md font-medium">Shop bouquets</a>
-          <a href="/contact?inquiry=event" className="px-5 py-3 border border-green-700 text-green-700 rounded-md font-medium">Event inquiry</a>
-          <a href="/contact" className="px-5 py-3 bg-white text-green-700 border border-green-700 rounded-md font-medium">Let&apos;s Connect</a>
+          <Link href="/products" className="px-5 py-3 bg-green-700 text-white rounded-md font-medium">Shop bouquets</Link>
+          <Link href="/contact?inquiry=event" className="px-5 py-3 border border-green-700 text-green-700 rounded-md font-medium">Event inquiry</Link>
+          <Link href="/contact" className="px-5 py-3 bg-white text-green-700 border border-green-700 rounded-md font-medium">Let&apos;s Connect</Link>
         </div>
 
         <div className="flex items-center justify-center space-x-4 mb-4">
@@ -28,9 +29,9 @@ export default function CTA() {
         </div>
 
         <div className="text-sm">
-          <a href="/products" className="text-gray-700 hover:underline mr-4">Shop</a>
-          <a href="/gallery" className="text-gray-700 hover:underline mr-4">Gallery</a>
-          <a href="/contact?inquiry=visit" className="text-gray-700 hover:underline">Visit studio</a>
+          <Link href="/products" className="text-gray-700 hover:underline mr-4">Shop</Link>
+          <Link href="/gallery" className="text-gray-700 hover:underline mr-4">Gallery</Link>
+          <Link href="/contact?inquiry=visit" className="text-gray-700 hover:underline">Visit studio</Link>
         </div>
       </div>
     </section>

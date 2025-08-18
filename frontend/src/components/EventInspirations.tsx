@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 
+import Image, { type StaticImageData } from "next/image";
 import g1 from "../assets/gallery1.png";
 import g2 from "../assets/gallery2.png";
 import g3 from "../assets/gallery3.png";
@@ -16,21 +17,21 @@ import g10 from "../assets/gallery10.png";
 
 type GalleryItem = {
   id: string;
-  src: string;
+  src: StaticImageData;
   caption: string;
 };
 
 const items: GalleryItem[] = [
-  { id: "e1", src: g1.src, caption: "Riverside — Outdoor Wedding" },
-  { id: "e2", src: g2.src, caption: "Ballroom — Corporate Gala" },
-  { id: "e3", src: g3.src, caption: "Heritage Lawn — Garden Party" },
-  { id: "e4", src: g4.src, caption: "Rooftop — Intimate Reception" },
-  { id: "e5", src: g5.src, caption: "Banquet Hall — Anniversary" },
-  { id: "e6", src: g6.src, caption: "Terrace — Pop-up Event" },
-  { id: "e7", src: g7.src, caption: "Vineyard — Sunset Ceremony" },
-  { id: "e8", src: g8.src, caption: "Loft — Modern Soirée" },
-  { id: "e9", src: g9.src, caption: "Heritage Home — Intimate Dinner" },
-  { id: "e10", src: g10.src, caption: "Botanical — Photo Shoot" },
+  { id: "e1", src: g1, caption: "Riverside — Outdoor Wedding" },
+  { id: "e2", src: g2, caption: "Ballroom — Corporate Gala" },
+  { id: "e3", src: g3, caption: "Heritage Lawn — Garden Party" },
+  { id: "e4", src: g4, caption: "Rooftop — Intimate Reception" },
+  { id: "e5", src: g5, caption: "Banquet Hall — Anniversary" },
+  { id: "e6", src: g6, caption: "Terrace — Pop-up Event" },
+  { id: "e7", src: g7, caption: "Vineyard — Sunset Ceremony" },
+  { id: "e8", src: g8, caption: "Loft — Modern Soirée" },
+  { id: "e9", src: g9, caption: "Heritage Home — Intimate Dinner" },
+  { id: "e10", src: g10, caption: "Botanical — Photo Shoot" },
 ];
 
 export default function EventInspirations() {
@@ -79,7 +80,7 @@ export default function EventInspirations() {
       <div className="columns-2 sm:columns-3 md:columns-4 gap-4">
         {items.slice(0, 10).map((it, i) => (
           <div key={it.id} className="break-inside-avoid mb-4 relative rounded-lg overflow-hidden cursor-pointer" onClick={() => openAt(i)} role="button" aria-label={`Open ${it.caption}`}>
-            <img src={it.src} alt={it.caption} className="w-full h-auto block rounded-lg shadow-sm" />
+            <Image src={it.src} alt={it.caption} className="w-full h-auto block rounded-lg shadow-sm" />
 
             <div className="absolute left-2 bottom-2 bg-black/50 text-white text-xs px-2 py-1 rounded-md">{it.caption}</div>
 
@@ -96,7 +97,7 @@ export default function EventInspirations() {
 
           <button aria-label="Previous" onClick={prev} className="absolute left-4 top-1/2 -translate-y-1/2 text-white p-2 rounded-md hover:bg-white/10">‹</button>
           <div className="max-w-[90vw] max-h-[85vh] w-full flex items-center justify-center">
-            <img src={items[index].src} alt={items[index].caption} className="max-w-full max-h-full rounded-lg shadow-xl object-contain" />
+            <Image src={items[index].src} alt={items[index].caption} className="max-w-full max-h-full rounded-lg shadow-xl object-contain" />
           </div>
           <button aria-label="Next" onClick={next} className="absolute right-4 top-1/2 -translate-y-1/2 text-white p-2 rounded-md hover:bg-white/10">›</button>
 

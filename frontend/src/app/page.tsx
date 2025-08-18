@@ -5,7 +5,6 @@ import NewArrivals from "../components/NewArrivals";
 import SeasonalCollection from "../components/SeasonalCollection";
 import EventInspirations from "../components/EventInspirations";
 import BuildYourBouquet from "../components/BuildYourBouquet";
-import { TrustBarCompact } from "../components/TrustBar";
 import TrustBar from "../components/TrustBar";
 import Reviews from "../components/Reviews";
 import SocialNewsletter from "@/components/SocialNewsletter";

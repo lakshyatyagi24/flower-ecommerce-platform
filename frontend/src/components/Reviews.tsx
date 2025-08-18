@@ -18,10 +18,12 @@ const Star: React.FC<{ filled?: boolean }> = ({ filled = false }) => (
   </svg>
 );
 
+import type { StaticImageData } from 'next/image';
+
 type Review = {
   id: string;
   name: string;
-  avatar: any;
+  avatar: StaticImageData;
   rating: number;
   text: string;
   source?: string;
