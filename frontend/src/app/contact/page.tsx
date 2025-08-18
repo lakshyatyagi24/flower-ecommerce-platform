@@ -6,6 +6,7 @@ import ContactForm from "./components/ContactForm";
 import QuickContactDetails from "./components/QuickContactDetails";
 import EventBookingShortcut from "./components/EventBookingShortcut";
 import logo from "../../assets/logo.png";
+import FAQSnapshot from "@/components/FAQSnapshot";
 
 export default function ContactPage() {
   return (
@@ -52,6 +53,10 @@ export default function ContactPage() {
               <EventBookingShortcut />
               <QuickContactDetails />
         </div>
+      </div>
+      {/* FAQ snapshot (contact-only) */}
+      <div className="mt-8">
+        <FAQSnapshot />
       </div>
     </main>
   );

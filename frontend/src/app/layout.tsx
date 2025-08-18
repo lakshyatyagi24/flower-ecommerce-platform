@@ -4,7 +4,6 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import PromoStrip from "@/components/PromoStrip";
 import Footer from "@/components/Footer";
-import TrustBar from "@/components/TrustBar";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -36,9 +35,8 @@ export default function RootLayout({
       >
         <PromoStrip />
         <Navbar />
-        {children}
-  <TrustBar />
-        <Footer />
+    {children}
+  <Footer />
       </body>
     </html>
   );
