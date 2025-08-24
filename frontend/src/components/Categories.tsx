@@ -60,6 +60,7 @@ const defaultCategories: Category[] = [
 
 const Categories: React.FC<CategoriesProps> = ({ categories = defaultCategories, onCategoryClick }) => {
   const [active, setActive] = useState<string | null>(null);
+  const [remoteCategories, setRemoteCategories] = useState<Category[] | null>(null);
   const [menuRect, setMenuRect] = useState<{ left: number; top: number; bottom: number; width: number } | null>(null);
   const hideTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -85,8 +86,46 @@ const Categories: React.FC<CategoriesProps> = ({ categories = defaultCategories,
     };
   }, []);
 
+  // Fetch categories from backend on mount. Backend runs on same origin in prod;
+  // during dev the backend may be on port 3001, so try origin and fallback to http://localhost:3001
+  useEffect(() => {
+    let cancelled = false;
+    const fetchCategories = async () => {
+      try {
+        const base = '';
+        const urlsToTry = [
+          `${base}/categories`,
+          `http://localhost:3001/categories`,
+        ];
+        for (const u of urlsToTry) {
+          try {
+            const res = await fetch(u, { cache: 'no-store' });
+            if (!res.ok) continue;
+            const data = await res.json();
+            if (cancelled) return;
+            // map backend category shape -> component shape
+            const mapped: Category[] = data.map((c: any) => ({
+              name: c.name,
+              slug: c.slug,
+              submenus: c.children && c.children.length ? [{ title: 'Subcategories', items: c.children.map((ch: any) => ch.name) }] : undefined,
+            }));
+            setRemoteCategories(mapped);
+            return;
+          } catch (e) {
+            // try next
+          }
+        }
+      } catch (e) {
+        // ignore - keep defaults
+      }
+    };
+    fetchCategories();
+    return () => { cancelled = true; };
+  }, []);
+
   // determine activeCategory for MegaMenu
-  const activeCategory = active ? categories.find((c) => c.name === active) ?? null : null;
+  const effectiveCategories = remoteCategories ?? categories;
+  const activeCategory = active ? effectiveCategories.find((c) => c.name === active) ?? null : null;
 
   return (
     <>
@@ -98,7 +137,7 @@ const Categories: React.FC<CategoriesProps> = ({ categories = defaultCategories,
     <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 relative">
   <div className="overflow-x-auto overflow-y-visible">
           <ul className="flex gap-x-8 items-center whitespace-nowrap text-sm py-3 px-2 justify-start md:justify-center overflow-x-auto">
-            {categories.map((cat) => (
+            {effectiveCategories.map((cat) => (
               <li
                 key={cat.name}
                 className="flex-shrink-0 relative"
