@@ -1,0 +1,47 @@
+.panel {
+  position: absolute;
+  z-index: 50;
+  background: #fff;
+  border: 1px solid #eef2f6;
+  box-shadow: 0 6px 18px rgba(16,24,40,0.08);
+  border-radius: 6px;
+  padding: 0.6rem;
+  font-size: 0.75rem;
+  color: #374151;
+  width: 18rem;
+  opacity: 0;
+  transform-origin: top center;
+}
+
+.arrow {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: #fff;
+  border-left: 1px solid #eef2f6;
+  border-top: 1px solid #eef2f6;
+  transform: rotate(45deg);
+}
+
+.placementTop .arrow { bottom: -6px; left: 1rem; }
+.placementBottom .arrow { top: -6px; left: 1rem; }
+.placementLeft .arrow { right: -6px; top: 0.6rem; }
+.placementRight .arrow { left: -6px; top: 0.6rem; }
+
+.placementTop { transform-origin: bottom center; }
+.placementBottom { transform-origin: top center; }
+.placementLeft { transform-origin: center right; }
+.placementRight { transform-origin: center left; }
+
+.animateIn { animation: tooltipIn 160ms cubic-bezier(.2,.9,.2,1) forwards; }
+/* make panel wider on larger screens and full-width on small screens */
+@media (max-width: 480px) {
+  .panel { width: calc(100vw - 32px); left: 16px !important; right: 16px !important; }
+}
+
+.panel:focus { outline: none; box-shadow: 0 0 0 4px rgba(124,131,90,0.12); }
+
+@keyframes tooltipIn {
+  from { opacity: 0; transform: translateY(-6px) scale(.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}

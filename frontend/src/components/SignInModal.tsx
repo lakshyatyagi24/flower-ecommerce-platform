@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import SignupModal from './SignupModal';
+import Tooltip from './Tooltip';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import FocusTrap from 'focus-trap-react';
@@ -37,6 +38,11 @@ const SignInModal: React.FC<Props> = ({ onClose }) => {
     }
   };
 
+  const getRemainingAttempts = (e: string) => {
+    const rec = getAttemptRecord(e);
+    return Math.max(0, MAX_ATTEMPTS - (rec.count || 0));
+  };
+
   const setAttemptRecord = (e: string, rec: { count: number; lockUntil?: number }) => {
     try {
       sessionStorage.setItem(makeKey(e), JSON.stringify(rec));
@@ -70,6 +76,8 @@ const SignInModal: React.FC<Props> = ({ onClose }) => {
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
+
+  // ...existing code...
 
   // focus trap handled by focus-trap-react wrapper around modal content
 
@@ -114,6 +122,8 @@ const SignInModal: React.FC<Props> = ({ onClose }) => {
       incrementFailed(email || 'guest');
       setAlert({ type: 'error', message: res.error || 'Invalid email or password' });
     } else {
+  // clear attempt record for this email on success
+  try { sessionStorage.removeItem(makeKey(email || 'guest')); } catch {}
       // success — redirect
       const getRedirectTarget = () => {
         try {
@@ -162,12 +172,26 @@ const SignInModal: React.FC<Props> = ({ onClose }) => {
         </div>
 
         <div className="p-6">
-          <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-2">
             <div>
               <h3 id="signin-title" className="text-lg font-semibold text-olive-green">Welcome back</h3>
-              <p id="signin-desc" className="text-xs text-gray-500 mt-1">Sign in to access your cart, orders, and event bookings. Your information is secure.</p>
+              <p id="signin-desc" className="text-xs text-gray-500 mt-1 inline">Sign in to access your cart, orders, and event bookings.</p>
+              <div className="mt-1 text-xs text-gray-500 relative">
+                <span>Your information is secure.</span>
+                <Tooltip triggerLabel={<span className="ml-2 text-olive-green hover:underline text-xs">Why?</span>}>
+                  <div className="mb-2">We protect your account with industry-standard encryption. After several failed sign-in attempts we temporarily lock this form locally to deter attackers. Passwords are never stored in plain text.</div>
+                  <div>
+                    <a href="/contact" className="text-olive-green hover:underline">Contact support</a> if you need help.
+                  </div>
+                </Tooltip>
+              </div>
             </div>
-            <button onClick={onClose} aria-label="Close sign in dialog" className="text-olive-green/70 hover:text-olive-green ml-4 p-2 rounded focus:outline-none focus:ring-2 focus:ring-olive-green/40">
+            <button
+              onClick={onClose}
+              aria-label="Close sign in dialog"
+              className="text-olive-green/70 hover:text-olive-green ml-4 p-3 rounded-full focus:outline-none focus:ring-2 focus:ring-olive-green/40"
+              style={{ minWidth: 44, minHeight: 44 }}
+            >
               ×
             </button>
           </div>
@@ -182,7 +206,7 @@ const SignInModal: React.FC<Props> = ({ onClose }) => {
 
               <form onSubmit={handleEmailSignIn} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Email</label>
+                  <label htmlFor="signin-email" className="block text-sm font-medium text-gray-700">Email</label>
                   <input
                     id="signin-email"
                     ref={firstInputRef}
@@ -199,7 +223,7 @@ const SignInModal: React.FC<Props> = ({ onClose }) => {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Password</label>
+                  <label htmlFor="signin-password" className="block text-sm font-medium text-gray-700">Password</label>
                   <div className="mt-1 relative">
                     <input
                       id="signin-password"
@@ -216,21 +240,52 @@ const SignInModal: React.FC<Props> = ({ onClose }) => {
                       type="button"
                       onClick={() => setShowPassword((s) => !s)}
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-olive-green/80"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-olive-green/80 inline-flex items-center justify-center"
+                      style={{ minWidth: 44, minHeight: 44 }}
                     >
                       {showPassword ? 'Hide' : 'Show'}
                     </button>
                   </div>
                   <div className="mt-2 text-sm text-right">
-                    <a href="/forgot-password" className="text-olive-green hover:underline">Forgot Password?</a>
+                    <a href="/forgot-password" className="text-olive-green hover:underline" aria-label="Forgot password">Forgot Password?</a>
                   </div>
                   {passwordError && <div id="signin-password-error" className="mt-1 text-sm text-red-600">{passwordError}</div>}
+                  {/* attempts / lockout info */}
+                  <div className="mt-2 text-sm" aria-live="polite">
+                    {(() => {
+                      const key = (email || 'guest');
+                      const lock = isLocked(key);
+                      const locked = !!(lock && lock > Date.now());
+                      if (locked) {
+                        const ms = (lock as number) - Date.now();
+                        const mins = Math.floor(ms / 60000);
+                        const secs = Math.ceil((ms % 60000) / 1000);
+                        return (
+                          <div id="signin-lockout" className="text-sm text-red-600">Too many failed attempts. Try again in {mins} min {secs}s.</div>
+                        );
+                      }
+                      const left = getRemainingAttempts(key);
+                      return <div className="text-gray-500">{left > 0 ? `${left} attempt${left === 1 ? '' : 's'} remaining` : 'You have no attempts remaining'}</div>;
+                    })()}
+                  </div>
                 </div>
 
                 <div>
-                  <button type="submit" className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-black px-4 py-3 sm:py-2 text-sm font-medium bg-white hover:bg-olive-green/5">
-                    Sign In
-                  </button>
+                  {(() => {
+                    const lock = isLocked(email || 'guest');
+                    const disabled = !!(lock && lock > Date.now());
+                    return (
+                      <button
+                        type="submit"
+                        disabled={disabled}
+                        aria-label="Sign in"
+                        className={`w-full inline-flex items-center justify-center gap-2 rounded-md border border-black px-4 py-3 sm:py-3 text-sm font-medium ${disabled ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white hover:bg-olive-green/5'}`}
+                        style={{ minHeight: 48 }}
+                      >
+                        Sign In
+                      </button>
+                    );
+                  })()}
                 </div>
               </form>
 
