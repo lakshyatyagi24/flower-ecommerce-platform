@@ -1,13 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Plus, Edit, Trash2, ChevronRight, ChevronDown } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Plus, Edit, Trash2, ChevronRight, ChevronDown, Loader2 } from 'lucide-react';
+import { useToast } from '@/components/ui/toast';
 
 interface Category {
   id: number;
@@ -21,7 +23,7 @@ interface Category {
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -30,25 +32,38 @@ export default function CategoriesPage() {
     parentId: '',
   });
   const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set());
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState<number | null>(null);
+  const { addToast } = useToast();
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       const response = await fetch('http://localhost:3001/categories');
+      if (!response.ok) {
+        throw new Error('Failed to fetch categories');
+      }
       const data = await response.json();
       setCategories(data);
     } catch (error) {
       console.error('Error fetching categories:', error);
+      addToast({
+        type: 'error',
+        title: 'Error',
+        description: 'Failed to load categories. Please try again.',
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }, [addToast]);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
+
     try {
       const data = {
         name: formData.name,
@@ -73,20 +88,63 @@ export default function CategoriesPage() {
 
       if (response.ok) {
         await fetchCategories();
-        setIsSheetOpen(false);
+        setIsDialogOpen(false);
         resetForm();
+        addToast({
+          type: 'success',
+          title: 'Success',
+          description: `Category ${editingCategory ? 'updated' : 'created'} successfully.`,
+        });
       } else {
         const error = await response.json();
-        alert(error.message || 'Error saving category');
+        if (response.status === 500 && error.message?.includes('Unique constraint failed')) {
+          setIsDialogOpen(false);
+          setTimeout(() => {
+            addToast({
+              type: 'error',
+              title: 'Duplicate Slug',
+              description: 'A category with this slug already exists. Please choose a different slug.',
+            });
+          }, 100);
+        } else if (response.status === 400 && error.message?.includes('Maximum 8 main categories')) {
+          setIsDialogOpen(false);
+          setTimeout(() => {
+            addToast({
+              type: 'warning',
+              title: 'Limit Reached',
+              description: 'You can only have a maximum of 8 main categories.',
+            });
+          }, 100);
+        } else {
+          setIsDialogOpen(false);
+          setTimeout(() => {
+            addToast({
+              type: 'error',
+              title: 'Error',
+              description: error.message || 'Failed to save category.',
+            });
+          }, 100);
+        }
+        resetForm(); // Reset form on error
       }
     } catch (error) {
       console.error('Error saving category:', error);
-      alert('Error saving category');
+      setIsDialogOpen(false);
+      resetForm(); // Reset form on error
+      setTimeout(() => {
+        addToast({
+          type: 'error',
+          title: 'Error',
+          description: 'Failed to save category. Please try again.',
+        });
+      }, 100);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this category?')) return;
+    setIsDeleting(id);
 
     try {
       const response = await fetch(`http://localhost:3001/categories/${id}`, {
@@ -95,14 +153,36 @@ export default function CategoriesPage() {
 
       if (response.ok) {
         await fetchCategories();
+        addToast({
+          type: 'success',
+          title: 'Success',
+          description: 'Category deleted successfully.',
+        });
       } else {
         const error = await response.json();
-        alert(error.message || 'Error deleting category');
+        addToast({
+          type: 'error',
+          title: 'Error',
+          description: error.message || 'Failed to delete category.',
+        });
       }
     } catch (error) {
       console.error('Error deleting category:', error);
-      alert('Error deleting category');
+      addToast({
+        type: 'error',
+        title: 'Error',
+        description: 'Failed to delete category. Please try again.',
+      });
+    } finally {
+      setIsDeleting(null);
     }
+  };
+
+  const generateSlug = (name: string): string => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
   };
 
   const resetForm = () => {
@@ -115,7 +195,15 @@ export default function CategoriesPage() {
     setEditingCategory(null);
   };
 
-  const openEditSheet = (category: Category) => {
+  const handleNameChange = (name: string) => {
+    setFormData({
+      ...formData,
+      name,
+      slug: editingCategory ? formData.slug : generateSlug(name), // Only auto-generate slug for new categories
+    });
+  };
+
+  const openEditDialog = (category: Category) => {
     setEditingCategory(category);
     setFormData({
       name: category.name,
@@ -123,12 +211,12 @@ export default function CategoriesPage() {
       image: category.image || '',
       parentId: category.parentId?.toString() || '',
     });
-    setIsSheetOpen(true);
+    setIsDialogOpen(true);
   };
 
-  const openCreateSheet = () => {
+  const openCreateDialog = () => {
     resetForm();
-    setIsSheetOpen(true);
+    setIsDialogOpen(true);
   };
 
   const toggleExpanded = (categoryId: number) => {
@@ -141,58 +229,92 @@ export default function CategoriesPage() {
     setExpandedCategories(newExpanded);
   };
 
-  const renderCategoryRow = (category: Category, level = 0): JSX.Element => {
+  const renderCategoryRow = (category: Category, level = 0): React.JSX.Element[] => {
     const hasChildren = category.children && category.children.length > 0;
     const isExpanded = expandedCategories.has(category.id);
+    const rows: React.JSX.Element[] = [];
 
-    return (
-      <>
-        <TableRow key={category.id}>
-          <TableCell>
-            <div style={{ paddingLeft: `${level * 20}px` }}>
-              {hasChildren && (
+    // Add the main row
+    rows.push(
+      <TableRow key={category.id}>
+        <TableCell>
+          <div style={{ paddingLeft: `${level * 20}px` }}>
+            {hasChildren && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => toggleExpanded(category.id)}
+                className="mr-2 p-0 h-4 w-4"
+              >
+                {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+              </Button>
+            )}
+            {category.name}
+          </div>
+        </TableCell>
+        <TableCell>{category.slug}</TableCell>
+        <TableCell>{category.image ? 'Yes' : 'No'}</TableCell>
+        <TableCell>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => openEditDialog(category)}
+            >
+              <Edit className="h-3 w-3" />
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  onClick={() => toggleExpanded(category.id)}
-                  className="mr-2 p-0 h-4 w-4"
+                  disabled={isDeleting === category.id}
                 >
-                  {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                  {isDeleting === category.id ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3 w-3" />
+                  )}
                 </Button>
-              )}
-              {category.name}
-            </div>
-          </TableCell>
-          <TableCell>{category.slug}</TableCell>
-          <TableCell>{category.image ? 'Yes' : 'No'}</TableCell>
-          <TableCell>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => openEditSheet(category)}
-              >
-                <Edit className="h-3 w-3" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleDelete(category.id)}
-              >
-                <Trash2 className="h-3 w-3" />
-              </Button>
-            </div>
-          </TableCell>
-        </TableRow>
-        {hasChildren && isExpanded &&
-          category.children!.map(child => renderCategoryRow(child, level + 1))
-        }
-      </>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete the category &ldquo;{category.name}&rdquo; and all its subcategories.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => handleDelete(category.id)}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </TableCell>
+      </TableRow>
     );
-  };
 
-  if (loading) {
-    return <div>Loading...</div>;
+    // Add child rows if expanded
+    if (hasChildren && isExpanded) {
+      category.children!.forEach(child => {
+        rows.push(...renderCategoryRow(child, level + 1));
+      });
+    }
+
+    return rows;
+  };  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Loading categories...</span>
+      </div>
+    );
   }
 
   return (
@@ -204,27 +326,28 @@ export default function CategoriesPage() {
             Manage your flower categories and subcategories
           </p>
         </div>
-        <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-          <SheetTrigger asChild>
-            <Button onClick={openCreateSheet}>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={openCreateDialog}>
               <Plus className="mr-2 h-4 w-4" />
               Add Category
             </Button>
-          </SheetTrigger>
-          <SheetContent>
-            <SheetHeader>
-              <SheetTitle>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>
                 {editingCategory ? 'Edit Category' : 'Add New Category'}
-              </SheetTitle>
-            </SheetHeader>
+              </DialogTitle>
+            </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4 mt-6">
               <div>
                 <Label htmlFor="name">Name</Label>
                 <Input
                   id="name"
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) => handleNameChange(e.target.value)}
                   required
+                  disabled={isSubmitting}
                 />
               </div>
               <div>
@@ -234,6 +357,7 @@ export default function CategoriesPage() {
                   value={formData.slug}
                   onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
                   required
+                  disabled={isSubmitting}
                 />
               </div>
               <div>
@@ -242,6 +366,7 @@ export default function CategoriesPage() {
                   id="image"
                   value={formData.image}
                   onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                  disabled={isSubmitting}
                 />
               </div>
               <div>
@@ -251,6 +376,7 @@ export default function CategoriesPage() {
                   value={formData.parentId}
                   onChange={(e) => setFormData({ ...formData, parentId: e.target.value })}
                   className="w-full p-2 border rounded"
+                  disabled={isSubmitting}
                 >
                   <option value="">Select parent category</option>
                   {categories.map(category => (
@@ -261,16 +387,22 @@ export default function CategoriesPage() {
                 </select>
               </div>
               <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setIsSheetOpen(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsDialogOpen(false)}
+                  disabled={isSubmitting}
+                >
                   Cancel
                 </Button>
-                <Button type="submit">
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {editingCategory ? 'Update' : 'Create'}
                 </Button>
               </div>
             </form>
-          </SheetContent>
-        </Sheet>
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Card>
@@ -288,7 +420,7 @@ export default function CategoriesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {categories.map(category => renderCategoryRow(category))}
+              {categories.flatMap(category => renderCategoryRow(category))}
             </TableBody>
           </Table>
         </CardContent>

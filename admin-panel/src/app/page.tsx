@@ -1,5 +1,4 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { BarChart3, Package, ShoppingCart, Users } from "lucide-react";
 
 export default function Dashboard() {
