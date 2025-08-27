@@ -55,137 +55,95 @@ type Slide = {
   };
 };
 
-const slides: Slide[] = [
-  // 1) Combined overlay stacked at center-right (eyebrow, title, subtitle, CTA)
-  {
-    id: 0,
-    img: slider1,
-    alt: 'Birthday bouquet',
-    bg: 'from-amber-50 to-amber-100',
-    overlay: {
-      combined: true,
-      position: 'center-right',
-  eyebrow: 'BRIGHTEN THEIR SPECIAL DAY',
-  title: 'Birthday',
-  subtitle: 'FLOWERS',
-  cta: { label: 'Shop Birthday', href: '#' },
-  /* inline color example */
-  textColor: '#1f2937',
-  button: { bg: '#065f46', text: '#ffffff' },
-    },
-  },
-
-  // 2) Individual item positions (eyebrow top-center, title center-right, subtitle bottom-right, CTA bottom-right)
-  {
-    id: 1,
-  img: slider2,
-    alt: 'Handpicked bouquets',
-    bg: 'from-pink-50 to-pink-100',
-    overlay: {
-    combined: true,
-      position: 'center',
-      eyebrow: 'HANDPICKED BOUQUETS',
-      title: 'Fresh',
-      subtitle: 'ARRIVALS',
-      cta: { label: 'Explore Now', href: '#' },
-      /* Tailwind class example */
-      textClass: 'text-white',
-      buttonClass: 'inline-block bg-white text-pink-600 px-5 py-2 rounded-md shadow hover:opacity-95',
-    },
-  },
-
-  // 3) Image-only slide (no overlay)
-  {
-    id: 2,
-    img: slider3,
-    alt: 'Window arrangement',
-    bg: 'from-green-50 to-green-100',
-  },
-
-  // 4) Gradient background only with combined overlay at bottom-left
-  {
-    id: 3,
-  img: slider4,
-    alt: 'Autumn specials',
-    bg: 'from-indigo-50 to-indigo-100',
-    overlay: {
-      combined: true,
-      position: 'bottom-right',
-      eyebrow: 'LIMITED TIME',
-      title: 'Autumn Specials',
-      subtitle: 'Curated arrangements',
-      cta: { label: 'See Offers', href: '#' },
-    },
-  },
-
-  // 5) Slide with only CTA (no title) positioned at bottom-center
-  {
-    id: 4,
-  img: slider5,
-    alt: 'Track order CTA',
-    bg: 'from-yellow-50 to-yellow-100',
-    overlay: {
-      position: 'center',
-      cta: { label: 'Track Order', href: '#' },
-      itemPosition: { cta: 'bottom-center' },
-    },
-  },
-
-  // 6) Title-only slide centered
-  {
-    id: 5,
-  img: slider6,
-    alt: 'New collections',
-    bg: 'from-teal-50 to-teal-100',
-    overlay: {
-      position: 'center',
-      title: 'New Collections',
-    },
-  },
-
-  // 7) Mixed per-item positions demonstrating flexible layout
-  {
-    id: 6,
-  img: slider7,
-    alt: 'Personalised gifts',
-    bg: 'from-rose-50 to-rose-100',
-    overlay: {
-      position: 'center-right',
-      eyebrow: 'DISCOVER',
-      title: 'Personalised Gifts',
-      subtitle: 'Built with care',
-      cta: { label: 'Customize', href: '#' },
-      itemPosition: { eyebrow: 'top-left', title: 'top-center', subtitle: 'center-left', cta: 'bottom-center' },
-    },
-  },
-
-  // 8) Image-only / decorative slide (different gradient)
-  {
-    id: 7,
-  img: slider8,
-    alt: 'Decorative',
-    bg: 'from-lime-50 to-lime-100',
-  },
+// default static slides used as a safe fallback
+const staticSlides: Slide[] = [
+  { id: 0, img: slider1, alt: 'Birthday bouquet', bg: 'from-amber-50 to-amber-100', overlay: { combined: true, position: 'center-right', eyebrow: 'BRIGHTEN THEIR SPECIAL DAY', title: 'Birthday', subtitle: 'FLOWERS', cta: { label: 'Shop Birthday', href: '#' }, textColor: '#1f2937', button: { bg: '#065f46', text: '#ffffff' } } },
+  { id: 1, img: slider2, alt: 'Handpicked bouquets', bg: 'from-pink-50 to-pink-100', overlay: { combined: true, position: 'center', eyebrow: 'HANDPICKED BOUQUETS', title: 'Fresh', subtitle: 'ARRIVALS', cta: { label: 'Explore Now', href: '#' }, textClass: 'text-white', buttonClass: 'inline-block bg-white text-pink-600 px-5 py-2 rounded-md shadow hover:opacity-95' } },
+  { id: 2, img: slider3, alt: 'Window arrangement', bg: 'from-green-50 to-green-100' },
+  { id: 3, img: slider4, alt: 'Autumn specials', bg: 'from-indigo-50 to-indigo-100', overlay: { combined: true, position: 'bottom-right', eyebrow: 'LIMITED TIME', title: 'Autumn Specials', subtitle: 'Curated arrangements', cta: { label: 'See Offers', href: '#' } } },
+  { id: 4, img: slider5, alt: 'Track order CTA', bg: 'from-yellow-50 to-yellow-100', overlay: { position: 'center', cta: { label: 'Track Order', href: '#' }, itemPosition: { cta: 'bottom-center' } } },
+  { id: 5, img: slider6, alt: 'New collections', bg: 'from-teal-50 to-teal-100', overlay: { position: 'center', title: 'New Collections' } },
+  { id: 6, img: slider7, alt: 'Personalised gifts', bg: 'from-rose-50 to-rose-100', overlay: { position: 'center-right', eyebrow: 'DISCOVER', title: 'Personalised Gifts', subtitle: 'Built with care', cta: { label: 'Customize', href: '#' }, itemPosition: { eyebrow: 'top-left', title: 'top-center', subtitle: 'center-left', cta: 'bottom-center' } } },
+  { id: 7, img: slider8, alt: 'Decorative', bg: 'from-lime-50 to-lime-100' },
 ];
 
 export default function Slider() {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
+  const [remoteSlides, setRemoteSlides] = useState<Slide[] | null>(null);
+  const [loading, setLoading] = useState(false);
   const autoplayRef = useRef<number | null>(null);
 
   useEffect(() => {
+    // fetch remote slides from backend
+    const base = process.env.NEXT_PUBLIC_API_BASE;
+    if (!base) return;
+    setLoading(true);
+    fetch(`${base}/sliders`)
+      .then((r) => r.json())
+      .then((data: any[]) => {
+        // map backend slider shape to Slide[]
+        const mapped: Slide[] = data.map((s: any, i: number) => {
+          const cfg = s.config ?? {};
+          const overlayFromCfg = (() => {
+            if (cfg.overlay) {
+              const pos = (cfg.overlay.position ?? 'center') as Position;
+              const cta = cfg.overlay.cta ?? (s.href ? { label: 'Shop', href: s.href } : undefined);
+              return {
+                combined: !!cfg.overlay.combined,
+                position: pos,
+                eyebrow: (cfg.overlay.eyebrow ?? s.eyebrow) as string | undefined,
+                title: (cfg.overlay.title ?? s.title) as string | undefined,
+                subtitle: (cfg.overlay.subtitle ?? s.subtitle) as string | undefined,
+                cta: cta ? ({ label: String(cta.label), href: cta.href } as { label: string; href?: string }) : undefined,
+                textColor: cfg.overlay.textColor as string | undefined,
+                textClass: cfg.overlay.textClass as string | undefined,
+                button: cfg.overlay.button as { bg?: string; text?: string } | undefined,
+                buttonClass: cfg.overlay.buttonClass as string | undefined,
+              };
+            }
+
+            if (s.title || s.eyebrow || s.subtitle) {
+              return { combined: true, position: 'center' as Position, eyebrow: s.eyebrow, title: s.title, subtitle: s.subtitle, cta: s.href ? { label: 'Shop', href: s.href } : undefined };
+            }
+
+            return undefined;
+          })();
+
+          return {
+            id: s.id ?? i,
+            eyebrow: s.eyebrow ?? undefined,
+            title: s.title ?? undefined,
+            subtitle: s.subtitle ?? undefined,
+            alt: s.alt ?? undefined,
+            img: s.image ?? undefined,
+            bg: cfg.bg ?? undefined,
+            overlay: overlayFromCfg,
+          };
+        });
+        setRemoteSlides(mapped);
+      })
+      .catch(() => setRemoteSlides(null))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
     if (paused) return;
+    const slidesArr = remoteSlides ?? staticSlides;
     autoplayRef.current = window.setInterval(() => {
-      setIndex((s) => (s + 1) % slides.length);
+      setIndex((s) => (s + 1) % slidesArr.length);
     }, 4000);
     return () => {
       if (autoplayRef.current) window.clearInterval(autoplayRef.current);
     };
-  }, [paused]);
+  }, [paused, remoteSlides]);
 
   function go(i: number) {
-    setIndex((i + slides.length) % slides.length);
+    const slidesArr = remoteSlides ?? staticSlides;
+    setIndex((i + slidesArr.length) % slidesArr.length);
   }
+
+  const slides = remoteSlides ?? staticSlides;
 
   return (
     <section
@@ -195,7 +153,7 @@ export default function Slider() {
       aria-roledescription="carousel"
     >
       <div className="relative h-56 sm:h-72 md:h-96 lg:h-80 xl:h-96">
-        {slides.map((s, i) => (
+  {slides.map((s: Slide, i: number) => (
           <div
             key={s.id}
             className={`absolute inset-0 transition-all duration-700 ease-[cubic-bezier(.2,.9,.2,1)] transform will-change-transform ${
@@ -203,12 +161,11 @@ export default function Slider() {
             }`}
             aria-hidden={i === index ? 'false' : 'true'}
           >
-            {/* background image (full-bleed) */}
             <div className={`absolute inset-0 bg-gradient-to-r ${s.bg || ''} bg-opacity-75`} />
             {s.img && (
               <div className="absolute inset-0">
                 <Image
-                  src={s.img}
+                  src={typeof s.img === 'string' && s.img.startsWith('/') ? s.img : s.img as any}
                   alt={s.alt ?? s.overlay?.title ?? `slide-${s.id}`}
                   fill
                   className="object-cover"
@@ -221,15 +178,6 @@ export default function Slider() {
             {/* overlay container - optional; each item may have its own position */}
             {s.overlay && (
               <div className="relative h-full w-full">
-                {/* helper to map position -> classes for absolute placement */}
-                {/**
-                 * position tokens: top-left, top-center, top-right,
-                 * center-left, center, center-right,
-                 * bottom-left, bottom-center, bottom-right
-                 */}
-                {
-                  /** render each overlay item absolutely based on itemPosition or overlay.position */
-                }
                 {(() => {
                   const mapPos = (pos?: Position) => {
                     const p = pos || s.overlay?.position || 'center-right';
@@ -352,7 +300,7 @@ export default function Slider() {
 
         {/* dots */}
         <div className="absolute left-1/2 -translate-x-1/2 bottom-4 z-20 flex gap-3">
-          {slides.map((_, i) => (
+          {slides.map((_: Slide, i: number) => (
             <button
               key={i}
               className={`w-3 h-3 rounded-full transition-all duration-300 ${
