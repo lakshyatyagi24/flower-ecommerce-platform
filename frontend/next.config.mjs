@@ -1,14 +1,24 @@
 const nextConfig = {
   images: {
-    // allow loading images served from the dev frontend origin
     remotePatterns: [
       {
         protocol: "http",
         hostname: "localhost",
         port: "3000",
-        pathname: "/assets/**",
+        pathname: "/**",
+      },
+      {
+        protocol: "http",
+        hostname: "localhost",
+        port: "3001",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "**",
       },
     ],
+    domains: ['localhost'],
   },
 };
 

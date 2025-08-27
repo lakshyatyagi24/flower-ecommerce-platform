@@ -7,9 +7,20 @@ const nextConfig: NextConfig = {
         protocol: "http",
         hostname: "localhost",
         port: "3000",
-        pathname: "/assets/**",
+        pathname: "/**",
+      },
+      {
+        protocol: "http",
+        hostname: "localhost",
+        port: "3001",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "**",
       },
     ],
+    domains: ['localhost'],
   },
 };
 

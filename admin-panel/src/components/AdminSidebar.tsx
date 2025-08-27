@@ -9,11 +9,13 @@ import {
   Settings,
   BarChart3,
   FolderTree,
+  Image,
 } from "lucide-react";
 
 const menuItems = [
   { name: "Dashboard", href: "/", icon: Home },
   { name: "Categories", href: "/categories", icon: FolderTree },
+  { name: "Sliders", href: "/sliders", icon: Image },
   { name: "Products", href: "/products", icon: Package },
   { name: "Orders", href: "/orders", icon: ShoppingCart },
   { name: "Customers", href: "/customers", icon: Users },
