@@ -65,43 +65,44 @@ export default function EventInspirations() {
   }
 
   return (
-    <section className="w-full max-w-6xl mx-auto mt-10 px-4 sm:px-6 lg:px-8">
-      <div className="flex items-end justify-between gap-4 mb-4 flex-wrap">
+    <section className="section-shell mt-12">
+      <div className="flex items-end justify-between gap-4 mb-6 flex-wrap">
         <div>
-          <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">Event Inspirations</h2>
-          <p className="mt-1 text-sm text-slate-500 max-w-2xl">A mosaic of past setups to showcase our style and spark ideas — tap any image to enlarge.</p>
+          <div className="pill mb-3">Atelier stories</div>
+          <h2 className="text-2xl md:text-3xl font-semibold text-slate-900 tracking-tight">Event Inspirations</h2>
+          <p className="mt-1 text-sm text-slate-600 max-w-2xl">A mosaic of past setups to showcase our style — tap any image to enlarge and envision your soirée.</p>
         </div>
         <div className="flex gap-3 items-center">
-          <Link href="#contact" className="text-olive-green font-medium hover:underline focus:outline-none focus:ring-2 focus:ring-olive-green/30 rounded px-2 py-1">Inquire About Events</Link>
+          <Link href="#contact" className="text-olive-green font-semibold underline-offset-4 hover:underline focus:outline-none focus:ring-2 focus:ring-olive-green/30 rounded px-2 py-1">Inquire About Events</Link>
         </div>
       </div>
 
       {/* Masonry-like columns using CSS columns */}
       <div className="columns-2 sm:columns-3 md:columns-4 gap-4">
         {items.slice(0, 10).map((it, i) => (
-          <div key={it.id} className="break-inside-avoid mb-4 relative rounded-lg overflow-hidden cursor-pointer" onClick={() => openAt(i)} role="button" aria-label={`Open ${it.caption}`}>
-            <Image src={it.src} alt={it.caption} className="w-full h-auto block rounded-lg shadow-sm" />
+          <div key={it.id} className="break-inside-avoid mb-4 relative rounded-xl overflow-hidden cursor-pointer shadow-[0_18px_40px_rgba(24,20,13,0.14)]" onClick={() => openAt(i)} role="button" aria-label={`Open ${it.caption}`}>
+            <Image src={it.src} alt={it.caption} className="w-full h-auto block rounded-xl" />
 
-            <div className="absolute left-2 bottom-2 bg-black/50 text-white text-xs px-2 py-1 rounded-md">{it.caption}</div>
+            <div className="absolute left-2 bottom-2 bg-black/55 text-white text-[11px] px-2.5 py-1 rounded-full shadow">{it.caption}</div>
 
             {/* subtle watermark */}
-            <div className="absolute right-2 bottom-2 text-[10px] text-white/60 pointer-events-none select-none">Florist Co.</div>
+            <div className="absolute right-3 top-3 text-[10px] uppercase tracking-[0.2em] text-white/70 pointer-events-none select-none">1ML Atelier</div>
           </div>
         ))}
       </div>
 
       {/* Lightbox */}
       {open && index !== null && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <button aria-label="Close" onClick={() => setOpen(false)} className="absolute top-4 right-4 text-white p-2 rounded-md hover:bg-white/10">✕</button>
 
           <button aria-label="Previous" onClick={prev} className="absolute left-4 top-1/2 -translate-y-1/2 text-white p-2 rounded-md hover:bg-white/10">‹</button>
           <div className="max-w-[90vw] max-h-[85vh] w-full flex items-center justify-center">
-            <Image src={items[index].src} alt={items[index].caption} className="max-w-full max-h-full rounded-lg shadow-xl object-contain" />
+            <Image src={items[index].src} alt={items[index].caption} className="max-w-full max-h-full rounded-2xl shadow-[0_32px_90px_rgba(0,0,0,0.35)] object-contain" />
           </div>
           <button aria-label="Next" onClick={next} className="absolute right-4 top-1/2 -translate-y-1/2 text-white p-2 rounded-md hover:bg-white/10">›</button>
 
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-sm text-white/90 bg-black/40 px-3 py-1 rounded-md">{items[index].caption}</div>
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-sm text-white/90 bg-black/45 px-3 py-1 rounded-full shadow">{items[index].caption}</div>
         </div>
       )}
     </section>

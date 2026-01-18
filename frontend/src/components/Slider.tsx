@@ -53,18 +53,74 @@ type Slide = {
   /* if true, use a single position and stack all items vertically at that position */
   combined?: boolean;
   };
+  /* routing configuration */
+  routing?: {
+    behavior?: 'complete-image-and-button' | 'button-only' | 'whole-image';
+  };
 };
 
 // default static slides used as a safe fallback
 const staticSlides: Slide[] = [
-  { id: 0, img: slider1, alt: 'Birthday bouquet', bg: 'from-amber-50 to-amber-100', overlay: { combined: true, position: 'center-right', eyebrow: 'BRIGHTEN THEIR SPECIAL DAY', title: 'Birthday', subtitle: 'FLOWERS', cta: { label: 'Shop Birthday', href: '#' }, textColor: '#1f2937', button: { bg: '#065f46', text: '#ffffff' } } },
-  { id: 1, img: slider2, alt: 'Handpicked bouquets', bg: 'from-pink-50 to-pink-100', overlay: { combined: true, position: 'center', eyebrow: 'HANDPICKED BOUQUETS', title: 'Fresh', subtitle: 'ARRIVALS', cta: { label: 'Explore Now', href: '#' }, textClass: 'text-white', buttonClass: 'inline-block bg-white text-pink-600 px-5 py-2 rounded-md shadow hover:opacity-95' } },
-  { id: 2, img: slider3, alt: 'Window arrangement', bg: 'from-green-50 to-green-100' },
-  { id: 3, img: slider4, alt: 'Autumn specials', bg: 'from-indigo-50 to-indigo-100', overlay: { combined: true, position: 'bottom-right', eyebrow: 'LIMITED TIME', title: 'Autumn Specials', subtitle: 'Curated arrangements', cta: { label: 'See Offers', href: '#' } } },
-  { id: 4, img: slider5, alt: 'Track order CTA', bg: 'from-yellow-50 to-yellow-100', overlay: { position: 'center', cta: { label: 'Track Order', href: '#' }, itemPosition: { cta: 'bottom-center' } } },
-  { id: 5, img: slider6, alt: 'New collections', bg: 'from-teal-50 to-teal-100', overlay: { position: 'center', title: 'New Collections' } },
-  { id: 6, img: slider7, alt: 'Personalised gifts', bg: 'from-rose-50 to-rose-100', overlay: { position: 'center-right', eyebrow: 'DISCOVER', title: 'Personalised Gifts', subtitle: 'Built with care', cta: { label: 'Customize', href: '#' }, itemPosition: { eyebrow: 'top-left', title: 'top-center', subtitle: 'center-left', cta: 'bottom-center' } } },
-  { id: 7, img: slider8, alt: 'Decorative', bg: 'from-lime-50 to-lime-100' },
+  {
+    id: 0,
+    img: slider1,
+    alt: 'Rebecca Purple bouquet',
+    bg: 'from-[#f8f1e8] via-[#f4e7dc] to-[#efe0d2]',
+    overlay: {
+      combined: true,
+      position: 'center-left',
+      eyebrow: 'Luxe limited drop',
+      title: 'Rebecca Purple',
+      subtitle: 'Hand-tied, velvet ribboned, crafted for luminous evenings.',
+      cta: { label: 'View Collection', href: '/products' },
+      textClass: 'text-[#1f1c19]',
+      buttonClass: 'inline-block bg-[#4a3b2a] text-white px-6 py-2.5 rounded-full shadow-md hover:shadow-lg hover:-translate-y-0.5 transition'
+    },
+  },
+  {
+    id: 1,
+    img: slider2,
+    alt: 'Forever florals',
+    bg: 'from-[#f3e9de] via-[#f8f2e9] to-[#efe0d2]',
+    overlay: {
+      combined: true,
+      position: 'center-right',
+      eyebrow: 'Forever collection',
+      title: 'Preserved stems that linger',
+      subtitle: 'Muse-worthy palettes, artisanal packaging, delivered same-day.',
+      cta: { label: 'Shop Forever', href: '/products?collection=autumn-rustic' },
+      textClass: 'text-[#2c261f]',
+      buttonClass: 'inline-block bg-white text-[#4a3b2a] px-5 py-2 rounded-full shadow hover:bg-[#f5ede2] border border-[#4a3b2a]/10'
+    },
+  },
+  {
+    id: 2,
+    img: slider3,
+    alt: 'Signature hampers',
+    bg: 'from-[#efe6db] via-[#f7f1e8] to-[#f4e7dc]',
+    overlay: {
+      combined: true,
+      position: 'center',
+      eyebrow: 'Gifting, refined',
+      title: 'Curated hampers with soul',
+      subtitle: 'Candles, keepsakes, artisanal chocolates with blooms.',
+      cta: { label: 'Build a hamper', href: '/products' },
+    },
+  },
+  {
+    id: 3,
+    img: slider4,
+    alt: 'Atelier service',
+    bg: 'from-[#f4ece2] via-[#f8f2e9] to-[#efe0d2]',
+    overlay: {
+      combined: true,
+      position: 'bottom-right',
+      eyebrow: 'Atelier concierge',
+      title: 'Installations & soirées',
+      subtitle: 'Bespoke floral storytelling for events across NCR & Mumbai.',
+      cta: { label: 'Book a consult', href: '/contact' },
+    },
+  },
 ];
 
 export default function Slider() {
@@ -85,6 +141,8 @@ export default function Slider() {
         // map backend slider shape to Slide[]
         const mapped: Slide[] = data.map((s: any, i: number) => {
           const cfg = s.config ?? {};
+          console.log('Slider config:', JSON.stringify(cfg, null, 2));
+          console.log('Slider routing:', cfg.routing);
           const overlayFromCfg = (() => {
             if (cfg.overlay) {
               const pos = (cfg.overlay.position ?? 'center') as Position;
@@ -119,6 +177,10 @@ export default function Slider() {
             img: s.image ?? undefined,
             bg: cfg.bg ?? undefined,
             overlay: overlayFromCfg,
+            routing: cfg.routing ? {
+              behavior: (cfg.routing.behavior === 'whole-image' ? 'complete-image-and-button' : 
+                       (cfg.routing.behavior === 'button-only' ? 'button-only' : 'complete-image-and-button')) as 'complete-image-and-button' | 'button-only'
+            } : { behavior: 'complete-image-and-button' },
           };
         });
         setRemoteSlides(mapped);
@@ -147,12 +209,12 @@ export default function Slider() {
 
   return (
     <section
-      className="w-full max-w-6xl mx-auto rounded-2xl overflow-hidden bg-transparent"
+      className="w-full max-w-screen-xl mx-auto rounded-[28px] overflow-hidden bg-transparent shadow-[0_30px_70px_rgba(24,20,13,0.12)]"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       aria-roledescription="carousel"
     >
-      <div className="relative h-56 sm:h-72 md:h-96 lg:h-80 xl:h-96">
+      <div className="relative h-[420px] sm:h-[520px] md:h-[560px] lg:h-[520px] xl:h-[600px]">
   {slides.map((s: Slide, i: number) => (
           <div
             key={s.id}
@@ -161,7 +223,17 @@ export default function Slider() {
             }`}
             aria-hidden={i === index ? 'false' : 'true'}
           >
-            <div className={`absolute inset-0 bg-gradient-to-r ${s.bg || ''} bg-opacity-75`} />
+            {/* Whole image link when routing behavior is 'complete-image-and-button' or legacy 'whole-image' */}
+            {(s.routing?.behavior === 'complete-image-and-button' || s.routing?.behavior === 'whole-image') && s.overlay?.cta?.href && (
+              <a
+                href={s.overlay.cta.href}
+                className="absolute inset-0 z-10"
+                target="_blank"
+                rel="noopener noreferrer"
+              />
+            )}
+            
+            <div className={`absolute inset-0 bg-gradient-to-r ${s.bg || ''} bg-opacity-90`} />
             {s.img && (
               <div className="absolute inset-0">
                 <Image
@@ -223,7 +295,7 @@ export default function Slider() {
                           {s.overlay.subtitle && <p style={textStyle} className={subtitleClass}>{s.overlay.subtitle}</p>}
                           {s.overlay.cta && (
                             <div className="mt-4">
-                              {s.overlay.cta.href ? (
+                              {s.routing?.behavior === 'button-only' && s.overlay.cta.href ? (
                                 <a href={s.overlay.cta.href} style={s.overlay.button ? btnStyle : undefined} className={btnClass}>{s.overlay.cta.label}</a>
                               ) : (
                                 <button style={s.overlay.button ? btnStyle : undefined} className={btnClass}>{s.overlay.cta.label}</button>
@@ -259,7 +331,7 @@ export default function Slider() {
                         const btnStyle = s.overlay?.button ? { backgroundColor: s.overlay.button.bg, color: s.overlay.button.text } : undefined;
                         const defaultBtnClass = 'inline-block bg-olive-green text-white px-5 py-2 rounded-md shadow hover:opacity-95';
                         const btnClass = s.overlay?.buttonClass ?? defaultBtnClass;
-                        return s.overlay!.cta!.href ? (
+                        return s.routing?.behavior === 'button-only' && s.overlay!.cta!.href ? (
                           <a href={s.overlay!.cta!.href} style={s.overlay?.button ? btnStyle : undefined} className={btnClass}>{s.overlay!.cta!.label}</a>
                         ) : (
                           <button style={s.overlay?.button ? btnStyle : undefined} className={btnClass}>{s.overlay!.cta!.label}</button>

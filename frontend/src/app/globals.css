@@ -1,28 +1,61 @@
 @import "tailwindcss";
 
 :root {
-  --background: #FAF3E7;
-  --foreground: #0a0a0a;
+  --background: #f7f2ea;
+  --foreground: #1b1a17;
+  --accent: #4a3b2a;
+  --accent-muted: #846953;
+  --pill: #f1e4d4;
+  --card: #ffffff;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #FAF3E7;
-    --foreground: #0a0a0a;
+    --background: #f7f2ea;
+    --foreground: #1b1a17;
   }
 }
 
 body {
-  background: var(--background);
+  background: radial-gradient(circle at 10% 20%, rgba(255,244,230,0.65), transparent 35%),
+              radial-gradient(circle at 80% 0%, rgba(233,215,196,0.5), transparent 38%),
+              var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-playfair-display, var(--font-sans));
+  letter-spacing: -0.01em;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--pill);
+  color: var(--accent);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 11px;
+}
+
+.section-shell {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+}
+
+.section-card {
+  background: var(--card);
+  border-radius: 18px;
+  border: 1px solid rgba(0,0,0,0.05);
+  box-shadow: 0 24px 60px rgba(24,20,13,0.08);
 }
 
 /* Skip link for keyboard users */
@@ -43,12 +76,12 @@ body {
 
 /* Classic / modern navbar utilities used across the app */
 :root {
-  --nav-bg: var(--background);
+  --nav-bg: rgba(255,255,255,0.9);
   --nav-border: rgba(0,0,0,0.06);
-  --nav-shadow: rgba(0,0,0,0.04);
-  --nav-height: 76px;
+  --nav-shadow: rgba(24,20,13,0.06);
+  --nav-height: 82px;
   /* reduced categories spacer to tighten gap beneath navbar */
-  --categories-height: 32px;
+  --categories-height: 28px;
 }
 
 .navbar {

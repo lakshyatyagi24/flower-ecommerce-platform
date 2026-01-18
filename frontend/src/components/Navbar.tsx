@@ -15,46 +15,46 @@ const Navbar = () => {
 
   return (
     <>
-      <nav className="navbar w-full" aria-label="Primary">
+      <nav className="navbar w-full backdrop-blur" aria-label="Primary">
         <div className="navbar-inner max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between w-full">
-            <div className="flex-none">
+            <div className="flex items-center gap-3 flex-none">
               <Logo />
+              <span className="hidden lg:inline text-xs tracking-[0.18em] uppercase text-olive-green/70">Bespoke floral atelier</span>
             </div>
 
-            <div className="hidden md:flex items-center justify-center flex-1 gap-x-12">
+            <div className="hidden md:flex items-center justify-center flex-1 gap-x-10">
               <ul className="flex items-center gap-x-6" role="menubar" aria-label="Primary pages">
-                <li role="none"><Link href="/" role="menuitem" className="nav-link px-2 py-1 rounded-md text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40">Home</Link></li>
-                <li role="none"><Link href="/about" role="menuitem" className="nav-link px-2 py-1 rounded-md text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40">About</Link></li>
-                <li role="none"><Link href="/contact" role="menuitem" className="nav-link px-2 py-1 rounded-md text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40">Contact</Link></li>
+                <li role="none"><Link href="/" role="menuitem" className="nav-link px-2 py-1 rounded-md text-[13px] font-semibold tracking-wide uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40">Home</Link></li>
+                <li role="none"><Link href="/products" role="menuitem" className="nav-link px-2 py-1 rounded-md text-[13px] font-semibold tracking-wide uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40">Shop</Link></li>
+                <li role="none"><Link href="/about" role="menuitem" className="nav-link px-2 py-1 rounded-md text-[13px] font-semibold tracking-wide uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40">About</Link></li>
+                <li role="none"><Link href="/contact" role="menuitem" className="nav-link px-2 py-1 rounded-md text-[13px] font-semibold tracking-wide uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40">Contact</Link></li>
               </ul>
 
-              <div className="max-w-lg w-full">
-                <div className="search-input">
+              <div className="max-w-md w-full">
+                <div className="search-input ring-1 ring-olive-green/10">
                   <SearchBar />
                 </div>
               </div>
             </div>
 
-            <div className="hidden md:flex items-center gap-x-4 flex-none">
-              <div className="flex items-center gap-x-3 whitespace-nowrap">
-                <Link href="/track-order" className="flex items-center text-olive-green/80 hover:text-olive-green px-2 py-1 rounded-md text-sm font-medium whitespace-nowrap flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40" aria-label="Track Order">
-                  <Image src="/track-order-icon.svg" alt="Track Order" width={20} height={20} className="w-5 h-5 mr-2 transition-transform hover:scale-110"/>
-                  <span className="hidden md:inline">{'Track\u00A0Order'}</span>
-                </Link>
-                <div className="flex items-center text-olive-green">
-                  <Cart />
-                </div>
-                <div className="flex items-center text-olive-green/70">
-                  <CurrencySelector />
-                </div>
-                <div className="flex items-center">
-                  <UserSignIn />
-                </div>
-                <div className="h-6 w-px bg-olive-green/20 mx-3" aria-hidden />
-                <div className="flex items-center min-w-[170px]">
-                  <LocationSelector />
-                </div>
+            <div className="hidden md:flex items-center gap-x-3 flex-none">
+              <Link href="/track-order" className="flex items-center text-olive-green/80 hover:text-olive-green px-2 py-1 rounded-md text-sm font-medium whitespace-nowrap flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40" aria-label="Track Order">
+                <Image src="/track-order-icon.svg" alt="Track Order" width={20} height={20} className="w-5 h-5 mr-2 transition-transform hover:scale-110"/>
+                <span className="hidden md:inline">{'Track\u00A0Order'}</span>
+              </Link>
+              <div className="flex items-center text-olive-green">
+                <Cart />
+              </div>
+              <div className="flex items-center text-olive-green/70">
+                <CurrencySelector />
+              </div>
+              <div className="flex items-center">
+                <UserSignIn />
+              </div>
+              <div className="h-6 w-px bg-olive-green/20 mx-2" aria-hidden />
+              <div className="hidden lg:flex items-center min-w-[170px] px-3 py-2 rounded-full bg-white/80 border border-olive-green/10 shadow-sm">
+                <LocationSelector />
               </div>
             </div>
 
@@ -82,14 +82,15 @@ const Navbar = () => {
         </div>
 
   {isMobileMenuOpen && (
-          <div className="md:hidden" id="mobile-menu">
-            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3" role="menu" aria-label="Mobile primary">
-              <div className="mb-2">
+          <div className="md:hidden bg-white/95 border-t border-olive-green/10" id="mobile-menu">
+            <div className="px-2 pt-3 pb-4 space-y-1 sm:px-3" role="menu" aria-label="Mobile primary">
+              <div className="mb-3 shadow-sm">
                 <SearchBar />
               </div>
-              <Link href="/" role="menuitem" className="text-olive-green hover:text-light-brown block px-3 py-2 rounded-md text-base font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40">Home</Link>
-              <Link href="/about" role="menuitem" className="text-olive-green hover:text-light-brown block px-3 py-2 rounded-md text-base font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40">About</Link>
-              <Link href="/contact" role="menuitem" className="text-olive-green hover:text-light-brown block px-3 py-2 rounded-md text-base font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40">Contact</Link>
+              <Link href="/" role="menuitem" className="text-olive-green hover:text-light-brown block px-3 py-2 rounded-md text-base font-semibold uppercase tracking-wide focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40">Home</Link>
+              <Link href="/products" role="menuitem" className="text-olive-green hover:text-light-brown block px-3 py-2 rounded-md text-base font-semibold uppercase tracking-wide focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40">Shop</Link>
+              <Link href="/about" role="menuitem" className="text-olive-green hover:text-light-brown block px-3 py-2 rounded-md text-base font-semibold uppercase tracking-wide focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40">About</Link>
+              <Link href="/contact" role="menuitem" className="text-olive-green hover:text-light-brown block px-3 py-2 rounded-md text-base font-semibold uppercase tracking-wide focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40">Contact</Link>
               <Link href="/track-order" role="menuitem" className="flex items-center text-olive-green hover:text-light-brown px-3 py-2 rounded-md text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40" aria-label="Track Order mobile">
                 <Image src="/track-order-icon.svg" alt="Track Order" width={20} height={20} className="mr-2"/>
                 Track Order
@@ -98,7 +99,7 @@ const Navbar = () => {
               <CurrencySelector />
               <UserSignIn />
             </div>
-            <div className="px-2 pt-2 pb-3">
+            <div className="px-2 pt-2 pb-4">
               <LocationSelector />
             </div>
           </div>

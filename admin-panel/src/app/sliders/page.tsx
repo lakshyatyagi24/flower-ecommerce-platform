@@ -45,6 +45,9 @@ interface SliderConfig {
     contentWidth?: 'full' | 'container' | 'narrow';
     verticalAlign?: 'top' | 'center' | 'bottom';
   };
+  routing?: {
+    behavior?: 'complete-image-and-button' | 'button-only' | 'whole-image';
+  };
 }
 
 interface SliderFormData {
@@ -92,6 +95,9 @@ export default function SlidersPage() {
       layout: {
         contentWidth: 'container',
         verticalAlign: 'center',
+      },
+      routing: {
+        behavior: 'complete-image-and-button',
       },
     },
     sortOrder: '',
@@ -203,6 +209,9 @@ export default function SlidersPage() {
           contentWidth: 'container',
           verticalAlign: 'center',
         },
+        routing: {
+          behavior: 'complete-image-and-button',
+        },
       },
       sortOrder: '',
       active: true,
@@ -246,7 +255,16 @@ export default function SlidersPage() {
           cleanedConfig.layout = formData.config.layout;
         }
         
-        configJson = cleanedConfig;
+        if (formData.config.routing && Object.values(formData.config.routing).some(v => v !== undefined)) {
+          cleanedConfig.routing = formData.config.routing;
+        }
+        
+        // If cleanedConfig has any properties, use it; otherwise, check if we have routing to include
+        if (Object.keys(cleanedConfig).length > 0) {
+          configJson = cleanedConfig;
+        } else if (formData.config.routing && Object.values(formData.config.routing).some(v => v !== undefined)) {
+          configJson = { routing: formData.config.routing };
+        }
       }
 
       // Handle image upload or URL
@@ -345,6 +363,9 @@ export default function SlidersPage() {
         contentWidth: 'container',
         verticalAlign: 'center',
       },
+      routing: {
+        behavior: 'complete-image-and-button',
+      },
     };
 
     const parsedConfig = slider.config ? { ...defaultConfig, ...slider.config } as SliderConfig : defaultConfig;
@@ -386,6 +407,9 @@ export default function SlidersPage() {
       layout: {
         contentWidth: 'container',
         verticalAlign: 'center',
+      },
+      routing: {
+        behavior: 'complete-image-and-button',
       },
     };
 
@@ -489,6 +513,9 @@ export default function SlidersPage() {
       layout: {
         contentWidth: 'container',
         verticalAlign: 'center',
+      },
+      routing: {
+        behavior: 'complete-image-and-button',
       },
     };
 
@@ -1004,6 +1031,37 @@ export default function SlidersPage() {
                     )}
                   </div>
 
+                  {/* Routing Settings */}
+                  <div className="space-y-3 p-4 border rounded-lg">
+                    <Label className="text-sm font-medium">Routing Settings</Label>
+                    <div>
+                      <Label htmlFor="routing-behavior">Routing Behavior</Label>
+                      <Select
+                        value={formData.config.routing?.behavior || 'complete-image-and-button'}
+                        onValueChange={(value) => setFormData({
+                          ...formData,
+                          config: {
+                            ...formData.config,
+                            routing: {
+                              behavior: value as 'complete-image-and-button' | 'button-only',
+                            },
+                          },
+                        })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="complete-image-and-button">Complete Image & Button</SelectItem>
+                          <SelectItem value="button-only">Button Only</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Choose whether the entire slider image/content and button should be clickable or only the button.
+                      </p>
+                    </div>
+                  </div>
+
                   {/* Layout Settings */}
                   <div className="space-y-3 p-4 border rounded-lg">
                     <Label className="text-sm font-medium">Layout Settings</Label>
@@ -1106,6 +1164,16 @@ export default function SlidersPage() {
                 
                 {/* Slider Preview */}
                 <div className="relative w-full h-96 bg-gray-100 rounded-lg overflow-hidden">
+                  {(((previewData || formData).config.routing?.behavior === 'complete-image-and-button') || ((previewData || formData).config.routing?.behavior === 'whole-image')) && (previewData || formData).href ? (
+                    <a
+                      href={(previewData || formData).href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="absolute inset-0 z-10"
+                      title="Click to navigate"
+                    />
+                  ) : null}
+                  
                   {/* Background Image */}
                   {(previewData || formData).image && (
                     <div
@@ -1158,17 +1226,37 @@ export default function SlidersPage() {
                           <div className={`${
                             (previewData || formData).config.button?.position === 'below' ? 'mt-6' : ''
                           }`}>
-                            <button
-                              className={`px-6 py-3 rounded font-medium transition-colors ${
-                                (previewData || formData).config.button?.style === 'primary' ? 
-                                  'bg-blue-600 text-white hover:bg-blue-700' :
-                                (previewData || formData).config.button?.style === 'secondary' ?
-                                  'bg-gray-600 text-white hover:bg-gray-700' :
-                                  'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                              }`}
-                            >
-                              {(previewData || formData).config.button?.text || 'Learn More'}
-                            </button>
+                            {(previewData || formData).config.routing?.behavior === 'button-only' && (previewData || formData).href ? (
+                              <a
+                                href={(previewData || formData).href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <button
+                                  className={`px-6 py-3 rounded font-medium transition-colors ${
+                                    (previewData || formData).config.button?.style === 'primary' ? 
+                                      'bg-blue-600 text-white hover:bg-blue-700' :
+                                    (previewData || formData).config.button?.style === 'secondary' ?
+                                      'bg-gray-600 text-white hover:bg-gray-700' :
+                                      'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  {(previewData || formData).config.button?.text || 'Learn More'}
+                                </button>
+                              </a>
+                            ) : (
+                              <button
+                                className={`px-6 py-3 rounded font-medium transition-colors ${
+                                  (previewData || formData).config.button?.style === 'primary' ? 
+                                    'bg-blue-600 text-white hover:bg-blue-700' :
+                                  (previewData || formData).config.button?.style === 'secondary' ?
+                                    'bg-gray-600 text-white hover:bg-gray-700' :
+                                    'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                                }`}
+                              >
+                                {(previewData || formData).config.button?.text || 'Learn More'}
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>
@@ -1203,6 +1291,7 @@ export default function SlidersPage() {
                       <div>Image: {(previewData || formData).image ? ((previewData || formData).imageUploadMethod === 'upload' ? 'Uploaded' : 'URL') : 'None'}</div>
                       <div>Overlay: {(previewData || formData).config.overlay ? 'Enabled' : 'Disabled'}</div>
                       <div>Button: {(previewData || formData).config.button?.show ? 'Enabled' : 'Disabled'}</div>
+                      <div>Routing: {((previewData || formData).config.routing?.behavior === 'complete-image-and-button') || ((previewData || formData).config.routing?.behavior === 'whole-image') ? 'Complete Image & Button' : 'Button Only'}</div>
                       <div>Status: {(previewData || formData).active ? 'Active' : 'Inactive'}</div>
                     </div>
                   </div>

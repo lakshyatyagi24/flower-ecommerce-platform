@@ -56,20 +56,26 @@ const tiles: Tile[] = [
 
 export default function QuickFinder() {
   return (
-    <section className="w-full max-w-6xl mx-auto mt-6 mb-6 px-4">
-      <h2 className="sr-only">Shop by occasion</h2>
+    <section className="section-shell mt-10 mb-8">
+      <div className="flex items-center justify-between mb-4">
+        <div className="pill">Shop by feeling</div>
+        <span className="text-xs uppercase tracking-[0.14em] text-olive-green/70">Concierge curation</span>
+      </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {tiles.map((t) => (
           <Link
             key={t.id}
             href={t.href}
             aria-label={`Shop ${t.label}`}
-            className="flex items-center gap-3 p-3 bg-white shadow-sm rounded-lg hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-olive-green"
+            className="flex items-center gap-3 p-4 section-card hover:-translate-y-0.5 transition transform hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-olive-green/30"
           >
-            <div className="w-12 h-12 flex items-center justify-center rounded-md bg-rose-50 text-rose-600">
+            <div className="w-12 h-12 flex items-center justify-center rounded-full bg-[#f1e4d4] text-olive-green">
               <t.Icon className="w-6 h-6" />
             </div>
-            <span className="text-sm font-medium text-slate-800">{t.label}</span>
+            <div className="flex flex-col">
+              <span className="text-[13px] uppercase tracking-[0.12em] text-olive-green/70">Occasion</span>
+              <span className="text-base font-semibold text-slate-900">{t.label}</span>
+            </div>
           </Link>
         ))}
       </div>

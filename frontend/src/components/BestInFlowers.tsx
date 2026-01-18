@@ -71,11 +71,12 @@ const BestInFlowers: React.FC = () => {
   }
 
   return (
-    <section className="w-full max-w-6xl mx-auto mt-10 px-4 sm:px-6 lg:px-8">
-      <div className="flex items-end justify-between gap-4 mb-4 flex-wrap">
+    <section className="section-shell mt-12">
+      <div className="flex items-end justify-between gap-4 mb-6 flex-wrap">
         <div>
-          <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">Best In Flowers</h2>
-          <p className="mt-1 text-sm text-slate-500">Curated favourites with thoughtful styling & seasonal freshness.</p>
+          <div className="pill mb-3">1ML recommends</div>
+          <h2 className="text-3xl md:text-4xl font-semibold text-slate-900 tracking-tight">Best in florals</h2>
+          <p className="mt-1 text-sm text-slate-600">Curated favourites with textured wrapping, layered purples, and fresh stems.</p>
         </div>
         <div className="flex gap-2 items-center">
           <button onClick={() => scrollByDir(-1)} disabled={!canScroll.left} aria-label="Scroll left" className={`w-9 h-9 rounded-full border border-slate-200 flex items-center justify-center bg-white/90 backdrop-blur-sm shadow-sm disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40`}>

@@ -44,33 +44,38 @@ export default function NewArrivals() {
   }
 
   return (
-    <section className="w-full max-w-6xl mx-auto mt-8 px-4 sm:px-6 lg:px-8">
-      <div className="flex items-end justify-between gap-4 mb-4 flex-wrap">
+    <section className="section-shell mt-12">
+      <div className="flex items-end justify-between gap-4 mb-6 flex-wrap">
         <div>
-          <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">New Arrivals</h2>
-          <p className="mt-1 text-sm text-slate-500">Freshly added bouquets & seasonal stems to discover.</p>
+          <div className="pill mb-3">Just in</div>
+          <h2 className="text-3xl md:text-4xl font-semibold text-slate-900 tracking-tight">New Arrivals</h2>
+          <p className="mt-1 text-sm text-slate-600">Freshly added bouquets & seasonal stems with velvet ribboning.</p>
         </div>
         <div className="flex gap-3 items-center">
-          <Link href="#" className="text-olive-green font-medium hover:underline focus:outline-none focus:ring-2 focus:ring-olive-green/30 rounded px-2 py-1">View All</Link>
+          <Link href="#" className="text-olive-green font-semibold underline-offset-4 hover:underline focus:outline-none focus:ring-2 focus:ring-olive-green/30 rounded px-2 py-1">View All</Link>
         </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {products.map((p) => (
-          <article key={p.id} className="bg-white rounded-2xl shadow-sm border border-olive-green/10 overflow-hidden flex flex-col">
-            <div className="relative w-full h-44 sm:h-48">
-              {p.badge && <span className="absolute top-3 left-3 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-medium shadow">{p.badge}</span>}
-              <Image src={p.img} alt={p.title} fill className="object-cover" />
+          <article key={p.id} className="section-card overflow-hidden flex flex-col group">
+            <div className="relative w-full h-44 sm:h-52">
+              {p.badge && <span className="absolute top-3 left-3 bg-white/95 backdrop-blur px-3 py-1 rounded-full text-[11px] font-semibold shadow">{p.badge}</span>}
+              <Image src={p.img} alt={p.title} fill className="object-cover transition duration-500 group-hover:scale-105" />
+              <div className="absolute inset-x-3 bottom-3 flex items-center justify-between text-[11px] text-white/90 opacity-0 group-hover:opacity-100 transition">
+                <span className="px-2 py-1 rounded-full bg-black/40">Same-day delivery</span>
+                <span className="px-2 py-1 rounded-full bg-black/40">Curated wrap</span>
+              </div>
             </div>
-            <div className="p-3 flex-1 flex flex-col">
-              <p className="text-[11px] uppercase tracking-wide text-olive-green/70 font-medium">{p.category}</p>
-              <h3 className="mt-1 font-semibold text-sm text-slate-900 line-clamp-2">{p.title}</h3>
+            <div className="p-4 flex-1 flex flex-col">
+              <p className="text-[11px] uppercase tracking-[0.14em] text-olive-green/70 font-semibold">{p.category}</p>
+              <h3 className="mt-1 font-semibold text-base text-slate-900 line-clamp-2">{p.title}</h3>
               <div className="mt-2 flex items-baseline gap-2">
                 <span className="font-bold text-slate-900">{p.price}</span>
               </div>
 
               <div className="mt-3 flex items-center gap-2">
-                <button onClick={() => handleAdd(p.id)} aria-pressed={!!adding[p.id]} className={`flex-1 inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-white shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40 transition ${adding[p.id] ? 'opacity-90' : 'hover:opacity-95'}`} style={{ backgroundColor: adding[p.id] ? '#6F7750' : '#7C835A' }}>
+                <button onClick={() => handleAdd(p.id)} aria-pressed={!!adding[p.id]} className={`flex-1 inline-flex items-center justify-center gap-2 rounded-full px-3 py-2 text-sm font-semibold text-white shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40 transition ${adding[p.id] ? 'opacity-90' : 'hover:-translate-y-0.5 hover:shadow-md'} bg-olive-green`}>
                   {adding[p.id] ? (
                     <>
                       <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -89,7 +94,7 @@ export default function NewArrivals() {
                     </>
                   )}
                 </button>
-                <button onClick={() => handleWishlist(p.id)} aria-label={`Wishlist ${p.title}`} className={`w-10 h-10 inline-flex items-center justify-center rounded-md border border-slate-200 text-slate-500 hover:text-rose-500 hover:border-rose-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300 transition ${wishlisted[p.id] ? 'bg-rose-50 text-rose-500 border-rose-300' : ''}`}>
+                <button onClick={() => handleWishlist(p.id)} aria-label={`Wishlist ${p.title}`} className={`w-10 h-10 inline-flex items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:text-rose-500 hover:border-rose-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-300 transition ${wishlisted[p.id] ? 'bg-rose-50 text-rose-500 border-rose-300' : ''}`}>
                   {wishlisted[p.id] ? (
                     <svg className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor"><path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 18.657l-6.828-6.829a4 4 0 010-5.656z"/></svg>
                   ) : (
