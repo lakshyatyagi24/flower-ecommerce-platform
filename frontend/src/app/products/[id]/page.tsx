@@ -4,6 +4,12 @@ import { notFound } from "next/navigation";
 import { products } from "@/lib/products";
 import Link from "next/link";
 
+export async function generateStaticParams() {
+  return products.map((product) => ({
+    id: product.id,
+  }));
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function ProductPage(props: any) {
   const id = props?.params?.id as string;
