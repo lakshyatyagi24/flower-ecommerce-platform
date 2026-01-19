@@ -1,4 +1,5 @@
 const nextConfig = {
+  output: "standalone",
   images: {
     remotePatterns: [
       {
@@ -18,7 +19,7 @@ const nextConfig = {
         hostname: "**",
       },
     ],
-    domains: ['localhost'],
+    domains: ["localhost"],
   },
 };
 
