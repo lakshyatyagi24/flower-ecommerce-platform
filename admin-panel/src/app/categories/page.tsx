@@ -38,7 +38,8 @@ export default function CategoriesPage() {
 
   const fetchCategories = useCallback(async () => {
     try {
-      const response = await fetch('http://localhost:3001/categories');
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${baseUrl}/categories`);
       if (!response.ok) {
         throw new Error('Failed to fetch categories');
       }
@@ -72,9 +73,10 @@ export default function CategoriesPage() {
         parentId: formData.parentId ? parseInt(formData.parentId) : undefined,
       };
 
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const url = editingCategory
-        ? `http://localhost:3001/categories/${editingCategory.id}`
-        : 'http://localhost:3001/categories';
+        ? `${baseUrl}/categories/${editingCategory.id}`
+        : `${baseUrl}/categories`;
 
       const method = editingCategory ? 'PUT' : 'POST';
 
@@ -147,7 +149,8 @@ export default function CategoriesPage() {
     setIsDeleting(id);
 
     try {
-      const response = await fetch(`http://localhost:3001/categories/${id}`, {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${baseUrl}/categories/${id}`, {
         method: 'DELETE',
       });
 

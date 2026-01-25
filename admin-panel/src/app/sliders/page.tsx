@@ -159,7 +159,8 @@ export default function SlidersPage() {
 
   const fetchSliders = useCallback(async () => {
     try {
-      const response = await fetch(`http://localhost:3001/sliders?includeInactive=${includeInactive}`);
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${baseUrl}/sliders?includeInactive=${includeInactive}`);
       if (!response.ok) {
         throw new Error('Failed to fetch sliders');
       }
@@ -304,13 +305,15 @@ export default function SlidersPage() {
 
       let response;
       if (editingSlider) {
-        response = await fetch(`http://localhost:3001/sliders/${editingSlider.id}`, {
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        response = await fetch(`${baseUrl}/sliders/${editingSlider.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
       } else {
-        response = await fetch('http://localhost:3001/sliders', {
+        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        response = await fetch(`${baseUrl}/sliders`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -436,7 +439,8 @@ export default function SlidersPage() {
   const handleDelete = async (id: number) => {
     setIsDeleting(id);
     try {
-      const response = await fetch(`http://localhost:3001/sliders/${id}`, {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${baseUrl}/sliders/${id}`, {
         method: 'DELETE',
       });
 
@@ -466,7 +470,8 @@ export default function SlidersPage() {
 
   const handleToggleActive = async (slider: Slider) => {
     try {
-      const response = await fetch(`http://localhost:3001/sliders/${slider.id}`, {
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${baseUrl}/sliders/${slider.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ active: !slider.active }),
@@ -549,13 +554,14 @@ export default function SlidersPage() {
 
     try {
       // Swap sort orders
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       await Promise.all([
-        fetch(`http://localhost:3001/sliders/${slider.id}`, {
+        fetch(`${baseUrl}/sliders/${slider.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sortOrder: targetSlider.sortOrder }),
         }),
-        fetch(`http://localhost:3001/sliders/${targetSlider.id}`, {
+        fetch(`${baseUrl}/sliders/${targetSlider.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sortOrder: slider.sortOrder }),
