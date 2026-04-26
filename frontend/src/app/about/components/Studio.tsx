@@ -6,60 +6,69 @@ import g2 from "../../../assets/gallery2.png";
 import g3 from "../../../assets/gallery3.png";
 import g4 from "../../../assets/gallery4.png";
 
-export default function Studio() {
-  const timeline = [
-    { step: "Sourcing", desc: "Careful selection of seasonal, local blooms." },
-    { step: "Design", desc: "Sketching and composing palettes by hand." },
-    { step: "Crafting", desc: "Hand-tying, wrapping, and finishing details." },
-    { step: "Delivery", desc: "Careful packaging and timely delivery." },
-  ];
+const process = [
+  {
+    step: "Farm sourcing",
+    desc: "We select blooms directly from partner farms — prioritising seasonal, locally-grown stems at peak freshness.",
+  },
+  {
+    step: "Quality grading",
+    desc: "Every batch is checked for stem integrity, colour vibrancy, and bud stage before packing.",
+  },
+  {
+    step: "Expert arranging",
+    desc: "Bouquets are hand-tied by our florists using proven techniques for balance, longevity, and visual impact.",
+  },
+  {
+    step: "Same-day delivery",
+    desc: "Packed in insulated boxes with flower food, dispatched by 4 PM for same-day delivery across major cities.",
+  },
+];
 
+export default function Studio() {
   return (
-    <section aria-labelledby="our-studio" className="mb-12">
-      <h2 id="our-studio" className="text-2xl font-semibold text-gray-900 mb-4">
-        Our Studio & Process
+    <section aria-labelledby="our-process" className="mb-14">
+      <div className="pill mb-3">How it works</div>
+      <h2 id="our-process" className="text-2xl md:text-3xl font-semibold text-slate-900 tracking-tight mb-2">
+        From Farm to Your Door
       </h2>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start mt-6">
         <div>
-          <p className="text-gray-600 mb-4">
-            We work in a small workshop where textures, color and scent guide every decision. Below are a few behind-the-scenes moments that show how arrangements come together.
+          <p className="text-slate-600 mb-5 text-sm leading-relaxed">
+            Every Fresh Petals India order follows a careful journey — from hand-picked farm blooms to beautifully arranged bouquets, packed and delivered the same day.
           </p>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="w-full h-40 rounded overflow-hidden">
-              <Image src={g1} alt="studio shot 1" className="object-cover w-full h-full" />
-            </div>
-            <div className="w-full h-40 rounded overflow-hidden">
-              <Image src={g2} alt="studio shot 2" className="object-cover w-full h-full" />
-            </div>
-            <div className="w-full h-40 rounded overflow-hidden">
-              <Image src={g3} alt="studio shot 3" className="object-cover w-full h-full" />
-            </div>
-            <div className="w-full h-40 rounded overflow-hidden">
-              <Image src={g4} alt="studio shot 4" className="object-cover w-full h-full" />
-            </div>
+            {[g1, g2, g3, g4].map((img, i) => (
+              <div key={i} className="w-full h-40 rounded-xl overflow-hidden shadow-sm">
+                <Image src={img} alt={`Fresh Petals India behind the scenes ${i + 1}`} className="object-cover w-full h-full" />
+              </div>
+            ))}
           </div>
         </div>
 
         <div>
-          <h3 className="text-lg font-medium text-gray-800 mb-3">Process timeline</h3>
-          <ol className="space-y-4 mb-6">
-            {timeline.map((t) => (
-              <li key={t.step} className="flex">
-                <div className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 mr-3 text-sm font-medium text-gray-700">{t.step[0]}</div>
+          <h3 className="text-base font-semibold text-slate-900 mb-4">Our process</h3>
+          <ol className="space-y-4">
+            {process.map((t, i) => (
+              <li key={t.step} className="flex gap-4">
+                <div className="w-10 h-10 flex items-center justify-center rounded-full bg-[#f1e4d4] text-[#4a3b2a] font-bold text-sm flex-shrink-0">
+                  {i + 1}
+                </div>
                 <div>
-                  <div className="font-medium text-gray-800">{t.step}</div>
-                  <div className="text-sm text-gray-600">{t.desc}</div>
+                  <div className="font-semibold text-slate-900 text-sm">{t.step}</div>
+                  <div className="text-sm text-slate-500 mt-0.5 leading-relaxed">{t.desc}</div>
                 </div>
               </li>
             ))}
           </ol>
 
-          <h3 className="text-lg font-medium text-gray-800 mb-2">Why we do it this way</h3>
-          <p className="text-gray-600">
-            Choosing local, seasonal blooms and crafting by hand lets us prioritize freshness, reduce waste, and offer unique designs rooted in each season. This slower approach ensures every piece feels intentional and personal.
-          </p>
+          <div className="mt-6 p-4 rounded-xl bg-[#f8f4ee] border border-olive-green/10">
+            <p className="text-sm text-slate-600 leading-relaxed">
+              <strong className="text-slate-800">Why direct from farms?</strong> Skipping wholesale markets means your flowers are 2–3 days fresher than those from traditional florists — and growers earn a fairer price.
+            </p>
+          </div>
         </div>
       </div>
     </section>
