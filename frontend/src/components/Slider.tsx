@@ -2,15 +2,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Image, { StaticImageData } from 'next/image';
-// import local assets (from src/assets)
-import slider1 from '../assets/slider1.png';
-import slider2 from '../assets/slider2.png';
-import slider3 from '../assets/slider3.png';
-import slider4 from '../assets/slider4.png';
-import slider5 from '../assets/slider5.png';
-import slider6 from '../assets/slider6.png';
-import slider7 from '../assets/slider7.png';
-import slider8 from '../assets/slider8.png';
 
 type Position =
   | 'top-left'
@@ -59,66 +50,66 @@ type Slide = {
   };
 };
 
-// default static slides used as a safe fallback
+// default static slides using real product images from theflora.in
 const staticSlides: Slide[] = [
   {
     id: 0,
-    img: slider1,
-    alt: 'Premium fresh cut flowers',
-    bg: 'from-[#f8f1e8] via-[#f4e7dc] to-[#efe0d2]',
+    img: 'https://cdn.shopify.com/s/files/1/0047/4637/9362/files/The_Flora_Banner.jpg?v=1727676100',
+    alt: 'Fresh flowers delivered across India',
     overlay: {
       combined: true,
       position: 'center-left',
-      eyebrow: 'Farm fresh blooms',
-      title: 'Premium Cut Flowers',
-      subtitle: 'Hand-selected stems delivered fresh — roses, orchids, sunflowers and more.',
-      cta: { label: 'Shop Flowers', href: '/products' },
-      textClass: 'text-[#1f1c19]',
-      buttonClass: 'inline-block bg-[#4a3b2a] text-white px-6 py-2.5 rounded-full shadow-md hover:shadow-lg hover:-translate-y-0.5 transition'
+      eyebrow: 'Farm fresh, delivered fast',
+      title: 'Flowers for Every Occasion',
+      subtitle: 'Hand-tied bouquets sourced from the finest Indian farms. Same-day delivery across 8+ cities.',
+      cta: { label: 'Shop Bouquets', href: '/products' },
+      textClass: 'text-white drop-shadow-md',
+      buttonClass: 'inline-block bg-white text-[#3d2c1e] px-6 py-2.5 rounded-full font-semibold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition',
     },
   },
   {
     id: 1,
-    img: slider2,
-    alt: 'Seasonal fresh flowers',
-    bg: 'from-[#f3e9de] via-[#f8f2e9] to-[#efe0d2]',
+    img: 'https://cdn.shopify.com/s/files/1/0047/4637/9362/products/WES_8950.jpg?v=1619006766',
+    alt: 'Sun Forest – Premium bouquet',
     overlay: {
       combined: true,
       position: 'center-right',
-      eyebrow: 'Weekly fresh arrivals',
-      title: "Nature's finest stems",
-      subtitle: 'Curated fresh flowers, sourced weekly from the best farms across India.',
+      eyebrow: 'New arrivals this week',
+      title: "Nature's Finest Stems",
+      subtitle: 'Seasonal blooms curated from trusted growers — roses, orchids, sunflowers and more.',
       cta: { label: 'See New Arrivals', href: '/products' },
-      textClass: 'text-[#2c261f]',
-      buttonClass: 'inline-block bg-white text-[#4a3b2a] px-5 py-2 rounded-full shadow hover:bg-[#f5ede2] border border-[#4a3b2a]/10'
+      textClass: 'text-white drop-shadow-md',
+      buttonClass: 'inline-block bg-[#4a3b2a] text-white px-6 py-2.5 rounded-full font-semibold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition',
     },
   },
   {
     id: 2,
-    img: slider3,
-    alt: 'Flower gifting hampers',
-    bg: 'from-[#efe6db] via-[#f7f1e8] to-[#f4e7dc]',
+    img: 'https://cdn.shopify.com/s/files/1/0047/4637/9362/files/IMG_4670.jpg?v=1706891407',
+    alt: 'Radiant Reverie – Blush bouquet',
     overlay: {
       combined: true,
-      position: 'center',
+      position: 'center-left',
       eyebrow: 'Gifting made beautiful',
-      title: 'Flowers & Gift Hampers',
-      subtitle: 'Pair fresh blooms with candles, chocolates, and keepsakes for the perfect gift.',
-      cta: { label: 'Shop Gifts', href: '/products' },
+      title: 'Bouquets She Will Love',
+      subtitle: 'Lush arrangements in blush and cream — perfect for anniversaries and birthdays.',
+      cta: { label: 'Shop Bouquets', href: '/products?category=bouquets' },
+      textClass: 'text-white drop-shadow-md',
+      buttonClass: 'inline-block bg-white text-[#7a2a3a] px-6 py-2.5 rounded-full font-semibold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition',
     },
   },
   {
     id: 3,
-    img: slider4,
-    alt: 'Event floral arrangements',
-    bg: 'from-[#f4ece2] via-[#f8f2e9] to-[#efe0d2]',
+    img: 'https://cdn.shopify.com/s/files/1/0047/4637/9362/products/TheFlora_AllTheColors_2.jpg?v=1665732723',
+    alt: 'A Riot of Colours – Vibrant mixed bouquet',
     overlay: {
       combined: true,
-      position: 'bottom-right',
+      position: 'center-right',
       eyebrow: 'Events & celebrations',
-      title: 'Fresh florals for every event',
-      subtitle: 'Weddings, birthdays, corporate events — beautiful arrangements delivered across India.',
-      cta: { label: 'Enquire Now', href: '/contact' },
+      title: 'Florals for Every Event',
+      subtitle: 'Weddings, birthdays, corporate setups — vibrant arrangements delivered pan-India.',
+      cta: { label: 'Book an Event', href: '/contact' },
+      textClass: 'text-white drop-shadow-md',
+      buttonClass: 'inline-block bg-olive-green text-white px-6 py-2.5 rounded-full font-semibold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition',
     },
   },
 ];
@@ -234,17 +225,19 @@ export default function Slider() {
               />
             )}
             
-            <div className={`absolute inset-0 bg-gradient-to-r ${s.bg || ''} bg-opacity-90`} />
+            <div className={`absolute inset-0 bg-gradient-to-r ${s.bg || 'from-black/10 to-black/10'}`} />
             {s.img && (
               <div className="absolute inset-0">
                 <Image
-                  src={typeof s.img === 'string' && s.img.startsWith('/') ? s.img : s.img as any}
+                  src={s.img as any}
                   alt={s.alt ?? s.overlay?.title ?? `slide-${s.id}`}
                   fill
-                  className="object-cover"
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 1152px"
+                  className="object-cover object-center"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 1280px"
                   priority={i === 0}
                 />
+                {/* dark scrim for text legibility on real photos */}
+                <div className="absolute inset-0 bg-black/30 pointer-events-none" />
               </div>
             )}
 
@@ -282,15 +275,16 @@ export default function Slider() {
                   if (s.overlay?.combined) {
                     const textStyle = s.overlay.textColor ? { color: s.overlay.textColor } : undefined;
                     const btnStyle = s.overlay.button ? { backgroundColor: s.overlay.button.bg, color: s.overlay.button.text } : undefined;
-                    const eyebrowClass = s.overlay.textClass ?? 'text-sm font-medium text-gray-600 tracking-widest mb-2';
-                    const titleClass = s.overlay.textClass ?? 'text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight';
-                    const subtitleClass = s.overlay.textClass ?? 'mt-2 text-xl sm:text-2xl font-semibold text-slate-700';
-                    const defaultBtnClass = 'inline-block bg-olive-green text-white px-5 py-2 rounded-md shadow hover:opacity-95';
+                    const colorClass = s.overlay.textClass ?? 'text-slate-900';
+                    const eyebrowClass = `text-xs font-semibold uppercase tracking-widest mb-2 ${colorClass}`;
+                    const titleClass = `text-3xl sm:text-4xl md:text-5xl font-extrabold leading-tight ${colorClass}`;
+                    const subtitleClass = `mt-2 text-sm sm:text-base font-medium max-w-sm ${colorClass} opacity-90`;
+                    const defaultBtnClass = 'inline-block bg-olive-green text-white px-5 py-2 rounded-full shadow hover:opacity-95';
                     const btnClass = s.overlay.buttonClass ?? defaultBtnClass;
 
                     return (
-                      <div className={`${mapPos(s.overlay.position)} max-w-3xl`}>
-                        <div className="flex flex-col items-start md:items-start lg:items-start text-left">
+                      <div className={`${mapPos(s.overlay.position)} max-w-sm sm:max-w-md px-6 sm:px-10`}>
+                        <div className="flex flex-col items-start text-left">
                           {s.overlay.eyebrow && <p style={textStyle} className={eyebrowClass}>{s.overlay.eyebrow}</p>}
                           {s.overlay.title && <h3 style={textStyle} className={titleClass}>{s.overlay.title}</h3>}
                           {s.overlay.subtitle && <p style={textStyle} className={subtitleClass}>{s.overlay.subtitle}</p>}
