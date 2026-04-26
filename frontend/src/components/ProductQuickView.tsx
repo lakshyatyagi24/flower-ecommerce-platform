@@ -8,7 +8,7 @@ export type QuickViewProduct = {
   title: string;
   category: string;
   description?: string;
-  img: StaticImageData;
+  img: StaticImageData | string;
   price: number;
   oldPrice?: number;
   rating?: number;
