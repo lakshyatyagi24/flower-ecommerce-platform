@@ -68,9 +68,9 @@ export default function EventInspirations() {
     <section className="section-shell mt-12">
       <div className="flex items-end justify-between gap-4 mb-6 flex-wrap">
         <div>
-          <div className="pill mb-3">Atelier stories</div>
+          <div className="pill mb-3">Our portfolio</div>
           <h2 className="text-2xl md:text-3xl font-semibold text-slate-900 tracking-tight">Event Inspirations</h2>
-          <p className="mt-1 text-sm text-slate-600 max-w-2xl">A mosaic of past setups to showcase our style — tap any image to enlarge and envision your soirée.</p>
+          <p className="mt-1 text-sm text-slate-600 max-w-2xl">A showcase of past setups — weddings, birthdays, corporate events and more. Tap any image to get inspired.</p>
         </div>
         <div className="flex gap-3 items-center">
           <Link href="#contact" className="text-olive-green font-semibold underline-offset-4 hover:underline focus:outline-none focus:ring-2 focus:ring-olive-green/30 rounded px-2 py-1">Inquire About Events</Link>
@@ -86,7 +86,7 @@ export default function EventInspirations() {
             <div className="absolute left-2 bottom-2 bg-black/55 text-white text-[11px] px-2.5 py-1 rounded-full shadow">{it.caption}</div>
 
             {/* subtle watermark */}
-            <div className="absolute right-3 top-3 text-[10px] uppercase tracking-[0.2em] text-white/70 pointer-events-none select-none">1ML Atelier</div>
+            <div className="absolute right-3 top-3 text-[10px] uppercase tracking-[0.2em] text-white/70 pointer-events-none select-none">Fresh Petals</div>
           </div>
         ))}
       </div>

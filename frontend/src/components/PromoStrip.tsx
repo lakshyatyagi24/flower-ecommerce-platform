@@ -12,7 +12,7 @@ const PromoStrip: React.FC = () => {
   // Config - tweak these values as needed
   const promoText = "Free same-day delivery on orders before 3:00 PM — limited time!";
   const cutoffTime: string | null = ""; // set to null or '' to disable countdown
-  const cta = { href: "/collections/same-day", label: "Shop Same-Day" };
+  const cta = { href: "/products", label: "Shop Now" };
 
   useEffect(() => {
     try {

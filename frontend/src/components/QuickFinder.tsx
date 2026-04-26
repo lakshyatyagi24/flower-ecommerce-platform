@@ -59,7 +59,7 @@ export default function QuickFinder() {
     <section className="section-shell mt-10 mb-8">
       <div className="flex items-center justify-between mb-4">
         <div className="pill">Shop by feeling</div>
-        <span className="text-xs uppercase tracking-[0.14em] text-olive-green/70">Concierge curation</span>
+        <span className="text-xs uppercase tracking-[0.14em] text-olive-green/70">Shop by occasion</span>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {tiles.map((t) => (

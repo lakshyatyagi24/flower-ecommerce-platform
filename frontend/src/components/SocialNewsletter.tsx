@@ -26,7 +26,7 @@ export default function SocialNewsletter() {
           <div>
             <div className="pill mb-3">Stay in bloom</div>
             <h3 className="text-2xl font-semibold text-slate-900">Follow us for floral inspiration</h3>
-            <p className="text-sm text-slate-600 mt-1">Latest arrangements, behind-the-scenes, and concierge-only drops.</p>
+            <p className="text-sm text-slate-600 mt-1">New arrivals, seasonal specials, and exclusive offers — straight to your inbox.</p>
             <div className="mt-3 flex items-center gap-3 text-sm text-olive-green font-semibold">
               <Link href="#" className="hover:underline">Instagram</Link>
               <span className="text-slate-300">•</span>

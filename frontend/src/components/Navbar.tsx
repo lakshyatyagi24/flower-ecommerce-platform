@@ -20,7 +20,7 @@ const Navbar = () => {
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-3 flex-none">
               <Logo />
-              <span className="hidden lg:inline text-xs tracking-[0.18em] uppercase text-olive-green/70">Bespoke floral atelier</span>
+              <span className="hidden lg:inline text-xs tracking-[0.18em] uppercase text-olive-green/70">Fresh flowers, delivered fast</span>
             </div>
 
             <div className="hidden md:flex items-center justify-center flex-1 gap-x-10">

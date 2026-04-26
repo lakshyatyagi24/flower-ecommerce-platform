@@ -8,9 +8,9 @@ export default function BuildYourBouquet() {
     <section className="section-shell mt-12">
       <div className="section-card p-6 sm:p-8 flex flex-col md:flex-row items-start gap-6 bg-gradient-to-br from-[#f8f1e8] via-white to-[#efe0d2]">
         <div className="flex-1">
-          <div className="pill mb-3">Custom atelier</div>
+          <div className="pill mb-3">Customise your order</div>
           <h3 className="text-2xl md:text-3xl font-semibold text-slate-900">Build-Your-Bouquet</h3>
-          <p className="mt-2 text-sm text-slate-600 max-w-xl">Create a custom bouquet in minutes — choose size, palette, and finishing add-ons for a truly artisan result.</p>
+          <p className="mt-2 text-sm text-slate-600 max-w-xl">Create a custom arrangement in minutes — choose your flowers, size, and add-ons for a truly personal gift.</p>
 
           {/* 3-step preview */}
           <div className="mt-4 grid grid-cols-3 gap-3 items-center">
@@ -58,7 +58,7 @@ export default function BuildYourBouquet() {
           <div className="flex-1">
             <div className="pill mb-3">Gift enhancers</div>
             <h3 className="text-2xl font-semibold text-slate-900">Add-Ons & Gift Enhancers</h3>
-            <p className="mt-2 text-sm text-slate-600 max-w-2xl">Vases, handwritten notes, chocolates, or candles crafted to match our Magnolia-inspired vibe.</p>
+            <p className="mt-2 text-sm text-slate-600 max-w-2xl">Vases, handwritten notes, artisan chocolates, or scented candles — the perfect finishing touch for your fresh flower gift.</p>
           </div>
 
           <div className="flex items-center gap-3 text-xs uppercase tracking-[0.16em] text-olive-green/70">

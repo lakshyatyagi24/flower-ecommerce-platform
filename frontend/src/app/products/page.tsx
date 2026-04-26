@@ -52,7 +52,7 @@ function ProductsView() {
           <p className="pill mb-3">Curated collections</p>
           <h1 className="text-3xl md:text-4xl font-semibold text-slate-900">{heading}</h1>
           <p className="text-slate-700 mt-2">
-            Lush palettes, artisanal wrapping, and indulgent gifting inspired by Magnolia Lane.
+            Premium fresh-cut flowers — roses, orchids, sunflowers, lilies and more — sourced directly from Indian farms.
           </p>
         </div>
         <Link href="/" className="text-olive-green font-semibold underline-offset-4 hover:underline">
