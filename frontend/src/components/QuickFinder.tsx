@@ -9,7 +9,7 @@ const tiles: Tile[] = [
   {
     id: 'birthday',
     label: 'Birthday',
-    href: '/products?occasion=birthday',
+    href: '/search?q=birthday',
     Icon: (props) => (
       <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
         <path d="M12 3v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -21,7 +21,7 @@ const tiles: Tile[] = [
   {
     id: 'anniversary',
     label: 'Anniversary',
-    href: '/products?occasion=anniversary',
+    href: '/search?q=anniversary',
     Icon: (props) => (
       <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
         <path d="M12 21s-6-4.35-8-7a5 5 0 0 1 8-6 5 5 0 0 1 8 6c-2 2.65-8 7-8 7z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -31,7 +31,7 @@ const tiles: Tile[] = [
   {
     id: 'sympathy',
     label: 'Sympathy',
-    href: '/products?occasion=sympathy',
+    href: '/search?q=sympathy',
     Icon: (props) => (
       <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
         <path d="M12 2v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -43,7 +43,7 @@ const tiles: Tile[] = [
   {
     id: 'congrats',
     label: 'Congratulations',
-    href: '/products?occasion=congratulations',
+    href: '/search?q=congratulations',
     Icon: (props) => (
       <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
         <path d="M12 2v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -58,8 +58,8 @@ export default function QuickFinder() {
   return (
     <section className="section-shell mt-10 mb-8">
       <div className="flex items-center justify-between mb-4">
-        <div className="pill">Shop by feeling</div>
-        <span className="text-xs uppercase tracking-[0.14em] text-olive-green/70">Concierge curation</span>
+        <div className="pill">Shop by occasion</div>
+        <span className="text-xs uppercase tracking-[0.14em] text-olive-green/70">Live search shortcuts</span>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {tiles.map((t) => (

@@ -45,7 +45,7 @@ export default function Commitment() {
             <li>Support for small growers through direct partnerships</li>
           </ul>
 
-          <a href="/sustainability" className="inline-block text-sm font-medium text-green-700 hover:underline">Read our full sustainability policy</a>
+          <a href="/about" className="inline-block text-sm font-medium text-green-700 hover:underline">Read more about our sourcing approach</a>
         </div>
       </div>
     </section>

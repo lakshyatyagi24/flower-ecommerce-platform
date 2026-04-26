@@ -2,8 +2,6 @@ import React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import OrderTimeline from "@/components/OrderTimeline";
-import p1 from "@/assets/test1.png";
-import p2 from "@/assets/test2.png";
 
 // allow loose props shape to satisfy Next's PageProps during build
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -42,8 +40,20 @@ export default async function TrackOrderResults(props: any) {
     paymentStatus: "Paid",
     paymentMethod: "UPI •••• 1234",
     items: [
-      { id: "p1", name: "Rustic Seasonal Bouquet", qty: 1, price: 999, image: p1 },
-      { id: "p2", name: "Add-on: Chocolate Box", qty: 1, price: 299, image: p2 },
+      {
+        id: "p1",
+        name: "Jumilla Roses",
+        qty: 1,
+        price: 999,
+        image: "https://cdn.shopify.com/s/files/1/0047/4637/9362/files/IMG_5577.jpg?v=1709440942",
+      },
+      {
+        id: "p2",
+        name: "Mokara Orchids",
+        qty: 1,
+        price: 299,
+        image: "https://cdn.shopify.com/s/files/1/0047/4637/9362/files/IMG_5647.jpg?v=1709453067",
+      },
     ],
   };
 
@@ -174,9 +184,9 @@ export default async function TrackOrderResults(props: any) {
                 <div className="font-medium mb-1">Need help?</div>
                 <div className="text-xs text-slate-600">For urgent support:</div>
                 <div className="flex items-center gap-3 mt-2">
-                  <a className="text-xs text-olive-green underline" href="https://wa.me/911234567890" aria-label="Chat on WhatsApp">WhatsApp</a>
-                  <a className="text-xs text-olive-green underline" href="tel:+911234567890" aria-label="Call support">Call</a>
-                  <a className="text-xs text-olive-green underline" href="mailto:support@example.com" aria-label="Email support">Email</a>
+                  <a className="text-xs text-olive-green underline" href="https://wa.me/919311311195" aria-label="Chat on WhatsApp">WhatsApp</a>
+                  <a className="text-xs text-olive-green underline" href="tel:+919311311195" aria-label="Call support">Call</a>
+                  <a className="text-xs text-olive-green underline" href="mailto:support@freshpetalsindia.com" aria-label="Email support">Email</a>
                   <Link className="text-xs text-olive-green underline" href="/contact" aria-label="Open chat">Chat</Link>
                 </div>
               </div>

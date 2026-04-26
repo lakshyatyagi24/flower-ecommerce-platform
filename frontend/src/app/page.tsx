@@ -14,19 +14,23 @@ export default function Home() {
     <main className="flex flex-col items-center pt-6 lg:pt-4">
       <Slider />
       <section className="section-shell mt-10 mb-6 text-center">
-        <p className="pill mx-auto mb-3">Inspired by Rebecca Purple</p>
-        <h1 className="text-4xl md:text-5xl font-semibold text-slate-900 leading-tight">Luxe florals for luminous evenings</h1>
-        <p className="mt-3 text-lg text-slate-700 max-w-3xl mx-auto">A Magnolia Lane-inspired refresh with velvet ribbons, layered purples, and artisanal packaging. Same-day delivery across Mumbai & NCR.</p>
+        <p className="pill mx-auto mb-3">Live Theflora sync</p>
+        <h1 className="text-4xl md:text-5xl font-semibold text-slate-900 leading-tight">
+          Fresh flowers, real inventory, reliable delivery
+        </h1>
+        <p className="mt-3 text-lg text-slate-700 max-w-3xl mx-auto">
+          Product photos and catalog content are mapped from live source data, so what you see on the site reflects current availability.
+        </p>
       </section>
       <QuickFinder />
       <BestInFlowers />
-  <NewArrivals />
-  <SeasonalCollection />
-  <EventInspirations />
-  <BuildYourBouquet />
-  <Reviews />
-  <TrustBar />
-  <SocialNewsletter />
+      <NewArrivals />
+      <SeasonalCollection />
+      <EventInspirations />
+      <BuildYourBouquet />
+      <Reviews />
+      <TrustBar />
+      <SocialNewsletter />
     </main>
   );
 }

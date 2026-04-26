@@ -20,7 +20,7 @@ export default function EventBookingShortcut() {
 
         <div>
           <Link
-            href="/events"
+            href="/contact?inquiry=event"
             className="inline-flex items-center px-5 py-3 bg-olive-green text-white rounded-md shadow-md hover:shadow-lg transition transform duration-150 hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-olive-green/60 text-sm font-medium motion-reduce:transition-none motion-reduce:transform-none motion-reduce:hover:scale-100 motion-reduce:active:scale-100"
           >
             Book now

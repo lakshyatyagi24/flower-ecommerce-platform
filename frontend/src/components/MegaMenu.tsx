@@ -128,7 +128,7 @@ export default function MegaMenu({ category, anchorRect, onRequestClose, clearHi
       <ul className="space-y-1 text-sm">
                 {col.items.map((it) => (
                   <li key={it}>
-                    <Link href={`#${it.toLowerCase().replace(/\s+/g, "-")}`} className="text-gray-600 hover:text-olive-green">{it}</Link>
+                    <Link href={`/search?q=${encodeURIComponent(it)}`} className="text-gray-600 hover:text-olive-green">{it}</Link>
                   </li>
                 ))}
               </ul>

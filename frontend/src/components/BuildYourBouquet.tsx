@@ -8,9 +8,9 @@ export default function BuildYourBouquet() {
     <section className="section-shell mt-12">
       <div className="section-card p-6 sm:p-8 flex flex-col md:flex-row items-start gap-6 bg-gradient-to-br from-[#f8f1e8] via-white to-[#efe0d2]">
         <div className="flex-1">
-          <div className="pill mb-3">Custom atelier</div>
+          <div className="pill mb-3">Custom request</div>
           <h3 className="text-2xl md:text-3xl font-semibold text-slate-900">Build-Your-Bouquet</h3>
-          <p className="mt-2 text-sm text-slate-600 max-w-xl">Create a custom bouquet in minutes — choose size, palette, and finishing add-ons for a truly artisan result.</p>
+          <p className="mt-2 text-sm text-slate-600 max-w-xl">Create a custom bouquet request in minutes, choose your preferred size, colors, and gifting add-ons.</p>
 
           {/* 3-step preview */}
           <div className="mt-4 grid grid-cols-3 gap-3 items-center">
@@ -34,10 +34,10 @@ export default function BuildYourBouquet() {
           </div>
 
           <div className="mt-6 flex items-center gap-4 flex-wrap">
-            <Link href="/build" className="inline-flex items-center justify-center rounded-full bg-olive-green px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg hover:-translate-y-0.5 transition focus:outline-none focus:ring-2 focus:ring-olive-green/30">Start customizing</Link>
+            <Link href="/contact?inquiry=custom-bouquet" className="inline-flex items-center justify-center rounded-full bg-olive-green px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg hover:-translate-y-0.5 transition focus:outline-none focus:ring-2 focus:ring-olive-green/30">Start customizing</Link>
 
             <div className="text-xs uppercase tracking-[0.16em] text-olive-green/70">
-              <div>Lead time: <span className="font-semibold text-slate-800">2–4 business days</span></div>
+              <div>Lead time: <span className="font-semibold text-slate-800">1-3 business days</span></div>
               <div className="mt-1">Prices from <span className="font-semibold text-slate-800">₹1,299</span></div>
             </div>
           </div>
@@ -47,7 +47,7 @@ export default function BuildYourBouquet() {
           <div className="rounded-2xl overflow-hidden shadow-[0_18px_40px_rgba(24,20,13,0.12)] bg-white/80 border border-white/60 p-4 relative">
             <div className="h-40 w-full rounded-xl bg-gradient-to-br from-[#f1e4d4] via-white to-[#e8d9c8] border border-white/50 flex items-center justify-center text-slate-600 text-xs">Preview: artisan bouquet mockup</div>
             <div className="mt-3 text-xs text-slate-600">See how size, palette, and add-ons come together. Full configurator opens on click.</div>
-            <span className="absolute top-4 right-4 px-2 py-1 rounded-full text-[10px] uppercase tracking-[0.16em] bg-black/5 text-olive-green/80">Luxe</span>
+            <span className="absolute top-4 right-4 px-2 py-1 rounded-full text-[10px] uppercase tracking-[0.16em] bg-black/5 text-olive-green/80">Custom</span>
           </div>
         </div>
       </div>
@@ -58,7 +58,7 @@ export default function BuildYourBouquet() {
           <div className="flex-1">
             <div className="pill mb-3">Gift enhancers</div>
             <h3 className="text-2xl font-semibold text-slate-900">Add-Ons & Gift Enhancers</h3>
-            <p className="mt-2 text-sm text-slate-600 max-w-2xl">Vases, handwritten notes, chocolates, or candles crafted to match our Magnolia-inspired vibe.</p>
+            <p className="mt-2 text-sm text-slate-600 max-w-2xl">Vases, handwritten notes, chocolates, and candles that pair well with floral deliveries.</p>
           </div>
 
           <div className="flex items-center gap-3 text-xs uppercase tracking-[0.16em] text-olive-green/70">

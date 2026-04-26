@@ -16,8 +16,8 @@ const playfairDisplay = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "1 Magnolia Lane – Floral Atelier",
-  description: "Luxe blooms, artisanal bouquets, and bespoke gifting inspired by Magnolia Lane.",
+  title: "Fresh Petals India",
+  description: "Fresh flower marketplace with real-time catalog sync, event florals, and fast delivery.",
   icons: {
     icon: '/favicon.ico',
   },

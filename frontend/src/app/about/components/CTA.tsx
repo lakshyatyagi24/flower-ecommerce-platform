@@ -17,20 +17,20 @@ export default function CTA() {
         </div>
 
         <div className="flex items-center justify-center space-x-4 mb-4">
-          <a href="#" aria-label="Instagram" className="text-gray-600 hover:text-green-700">
+          <a href="https://theflora.in" target="_blank" rel="noreferrer" aria-label="Theflora" className="text-gray-600 hover:text-green-700">
             <Image src="/user-icon.svg" alt="Instagram" width={28} height={28} />
           </a>
-          <a href="#" aria-label="Website" className="text-gray-600 hover:text-green-700">
+          <a href="/products" aria-label="Website" className="text-gray-600 hover:text-green-700">
             <Image src="/globe.svg" alt="Website" width={28} height={28} />
           </a>
-          <a href="#" aria-label="Facebook" className="text-gray-600 hover:text-green-700">
+          <a href="/contact" aria-label="Facebook" className="text-gray-600 hover:text-green-700">
             <Image src="/window.svg" alt="Facebook" width={28} height={28} />
           </a>
         </div>
 
         <div className="text-sm">
           <Link href="/products" className="text-gray-700 hover:underline mr-4">Shop</Link>
-          <Link href="/gallery" className="text-gray-700 hover:underline mr-4">Gallery</Link>
+          <Link href="/search" className="text-gray-700 hover:underline mr-4">Search</Link>
           <Link href="/contact?inquiry=visit" className="text-gray-700 hover:underline">Visit studio</Link>
         </div>
       </div>

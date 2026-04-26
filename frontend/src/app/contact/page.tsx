@@ -1,11 +1,9 @@
 "use client";
 import React from "react";
-import Image from "next/image";
 import ContactHero from "./components/ContactHero";
 import ContactForm from "./components/ContactForm";
 import QuickContactDetails from "./components/QuickContactDetails";
 import EventBookingShortcut from "./components/EventBookingShortcut";
-import logo from "../../assets/logo.png";
 import FAQSnapshot from "@/components/FAQSnapshot";
 
 export default function ContactPage() {
@@ -35,12 +33,12 @@ export default function ContactPage() {
 
           <div className="p-4 bg-white border-t">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-                <Image src={logo} alt="logo" width={40} height={40} className="object-contain" />
+              <div className="w-12 h-12 rounded-full bg-olive-green/10 text-olive-green font-semibold flex items-center justify-center">
+                FP
               </div>
               <div>
-                <p className="font-medium">Flower Marketplace</p>
-                <p className="text-sm text-gray-600">123 Floral Lane, San Francisco, CA</p>
+                <p className="font-medium">Fresh Petals India</p>
+                <p className="text-sm text-gray-600">New Delhi, India</p>
               </div>
             </div>
           </div>

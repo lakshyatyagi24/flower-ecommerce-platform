@@ -2,10 +2,10 @@
 import React from "react";
 
 export default function QuickContactDetails() {
-  const phone = "+911234567890"; // adjust as needed
-  const whatsapp = "+911234567890"; // whatsapp number (international format, no plus in wa.me link)
-  const email = "hello@example.com";
-  const addressText = "Studio Floral, Connaught Place, New Delhi, India";
+  const phone = "+919311311195";
+  const whatsapp = "+919311311195";
+  const email = "support@freshpetalsindia.com";
+  const addressText = "Fresh Petals India, New Delhi, India";
   const mapsQuery = encodeURIComponent(addressText);
 
   return (
@@ -81,7 +81,7 @@ export default function QuickContactDetails() {
         </div>
         <div>
           <div className="text-sm font-medium">Delivery regions</div>
-          <div className="text-sm text-gray-600">Delhi NCR, Gurugram, Noida (additional areas on request)</div>
+          <div className="text-sm text-gray-600">Delhi NCR, Mumbai, Bengaluru (more locations based on availability)</div>
         </div>
       </div>
     </div>

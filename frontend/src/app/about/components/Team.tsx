@@ -1,14 +1,26 @@
 "use client";
+
 import React from "react";
-import Image from "next/image";
-import person1 from "../../../assets/person1.png";
-import person2 from "../../../assets/person2.png";
-import person3 from "../../../assets/person3.png";
 
 const team = [
-  { name: "Asha Verma", role: "Lead Florist", img: person1, bio: "Loves seasonal palettes and hand-tying techniques." },
-  { name: "Ravi Patel", role: "Event Specialist", img: person2, bio: "Turns spaces into intimate floral experiences." },
-  { name: "Mira Shah", role: "Studio Artisan", img: person3, bio: "Finds beauty in textures and unusual foliage." },
+  {
+    name: "Asha Verma",
+    role: "Catalog Operations Lead",
+    initials: "AV",
+    bio: "Coordinates product data quality and release accuracy across categories.",
+  },
+  {
+    name: "Ravi Patel",
+    role: "Event Fulfillment Specialist",
+    initials: "RP",
+    bio: "Supports bulk orders and event delivery coordination with partner teams.",
+  },
+  {
+    name: "Mira Shah",
+    role: "Customer Experience Manager",
+    initials: "MS",
+    bio: "Manages support loops for order tracking, substitutions, and delivery communication.",
+  },
 ];
 
 export default function Team() {
@@ -18,13 +30,15 @@ export default function Team() {
         Meet the Team
       </h2>
 
-      <p className="text-gray-600 mb-6">Our florists, artisans, and event specialists who bring the work to life.</p>
+      <p className="text-gray-600 mb-6">
+        A focused operations team behind product accuracy, customer support, and reliable fulfillment.
+      </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {team.map((person) => (
           <div key={person.name} className="bg-white rounded-lg p-4 border flex space-x-4 items-center">
-            <div className="w-20 h-20 rounded-full overflow-hidden flex-shrink-0">
-              <Image src={person.img} alt={person.name} width={80} height={80} className="object-cover" />
+            <div className="w-20 h-20 rounded-full bg-olive-green/15 flex items-center justify-center text-olive-green font-semibold flex-shrink-0">
+              {person.initials}
             </div>
 
             <div>

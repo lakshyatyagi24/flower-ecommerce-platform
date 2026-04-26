@@ -1,17 +1,21 @@
 "use client";
+
 import React from "react";
 import Image from "next/image";
-import g1 from "../../../assets/gallery1.png";
-import g2 from "../../../assets/gallery2.png";
-import g3 from "../../../assets/gallery3.png";
-import g4 from "../../../assets/gallery4.png";
+
+const studioImages = [
+  "https://cdn.shopify.com/s/files/1/0047/4637/9362/products/WES_4079_60de86c7-3385-4b2e-850d-297d9c8e2dfb.jpg?v=1722409287",
+  "https://cdn.shopify.com/s/files/1/0047/4637/9362/products/WES_3378.jpg?v=1621319809",
+  "https://cdn.shopify.com/s/files/1/0047/4637/9362/files/IMG_5577.jpg?v=1709440942",
+  "https://cdn.shopify.com/s/files/1/0047/4637/9362/files/IMG_5536.jpg?v=1709440820",
+];
 
 export default function Studio() {
   const timeline = [
-    { step: "Sourcing", desc: "Careful selection of seasonal, local blooms." },
-    { step: "Design", desc: "Sketching and composing palettes by hand." },
-    { step: "Crafting", desc: "Hand-tying, wrapping, and finishing details." },
-    { step: "Delivery", desc: "Careful packaging and timely delivery." },
+    { step: "Sourcing", desc: "Selecting fresh stems from trusted growers and suppliers." },
+    { step: "Verification", desc: "Validating image quality, metadata, and product descriptions." },
+    { step: "Publishing", desc: "Syncing catalog updates into storefront collections and pages." },
+    { step: "Fulfillment", desc: "Coordinating packaging and dispatch with delivery updates." },
   ];
 
   return (
@@ -23,22 +27,15 @@ export default function Studio() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
         <div>
           <p className="text-gray-600 mb-4">
-            We work in a small workshop where textures, color and scent guide every decision. Below are a few behind-the-scenes moments that show how arrangements come together.
+            The storefront is built around real visual references and consistent product data so shoppers can trust every listing.
           </p>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="w-full h-40 rounded overflow-hidden">
-              <Image src={g1} alt="studio shot 1" className="object-cover w-full h-full" />
-            </div>
-            <div className="w-full h-40 rounded overflow-hidden">
-              <Image src={g2} alt="studio shot 2" className="object-cover w-full h-full" />
-            </div>
-            <div className="w-full h-40 rounded overflow-hidden">
-              <Image src={g3} alt="studio shot 3" className="object-cover w-full h-full" />
-            </div>
-            <div className="w-full h-40 rounded overflow-hidden">
-              <Image src={g4} alt="studio shot 4" className="object-cover w-full h-full" />
-            </div>
+            {studioImages.map((src, idx) => (
+              <div key={`studio-${idx}`} className="w-full h-40 rounded overflow-hidden relative">
+                <Image src={src} alt={`Studio process ${idx + 1}`} fill className="object-cover w-full h-full" />
+              </div>
+            ))}
           </div>
         </div>
 
@@ -47,7 +44,9 @@ export default function Studio() {
           <ol className="space-y-4 mb-6">
             {timeline.map((t) => (
               <li key={t.step} className="flex">
-                <div className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 mr-3 text-sm font-medium text-gray-700">{t.step[0]}</div>
+                <div className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 mr-3 text-sm font-medium text-gray-700">
+                  {t.step[0]}
+                </div>
                 <div>
                   <div className="font-medium text-gray-800">{t.step}</div>
                   <div className="text-sm text-gray-600">{t.desc}</div>
@@ -56,9 +55,9 @@ export default function Studio() {
             ))}
           </ol>
 
-          <h3 className="text-lg font-medium text-gray-800 mb-2">Why we do it this way</h3>
+          <h3 className="text-lg font-medium text-gray-800 mb-2">Why this process works</h3>
           <p className="text-gray-600">
-            Choosing local, seasonal blooms and crafting by hand lets us prioritize freshness, reduce waste, and offer unique designs rooted in each season. This slower approach ensures every piece feels intentional and personal.
+            Keeping visual assets and catalog data synchronized reduces ordering errors and improves confidence for both personal and event purchases.
           </p>
         </div>
       </div>
