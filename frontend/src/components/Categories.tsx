@@ -107,7 +107,7 @@ const Categories: React.FC<CategoriesProps> = ({ categories = defaultCategories,
           }}
         >
           <Link
-            href={`#${cat.slug ?? cat.name.toLowerCase()}`}
+            href={`/products?category=${cat.slug ?? cat.name.toLowerCase()}`}
             onClick={() => onCategoryClick?.(cat.name)}
             onFocus={(e) => {
               setActive(cat.name);

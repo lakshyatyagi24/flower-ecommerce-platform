@@ -4,6 +4,9 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import PromoStrip from "@/components/PromoStrip";
 import Footer from "@/components/Footer";
+import CartDrawer from "@/components/CartDrawer";
+import { AuthProvider } from "@/lib/auth-context";
+import { CartProvider } from "@/lib/cart-context";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -33,10 +36,15 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${playfairDisplay.variable} antialiased`}
       >
-        <PromoStrip />
-        <Navbar />
-        {children}
-        <Footer />
+        <AuthProvider>
+          <CartProvider>
+            <PromoStrip />
+            <Navbar />
+            {children}
+            <Footer />
+            <CartDrawer />
+          </CartProvider>
+        </AuthProvider>
       </body>
     </html>
   );
