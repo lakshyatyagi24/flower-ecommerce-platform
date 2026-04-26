@@ -16,6 +16,10 @@
 # production
 /build
 
+# next.js build output — never commit this
+/.next
+/out
+
 # misc
 .DS_Store
 *.pem
