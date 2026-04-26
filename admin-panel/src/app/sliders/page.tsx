@@ -13,6 +13,12 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Edit, Trash2, Loader2, ArrowUp, ArrowDown, Copy, Eye } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
+import { getStoredToken } from '@/lib/api';
+
+function authHeaders(): Record<string, string> {
+  const token = getStoredToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 interface Slider {
   id: number;
@@ -118,7 +124,11 @@ export default function SlidersPage() {
       const ctx = canvas.getContext('2d');
       const img = document.createElement('img');
 
+      const objectUrl = URL.createObjectURL(file);
+
       img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+
         // Calculate new dimensions (max 1200px width/height)
         const maxSize = 1200;
         let { width, height } = img;
@@ -153,7 +163,12 @@ export default function SlidersPage() {
         }, 'image/jpeg', 0.8); // 80% quality
       };
 
-      img.src = URL.createObjectURL(file);
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve(file);
+      };
+
+      img.src = objectUrl;
     });
   };
 
@@ -308,14 +323,14 @@ export default function SlidersPage() {
         const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
         response = await fetch(`${baseUrl}/sliders/${editingSlider.id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify(payload),
         });
       } else {
         const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
         response = await fetch(`${baseUrl}/sliders`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify(payload),
         });
       }
@@ -442,6 +457,7 @@ export default function SlidersPage() {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const response = await fetch(`${baseUrl}/sliders/${id}`, {
         method: 'DELETE',
+        headers: authHeaders(),
       });
 
       if (!response.ok) {
@@ -473,7 +489,7 @@ export default function SlidersPage() {
       const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const response = await fetch(`${baseUrl}/sliders/${slider.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ active: !slider.active }),
       });
 
@@ -558,12 +574,12 @@ export default function SlidersPage() {
       await Promise.all([
         fetch(`${baseUrl}/sliders/${slider.id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify({ sortOrder: targetSlider.sortOrder }),
         }),
         fetch(`${baseUrl}/sliders/${targetSlider.id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify({ sortOrder: slider.sortOrder }),
         }),
       ]);

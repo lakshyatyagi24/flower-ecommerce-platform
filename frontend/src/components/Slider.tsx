@@ -187,11 +187,12 @@ export default function Slider() {
       })
       .catch(() => setRemoteSlides(null))
       .finally(() => setLoading(false));
+    // note: empty array [] is treated as "no data" → falls back to staticSlides
   }, []);
 
   useEffect(() => {
     if (paused) return;
-    const slidesArr = remoteSlides ?? staticSlides;
+    const slidesArr = (remoteSlides && remoteSlides.length > 0) ? remoteSlides : staticSlides;
     autoplayRef.current = window.setInterval(() => {
       setIndex((s) => (s + 1) % slidesArr.length);
     }, 4000);
@@ -201,11 +202,11 @@ export default function Slider() {
   }, [paused, remoteSlides]);
 
   function go(i: number) {
-    const slidesArr = remoteSlides ?? staticSlides;
-    setIndex((i + slidesArr.length) % slidesArr.length);
+    const slides2 = (remoteSlides && remoteSlides.length > 0) ? remoteSlides : staticSlides;
+    setIndex((i + slides2.length) % slides2.length);
   }
 
-  const slides = remoteSlides ?? staticSlides;
+  const slides = (remoteSlides && remoteSlides.length > 0) ? remoteSlides : staticSlides;
 
   return (
     <section

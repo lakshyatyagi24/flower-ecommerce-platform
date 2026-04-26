@@ -10,6 +10,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Plus, Edit, Trash2, ChevronRight, ChevronDown, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
+import { getStoredToken } from '@/lib/api';
+
+function authHeaders(): Record<string, string> {
+  const token = getStoredToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 interface Category {
   id: number;
@@ -38,7 +44,7 @@ export default function CategoriesPage() {
 
   const fetchCategories = useCallback(async () => {
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const response = await fetch(`${baseUrl}/categories`);
       if (!response.ok) {
         throw new Error('Failed to fetch categories');
@@ -73,7 +79,7 @@ export default function CategoriesPage() {
         parentId: formData.parentId ? parseInt(formData.parentId) : undefined,
       };
 
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const url = editingCategory
         ? `${baseUrl}/categories/${editingCategory.id}`
         : `${baseUrl}/categories`;
@@ -84,6 +90,7 @@ export default function CategoriesPage() {
         method,
         headers: {
           'Content-Type': 'application/json',
+          ...authHeaders(),
         },
         body: JSON.stringify(data),
       });
@@ -149,9 +156,10 @@ export default function CategoriesPage() {
     setIsDeleting(id);
 
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const response = await fetch(`${baseUrl}/categories/${id}`, {
         method: 'DELETE',
+        headers: authHeaders(),
       });
 
       if (response.ok) {
