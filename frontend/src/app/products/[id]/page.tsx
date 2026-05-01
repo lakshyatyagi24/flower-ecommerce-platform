@@ -7,6 +7,7 @@ import { useParams } from "next/navigation";
 import { ApiProduct, api } from "@/lib/api";
 import { useCart, formatINR } from "@/lib/cart-context";
 import ProductReviews from "@/components/ProductReviews";
+import EnquiryModal from "@/components/EnquiryModal";
 
 const RatingStar: React.FC<{ filled?: boolean }> = ({ filled = false }) => (
   <svg
@@ -29,6 +30,7 @@ export default function ProductPage() {
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [reviewStats, setReviewStats] = useState<{ averageRating: number; reviewCount: number } | null>(null);
+  const [enquiryOpen, setEnquiryOpen] = useState(false);
   const { add } = useCart();
 
   const handleReviewStats = useCallback(
@@ -85,9 +87,12 @@ export default function ProductPage() {
     );
   }
 
-  const outOfStock = product.stock === 0 && product.stock !== undefined;
+  const isEnquiry = product.saleMode === "ENQUIRY";
+  const outOfStock = !isEnquiry && product.stock === 0 && product.stock !== undefined;
   const averageRating = reviewStats?.averageRating ?? product.averageRating ?? 0;
   const reviewCount = reviewStats?.reviewCount ?? product.reviewCount ?? 0;
+  const minOrderQty = product.minOrderQty && product.minOrderQty > 0 ? product.minOrderQty : 1;
+  const unitLabel = product.unit && product.unit !== "piece" ? product.unit : null;
 
   return (
     <main className="section-shell mt-12 mb-16">
@@ -131,73 +136,114 @@ export default function ProductPage() {
           </div>
 
           <div className="flex items-center gap-4">
-            <span className="text-2xl font-bold text-olive-green">{formatINR(product.price)}</span>
-            <span className="text-sm uppercase tracking-[0.16em] text-olive-green/70">Inclusive of taxes</span>
+            {isEnquiry ? (
+              <span className="text-lg font-semibold text-olive-green">Custom quote on enquiry</span>
+            ) : (
+              <>
+                <span className="text-2xl font-bold text-olive-green">
+                  {formatINR(product.price)}
+                  {unitLabel ? <span className="ml-2 text-sm font-normal text-olive-green/70">/ {unitLabel}</span> : null}
+                </span>
+                {product.gstRate && product.gstRate > 0 ? (
+                  <span className="text-sm uppercase tracking-[0.16em] text-olive-green/70">+ {product.gstRate}% GST</span>
+                ) : (
+                  <span className="text-sm uppercase tracking-[0.16em] text-olive-green/70">No GST · raw cut flowers</span>
+                )}
+              </>
+            )}
           </div>
 
-          <ul className="space-y-2 text-sm text-slate-700 bg-white/70 border border-olive-green/10 rounded-2xl p-4">
-            <li>• Velvet ribboning & keepsake note</li>
-            <li>• Same-day delivery across Mumbai & NCR</li>
-            <li>• Artisanal hydration pouch for freshness</li>
-          </ul>
+          {isEnquiry ? (
+            <div className="rounded-2xl border border-olive-green/20 bg-olive-green/5 p-4 text-sm text-slate-700">
+              This product is built to order. Send us an enquiry with your quantity, date and budget — we&apos;ll call you back to confirm pricing and availability.
+            </div>
+          ) : (
+            <ul className="space-y-2 text-sm text-slate-700 bg-white/70 border border-olive-green/10 rounded-2xl p-4">
+              <li>• Sourced fresh from the mandi every morning</li>
+              <li>• Cab/bike delivery across Delhi NCR</li>
+              <li>• Bulk pricing available for corporate orders</li>
+            </ul>
+          )}
 
           <div className="flex flex-wrap items-center gap-3">
-            <div className="inline-flex items-center border border-olive-green/20 rounded-full overflow-hidden">
+            {isEnquiry ? (
               <button
                 type="button"
-                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                className="px-3 py-2 text-olive-green hover:bg-olive-green/5"
-                aria-label="Decrease"
+                onClick={() => setEnquiryOpen(true)}
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-olive-green text-white px-6 py-2.5 text-sm font-semibold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition"
               >
-                −
+                Enquire now
               </button>
-              <span className="px-4 font-medium" aria-live="polite">{quantity}</span>
-              <button
-                type="button"
-                onClick={() => setQuantity((q) => q + 1)}
-                className="px-3 py-2 text-olive-green hover:bg-olive-green/5"
-                aria-label="Increase"
-              >
-                +
-              </button>
-            </div>
-            <button
-              type="button"
-              disabled={outOfStock}
-              onClick={() =>
-                add(
-                  {
-                    productId: product.id,
-                    slug: product.slug,
-                    name: product.name,
-                    price: product.price,
-                    image: product.image,
-                  },
-                  quantity,
-                )
-              }
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-olive-green text-white px-6 py-2.5 text-sm font-semibold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition disabled:opacity-50 disabled:hover:translate-y-0"
-            >
-              {outOfStock ? "Out of stock" : "Add to cart"}
-            </button>
+            ) : (
+              <>
+                <div className="inline-flex items-center border border-olive-green/20 rounded-full overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setQuantity((q) => Math.max(minOrderQty, q - 1))}
+                    className="px-3 py-2 text-olive-green hover:bg-olive-green/5"
+                    aria-label="Decrease"
+                  >
+                    −
+                  </button>
+                  <span className="px-4 font-medium" aria-live="polite">{quantity}</span>
+                  <button
+                    type="button"
+                    onClick={() => setQuantity((q) => q + 1)}
+                    className="px-3 py-2 text-olive-green hover:bg-olive-green/5"
+                    aria-label="Increase"
+                  >
+                    +
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  disabled={outOfStock}
+                  onClick={() =>
+                    add(
+                      {
+                        productId: product.id,
+                        slug: product.slug,
+                        name: product.name,
+                        price: product.price,
+                        image: product.image,
+                        saleMode: product.saleMode,
+                        gstRate: product.gstRate,
+                      },
+                      quantity,
+                    )
+                  }
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-olive-green text-white px-6 py-2.5 text-sm font-semibold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition disabled:opacity-50 disabled:hover:translate-y-0"
+                >
+                  {outOfStock ? "Out of stock" : "Add to cart"}
+                </button>
+              </>
+            )}
             <Link href="/products" className="text-olive-green font-semibold underline-offset-4 hover:underline">
               Back to collections
             </Link>
           </div>
 
-          {product.stock > 0 && product.stock < 10 && (
+          {!isEnquiry && product.stock > 0 && product.stock < 10 && (
             <p className="text-sm text-amber-700">Only {product.stock} left in stock.</p>
           )}
-
-          <div className="mt-6 text-xs uppercase tracking-[0.18em] text-olive-green/70">
-            Crafted with sustainable packaging
-          </div>
+          {minOrderQty > 1 && !isEnquiry ? (
+            <p className="text-xs text-gray-500">Minimum order: {minOrderQty} {unitLabel || "units"}.</p>
+          ) : null}
         </div>
       </div>
 
       <div id="product-reviews">
         <ProductReviews productId={product.id} onStatsChange={handleReviewStats} />
       </div>
+
+      <EnquiryModal
+        open={enquiryOpen}
+        onClose={() => setEnquiryOpen(false)}
+        productId={product.id}
+        productName={product.name}
+        source={`product:${product.slug}`}
+        heading={`Enquire about ${product.name}`}
+      />
     </main>
   );
 }

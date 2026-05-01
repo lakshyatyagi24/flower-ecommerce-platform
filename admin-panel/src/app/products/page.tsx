@@ -22,7 +22,23 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Plus, Edit, Trash2, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
-import { adminApi, AdminProduct, AdminCategory, ApiError } from "@/lib/api";
+import { adminApi, AdminProduct, AdminCategory, ApiError, AdminProductType, AdminSaleMode } from "@/lib/api";
+
+const PRODUCT_TYPES: { value: AdminProductType; label: string }[] = [
+  { value: "CUT_FLOWER", label: "Cut flower" },
+  { value: "PLANT", label: "Plant" },
+  { value: "BOUQUET", label: "Bouquet" },
+  { value: "ARRANGEMENT", label: "Arrangement" },
+  { value: "HAMPER", label: "Hamper" },
+];
+
+const UNIT_OPTIONS = [
+  { value: "piece", label: "Piece" },
+  { value: "stem", label: "Stem" },
+  { value: "bunch", label: "Bunch" },
+  { value: "box", label: "Box" },
+  { value: "kg", label: "Kg" },
+];
 
 interface ProductForm {
   name: string;
@@ -34,6 +50,11 @@ interface ProductForm {
   categoryId: string;
   featured: boolean;
   active: boolean;
+  productType: AdminProductType;
+  saleMode: AdminSaleMode;
+  gstRate: string;
+  unit: string;
+  minOrderQty: string;
 }
 
 const emptyForm: ProductForm = {
@@ -46,6 +67,11 @@ const emptyForm: ProductForm = {
   categoryId: "",
   featured: false,
   active: true,
+  productType: "CUT_FLOWER",
+  saleMode: "PURCHASE",
+  gstRate: "0",
+  unit: "piece",
+  minOrderQty: "1",
 };
 
 function slugify(input: string): string {
@@ -114,6 +140,11 @@ export default function ProductsPage() {
       categoryId: p.categoryId?.toString() ?? "",
       featured: p.featured,
       active: p.active,
+      productType: p.productType ?? "CUT_FLOWER",
+      saleMode: p.saleMode ?? "PURCHASE",
+      gstRate: (p.gstRate ?? 0).toString(),
+      unit: p.unit ?? "piece",
+      minOrderQty: (p.minOrderQty ?? 1).toString(),
     });
     setIsDialogOpen(true);
   };
@@ -146,21 +177,32 @@ export default function ProductsPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
+      const isEnquiry = form.saleMode === "ENQUIRY";
       const priceNum = parseFloat(form.price);
-      if (isNaN(priceNum) || priceNum < 0) {
-        throw new Error("Please enter a valid price.");
+      if (!isEnquiry && (isNaN(priceNum) || priceNum < 0)) {
+        throw new Error("Please enter a valid price for purchase products.");
       }
+      const gstNum = parseFloat(form.gstRate || "0");
+      if (isNaN(gstNum) || gstNum < 0) {
+        throw new Error("Please enter a valid GST rate (0 or positive).");
+      }
+      const minOrderNum = parseInt(form.minOrderQty || "1", 10);
       const stockNum = parseInt(form.stock || "0", 10);
       const payload = {
         name: form.name.trim(),
         slug: form.slug.trim() || slugify(form.name),
         description: form.description.trim() || undefined,
-        price: priceNum,
+        price: isEnquiry ? (isNaN(priceNum) ? 0 : priceNum) : priceNum,
         image: form.image || undefined,
         stock: isNaN(stockNum) ? 0 : Math.max(0, stockNum),
         featured: form.featured,
         active: form.active,
         categoryId: form.categoryId ? parseInt(form.categoryId, 10) : null,
+        productType: form.productType,
+        saleMode: form.saleMode,
+        gstRate: gstNum,
+        unit: form.unit,
+        minOrderQty: isNaN(minOrderNum) || minOrderNum < 1 ? 1 : minOrderNum,
       };
       if (editing) {
         await adminApi.updateProduct(editing.id, payload);
@@ -229,12 +271,63 @@ export default function ProductsPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="price">Price (₹)</Label>
-                  <Input id="price" type="number" step="0.01" min="0" required value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
+                  <Label htmlFor="productType">Product type</Label>
+                  <select
+                    id="productType"
+                    value={form.productType}
+                    onChange={(e) => setForm({ ...form, productType: e.target.value as AdminProductType })}
+                    className="w-full p-2 border rounded mt-1"
+                  >
+                    {PRODUCT_TYPES.map((pt) => (
+                      <option key={pt.value} value={pt.value}>{pt.label}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
-                  <Label htmlFor="stock">Stock</Label>
+                  <Label htmlFor="saleMode">Sale mode</Label>
+                  <select
+                    id="saleMode"
+                    value={form.saleMode}
+                    onChange={(e) => setForm({ ...form, saleMode: e.target.value as AdminSaleMode })}
+                    className="w-full p-2 border rounded mt-1"
+                  >
+                    <option value="PURCHASE">Purchase (Add to cart)</option>
+                    <option value="ENQUIRY">Enquiry only (custom quote)</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="price">Price (₹) {form.saleMode === "ENQUIRY" ? <span className="text-xs text-muted-foreground">(optional, indicative)</span> : null}</Label>
+                  <Input id="price" type="number" step="0.01" min="0" required={form.saleMode === "PURCHASE"} value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
+                </div>
+                <div>
+                  <Label htmlFor="stock">Stock {form.saleMode === "ENQUIRY" ? <span className="text-xs text-muted-foreground">(N/A for enquiry)</span> : null}</Label>
                   <Input id="stock" type="number" min="0" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <Label htmlFor="gstRate">GST rate (%)</Label>
+                  <Input id="gstRate" type="number" step="0.1" min="0" value={form.gstRate} onChange={(e) => setForm({ ...form, gstRate: e.target.value })} />
+                  <p className="text-xs text-muted-foreground mt-1">0 for raw cut flowers, 5 for bouquets/arrangements</p>
+                </div>
+                <div>
+                  <Label htmlFor="unit">Unit</Label>
+                  <select
+                    id="unit"
+                    value={form.unit}
+                    onChange={(e) => setForm({ ...form, unit: e.target.value })}
+                    className="w-full p-2 border rounded mt-1"
+                  >
+                    {UNIT_OPTIONS.map((u) => (
+                      <option key={u.value} value={u.value}>{u.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label htmlFor="minOrderQty">Min. order qty</Label>
+                  <Input id="minOrderQty" type="number" min="1" value={form.minOrderQty} onChange={(e) => setForm({ ...form, minOrderQty: e.target.value })} />
                 </div>
               </div>
               <div>

@@ -3,13 +3,13 @@ import React from "react";
 import Image from "next/image";
 import studioImg from "../../assets/gallery5.png";
 import Philosophy from "./components/Philosophy";
-import Team from "./components/Team";
 import Studio from "./components/Studio";
 import Commitment from "./components/Commitment";
-import Testimonials from "./components/Testimonials";
 import CTA from "./components/CTA";
+import { useSettings } from "@/lib/settings-context";
 
 export default function AboutPage() {
+  const settings = useSettings();
   return (
     <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       {/* Brand Story */}
@@ -18,7 +18,7 @@ export default function AboutPage() {
           <div className="w-full h-64 sm:h-80 lg:h-96 rounded-2xl overflow-hidden shadow-[0_28px_70px_rgba(24,20,13,0.12)]">
             <Image
               src={studioImg}
-              alt="Fresh Petals India floral arrangement"
+              alt={`${settings.name} floral arrangement`}
               className="object-cover w-full h-full"
               priority
             />
@@ -27,28 +27,31 @@ export default function AboutPage() {
           <div>
             <div className="pill mb-4">Our story</div>
             <h1 id="brand-story" className="text-3xl md:text-4xl font-semibold text-slate-900 tracking-tight mb-4">
-              From the farm to your door
+              From the mandi to your door
             </h1>
 
             <p className="text-slate-600 mb-4 leading-relaxed">
-              Fresh Petals India was founded with one purpose — to make the beauty of farm-fresh flowers accessible to everyone across India. We work directly with sustainable flower farms, cutting out middlemen so your blooms arrive at their freshest.
+              {settings.name} is a family-run flower business in Delhi NCR. Each morning we start at the wholesale mandi,
+              hand-picking the freshest cut flowers — roses, lilies, orchids, carnations, sunflowers and seasonal stems —
+              and supply them directly to homes, offices and corporate events through the day.
             </p>
 
             <p className="text-slate-600 mb-6 leading-relaxed">
-              Every arrangement carries a story: of the growers who tended the stems, the florists who tied each bouquet, and the moments they help you celebrate. We believe a truly fresh flower is the most honest, beautiful gift you can give.
+              We focus on what we do best: a reliable supply of high-quality cut flowers and plants, plus custom bouquets and
+              event arrangements built to order. Less middleman, more freshness — that&apos;s how we keep prices fair and stems vibrant.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="section-card bg-white p-4">
-                <h3 className="text-sm font-semibold text-slate-900">Our mission</h3>
+                <h3 className="text-sm font-semibold text-slate-900">What we do</h3>
                 <p className="text-sm text-slate-600 mt-1 leading-relaxed">
-                  To connect India with farm-fresh flowers — delivered with care, speed, and a genuine love for floral beauty.
+                  Daily cut-flower supply, indoor plants, and corporate floral solutions across Delhi NCR.
                 </p>
               </div>
               <div className="section-card bg-white p-4">
-                <h3 className="text-sm font-semibold text-slate-900">Our vision</h3>
+                <h3 className="text-sm font-semibold text-slate-900">Why us</h3>
                 <p className="text-sm text-slate-600 mt-1 leading-relaxed">
-                  To be India&apos;s most trusted fresh flower brand — known for quality, sustainability, and same-day delivery across every major city.
+                  Direct mandi sourcing means fresher stems and lower prices. Bulk-friendly for corporate and event orders.
                 </p>
               </div>
             </div>
@@ -59,8 +62,6 @@ export default function AboutPage() {
       <Philosophy />
       <Studio />
       <Commitment />
-      <Testimonials />
-      <Team />
       <CTA />
     </main>
   );

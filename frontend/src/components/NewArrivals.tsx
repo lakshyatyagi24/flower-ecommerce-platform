@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { api, ApiProduct } from "../lib/api";
+import { useCart } from "../lib/cart-context";
 
 const FALLBACK_IMG = 'https://images.unsplash.com/photo-1490750967868-88df5691cc0f?w=400&q=80';
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
@@ -35,7 +36,23 @@ export default function NewArrivals() {
       .finally(() => setLoading(false));
   }, []);
 
-  function handleAdd(id: string) {
+  const { add } = useCart();
+
+  function handleAdd(p: ApiProduct) {
+    if (p.saleMode === "ENQUIRY") return;
+    add(
+      {
+        productId: p.id,
+        slug: p.slug,
+        name: p.name,
+        price: p.price,
+        image: p.image,
+        saleMode: p.saleMode,
+        gstRate: p.gstRate,
+      },
+      1,
+    );
+    const id = String(p.id);
     setAdding((s) => ({ ...s, [id]: true }));
     setTimeout(() => setAdding((s) => ({ ...s, [id]: false })), 1500);
   }
@@ -82,26 +99,37 @@ export default function NewArrivals() {
                       {p.category?.name || 'Cut Flowers'}
                     </p>
                     <h3 className="mt-1 font-semibold text-base text-slate-900 line-clamp-2 flex-1">{p.name}</h3>
-                    <div className="mt-2 font-bold text-slate-900">{fmt.format(p.price)}</div>
+                    <div className="mt-2 font-bold text-slate-900">
+                      {p.saleMode === 'ENQUIRY' ? <span className="text-base">On enquiry</span> : fmt.format(p.price)}
+                    </div>
                     <div className="mt-3 flex items-center gap-2">
-                      <button
-                        onClick={() => handleAdd(sid)}
-                        aria-pressed={!!adding[sid]}
-                        aria-label={`${adding[sid] ? 'Added' : 'Add to cart'} — ${p.name}`}
-                        className={`flex-1 inline-flex items-center justify-center gap-2 rounded-full px-3 py-2 text-sm font-semibold text-white bg-olive-green shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40 transition-all ${adding[sid] ? 'opacity-80' : 'hover:-translate-y-0.5 hover:shadow-md'}`}
-                      >
-                        {adding[sid] ? (
-                          <>
-                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></svg>
-                            Added
-                          </>
-                        ) : (
-                          <>
-                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M3 3h2l.4 2M7 13h10l3-8H6.4" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" /><circle cx="10" cy="19" r="1" fill="currentColor" /><circle cx="18" cy="19" r="1" fill="currentColor" /></svg>
-                            Quick Add
-                          </>
-                        )}
-                      </button>
+                      {p.saleMode === 'ENQUIRY' ? (
+                        <Link
+                          href={`/products/${p.slug}`}
+                          className="flex-1 inline-flex items-center justify-center gap-2 rounded-full px-3 py-2 text-sm font-semibold text-white bg-olive-green shadow-sm hover:-translate-y-0.5 hover:shadow-md transition-all"
+                        >
+                          Enquire
+                        </Link>
+                      ) : (
+                        <button
+                          onClick={() => handleAdd(p)}
+                          aria-pressed={!!adding[sid]}
+                          aria-label={`${adding[sid] ? 'Added' : 'Add to cart'} — ${p.name}`}
+                          className={`flex-1 inline-flex items-center justify-center gap-2 rounded-full px-3 py-2 text-sm font-semibold text-white bg-olive-green shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40 transition-all ${adding[sid] ? 'opacity-80' : 'hover:-translate-y-0.5 hover:shadow-md'}`}
+                        >
+                          {adding[sid] ? (
+                            <>
+                              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></svg>
+                              Added
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" aria-hidden><path d="M3 3h2l.4 2M7 13h10l3-8H6.4" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" /><circle cx="10" cy="19" r="1" fill="currentColor" /><circle cx="18" cy="19" r="1" fill="currentColor" /></svg>
+                              Quick Add
+                            </>
+                          )}
+                        </button>
+                      )}
                       <button
                         onClick={() => handleWishlist(sid)}
                         aria-label={`${wishlisted[sid] ? 'Remove from' : 'Save to'} wishlist — ${p.name}`}

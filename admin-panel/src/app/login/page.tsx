@@ -23,7 +23,21 @@ export default function AdminLoginPage() {
     try {
       await login(email, password);
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : err instanceof Error ? err.message : "Login failed";
+      let message: string;
+      if (err instanceof ApiError) {
+        message = err.message;
+        if (err.status === 0 || /Failed to fetch|NetworkError/i.test(err.message)) {
+          message = "Could not reach the API server. Make sure the backend is running on the configured NEXT_PUBLIC_API_BASE.";
+        } else if (err.status === 401) {
+          message = "Invalid email or password. If this is a fresh setup, run `npx prisma db seed` in flower-backend to create the default admin (admin@flowershop.local / admin1234).";
+        }
+      } else if (err instanceof Error) {
+        message = /Failed to fetch|NetworkError/i.test(err.message)
+          ? "Could not reach the API server. Make sure the backend is running on the configured NEXT_PUBLIC_API_BASE."
+          : err.message;
+      } else {
+        message = "Login failed. Please try again.";
+      }
       setError(message);
     } finally {
       setSubmitting(false);

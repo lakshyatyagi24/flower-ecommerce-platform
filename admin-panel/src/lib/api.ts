@@ -80,6 +80,9 @@ export type AdminUser = {
   role: 'CUSTOMER' | 'ADMIN';
 };
 
+export type AdminProductType = 'CUT_FLOWER' | 'PLANT' | 'BOUQUET' | 'ARRANGEMENT' | 'HAMPER';
+export type AdminSaleMode = 'PURCHASE' | 'ENQUIRY';
+
 export type AdminProduct = {
   id: number;
   name: string;
@@ -90,8 +93,39 @@ export type AdminProduct = {
   stock: number;
   featured: boolean;
   active: boolean;
+  productType?: AdminProductType;
+  saleMode?: AdminSaleMode;
+  gstRate?: number;
+  unit?: string;
+  minOrderQty?: number;
   categoryId: number | null;
-  category?: { id: number; name: string; slug: string } | null;
+  category?: { id: number; name: string; slug: string; productType?: AdminProductType; defaultSaleMode?: AdminSaleMode } | null;
+};
+
+export type AdminEnquiryStatus = 'NEW' | 'CONTACTED' | 'QUOTED' | 'CONVERTED' | 'CLOSED';
+
+export type AdminEnquiry = {
+  id: number;
+  userId: number | null;
+  productId: number | null;
+  productName: string | null;
+  customerName: string;
+  customerEmail: string | null;
+  customerPhone: string;
+  quantity: number | null;
+  eventDate: string | null;
+  occasion: string | null;
+  budget: number | null;
+  address: string | null;
+  city: string | null;
+  message: string | null;
+  source: string;
+  status: AdminEnquiryStatus;
+  adminNotes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  product?: { id: number; name: string; slug: string } | null;
+  user?: { id: number; email: string; name: string | null } | null;
 };
 
 export type AdminOrder = {
@@ -199,8 +233,33 @@ export const adminApi = {
       productCount: number;
       customerCount: number;
       revenue: number;
+      openEnquiries: number;
       recentOrders: { id: number; customerName: string | null; total: number; status: string; createdAt: string }[];
     }>('/orders/stats'),
+
+  // Enquiries
+  listEnquiries: (params: { status?: string; take?: number; skip?: number } = {}) => {
+    const qs = new URLSearchParams();
+    if (params.status) qs.set('status', params.status);
+    if (params.take !== undefined) qs.set('take', String(params.take));
+    if (params.skip !== undefined) qs.set('skip', String(params.skip));
+    const suffix = qs.toString();
+    return apiFetch<{ items: AdminEnquiry[]; total: number; take: number; skip: number; openCount: number }>(
+      `/enquiries${suffix ? `?${suffix}` : ''}`,
+    );
+  },
+  getEnquiry: (id: number) => apiFetch<AdminEnquiry>(`/enquiries/${id}`),
+  updateEnquiryStatus: (id: number, status: string, adminNotes?: string) =>
+    apiFetch<AdminEnquiry>(`/enquiries/${id}/status`, {
+      method: 'PUT',
+      body: { status, adminNotes },
+    }),
+  enquiryStats: () =>
+    apiFetch<{
+      byStatus: Record<AdminEnquiryStatus, number>;
+      open: number;
+      total: number;
+    }>('/enquiries/stats'),
 
   // Customers
   listCustomers: () => apiFetch<AdminCustomer[]>('/users/customers'),

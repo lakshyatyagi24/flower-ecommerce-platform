@@ -98,12 +98,21 @@ export type AuthUser = {
 
 export type AuthResponse = { token: string; user: AuthUser };
 
+export type ProductType = 'CUT_FLOWER' | 'PLANT' | 'BOUQUET' | 'ARRANGEMENT' | 'HAMPER';
+export type SaleMode = 'PURCHASE' | 'ENQUIRY';
+
 export type ApiCategory = {
   id: number;
   name: string;
   slug: string;
   image?: string | null;
+  description?: string | null;
   parentId?: number | null;
+  productType?: ProductType;
+  defaultSaleMode?: SaleMode;
+  defaultGstRate?: number;
+  sortOrder?: number;
+  active?: boolean;
   children?: ApiCategory[];
 };
 
@@ -117,10 +126,43 @@ export type ApiProduct = {
   stock: number;
   featured: boolean;
   active: boolean;
+  productType?: ProductType;
+  saleMode?: SaleMode;
+  gstRate?: number;
+  unit?: string;
+  minOrderQty?: number;
   categoryId: number | null;
-  category?: { id: number; name: string; slug: string } | null;
+  category?: {
+    id: number;
+    name: string;
+    slug: string;
+    productType?: ProductType;
+    defaultSaleMode?: SaleMode;
+  } | null;
   averageRating?: number;
   reviewCount?: number;
+};
+
+export type ApiEnquiry = {
+  id: number;
+  productId: number | null;
+  productName: string | null;
+  customerName: string;
+  customerEmail: string | null;
+  customerPhone: string;
+  quantity: number | null;
+  eventDate: string | null;
+  occasion: string | null;
+  budget: number | null;
+  address: string | null;
+  city: string | null;
+  message: string | null;
+  source: string;
+  status: 'NEW' | 'CONTACTED' | 'QUOTED' | 'CONVERTED' | 'CLOSED';
+  adminNotes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  product?: { id: number; name: string; slug: string } | null;
 };
 
 export type ApiReview = {
@@ -152,11 +194,14 @@ export type ApiOrderItem = {
   product?: { id: number; slug: string; image: string | null } | null;
 };
 
+export type ApiOrderItem2 = ApiOrderItem & { gstRate?: number; gstAmount?: number };
+
 export type ApiOrder = {
   id: number;
   userId: number | null;
   subtotal: number;
   shipping: number;
+  gst?: number;
   total: number;
   status: 'PENDING' | 'PAID' | 'SHIPPED' | 'COMPLETED' | 'CANCELLED';
   paymentMethod: string;
@@ -169,7 +214,7 @@ export type ApiOrder = {
   notes: string | null;
   createdAt: string;
   updatedAt: string;
-  items: ApiOrderItem[];
+  items: ApiOrderItem2[];
   user?: { id: number; email: string; name: string | null } | null;
 };
 
@@ -231,6 +276,23 @@ export const api = {
   ) => apiFetch<ApiReview>(`/products/${productId}/reviews`, { method: 'POST', body, auth: true }),
   deleteReview: (reviewId: number) =>
     apiFetch<{ success: true }>(`/reviews/${reviewId}`, { method: 'DELETE', auth: true }),
+
+  // Enquiries (public POST)
+  createEnquiry: (body: {
+    productId?: number | null;
+    productName?: string;
+    customerName: string;
+    customerEmail?: string;
+    customerPhone: string;
+    quantity?: number;
+    eventDate?: string;
+    occasion?: string;
+    budget?: number;
+    address?: string;
+    city?: string;
+    message?: string;
+    source?: string;
+  }) => apiFetch<ApiEnquiry>('/enquiries', { method: 'POST', body }),
 
   // Settings
   getSettings: () => apiFetch<Record<string, string>>('/settings'),

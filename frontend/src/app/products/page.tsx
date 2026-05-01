@@ -116,25 +116,43 @@ function ProductsView() {
                   </Link>
                 </h3>
                 <div className="flex items-center justify-between text-sm text-slate-700 mt-auto">
-                  <span className="font-semibold text-olive-green">{formatINR(p.price)}</span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      add(
-                        {
-                          productId: p.id,
-                          slug: p.slug,
-                          name: p.name,
-                          price: p.price,
-                          image: p.image,
-                        },
-                        1,
-                      )
-                    }
-                    className="text-olive-green font-medium hover:underline"
-                  >
-                    Add to cart
-                  </button>
+                  {p.saleMode === "ENQUIRY" ? (
+                    <span className="font-semibold text-olive-green">On enquiry</span>
+                  ) : (
+                    <span className="font-semibold text-olive-green">
+                      {formatINR(p.price)}
+                      {p.unit && p.unit !== "piece" ? <span className="ml-1 text-xs font-normal text-olive-green/70">/ {p.unit}</span> : null}
+                    </span>
+                  )}
+                  {p.saleMode === "ENQUIRY" ? (
+                    <Link
+                      href={`/products/${p.slug}`}
+                      className="text-olive-green font-medium hover:underline"
+                    >
+                      Enquire
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        add(
+                          {
+                            productId: p.id,
+                            slug: p.slug,
+                            name: p.name,
+                            price: p.price,
+                            image: p.image,
+                            saleMode: p.saleMode,
+                            gstRate: p.gstRate,
+                          },
+                          1,
+                        )
+                      }
+                      className="text-olive-green font-medium hover:underline"
+                    >
+                      Add to cart
+                    </button>
+                  )}
                 </div>
               </div>
             </article>

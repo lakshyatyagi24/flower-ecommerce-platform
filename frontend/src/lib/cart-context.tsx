@@ -9,12 +9,15 @@ export interface CartItem {
   price: number;
   image: string | null;
   quantity: number;
+  saleMode?: 'PURCHASE' | 'ENQUIRY';
+  gstRate?: number;
 }
 
 interface CartState {
   items: CartItem[];
   count: number;
   subtotal: number;
+  gstTotal: number;
   add: (item: Omit<CartItem, 'quantity'>, qty?: number) => void;
   setQuantity: (productId: number, quantity: number) => void;
   remove: (productId: number) => void;
@@ -23,6 +26,13 @@ interface CartState {
   open: () => void;
   close: () => void;
   toggle: () => void;
+}
+
+export class EnquiryOnlyProductError extends Error {
+  constructor(productName: string) {
+    super(`"${productName}" is enquiry-only — please send an enquiry instead of adding to cart.`);
+    this.name = 'EnquiryOnlyProductError';
+  }
 }
 
 const CartContext = createContext<CartState | undefined>(undefined);
@@ -60,6 +70,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [items, hydrated]);
 
   const add = useCallback((item: Omit<CartItem, 'quantity'>, qty = 1) => {
+    if (item.saleMode === 'ENQUIRY') {
+      throw new EnquiryOnlyProductError(item.name);
+    }
     setItems((prev) => {
       const existing = prev.find((i) => i.productId === item.productId);
       if (existing) {
@@ -87,12 +100,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const count = useMemo(() => items.reduce((sum, i) => sum + i.quantity, 0), [items]);
   const subtotal = useMemo(() => items.reduce((sum, i) => sum + i.quantity * i.price, 0), [items]);
+  const gstTotal = useMemo(
+    () =>
+      items.reduce(
+        (sum, i) => sum + (i.gstRate ? (i.price * i.quantity * i.gstRate) / 100 : 0),
+        0,
+      ),
+    [items],
+  );
 
   const value = useMemo<CartState>(
     () => ({
       items,
       count,
       subtotal,
+      gstTotal,
       add,
       setQuantity,
       remove,
@@ -102,7 +124,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       close: () => setIsOpen(false),
       toggle: () => setIsOpen((v) => !v),
     }),
-    [items, count, subtotal, add, setQuantity, remove, clear, isOpen],
+    [items, count, subtotal, gstTotal, add, setQuantity, remove, clear, isOpen],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
