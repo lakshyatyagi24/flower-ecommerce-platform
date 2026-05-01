@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+/* Tailwind v4 theme: define custom palette so utilities like
+   bg-olive-green, text-light-brown, bg-beige are generated. */
+@theme {
+  --color-olive-green: #7C835A;
+  --color-light-brown: #B79B7A;
+  --color-beige: #FAF3E7;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-playfair-display), ui-serif, Georgia, serif;
+}
+
 :root {
   --background: #f7f2ea;
   --foreground: #1b1a17;

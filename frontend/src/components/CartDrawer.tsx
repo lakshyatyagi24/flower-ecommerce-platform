@@ -6,7 +6,7 @@ import { useEffect } from "react";
 import { useCart, formatINR } from "@/lib/cart-context";
 
 export default function CartDrawer() {
-  const { items, isOpen, close, count, subtotal, setQuantity, remove } = useCart();
+  const { items, isOpen, close, count, subtotal, gstTotal, setQuantity, remove } = useCart();
 
   useEffect(() => {
     if (!isOpen) return;
@@ -114,7 +114,17 @@ export default function CartDrawer() {
           <footer className="border-t border-olive-green/10 p-5 space-y-3">
             <div className="flex items-center justify-between text-sm text-slate-700">
               <span>Subtotal</span>
-              <span className="text-base font-semibold text-olive-green">{formatINR(subtotal)}</span>
+              <span className="font-medium text-slate-900">{formatINR(subtotal)}</span>
+            </div>
+            {gstTotal > 0 && (
+              <div className="flex items-center justify-between text-sm text-slate-700">
+                <span>GST</span>
+                <span className="font-medium text-slate-900">{formatINR(gstTotal)}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between text-sm border-t border-olive-green/10 pt-2">
+              <span className="font-semibold text-slate-900">Estimated total</span>
+              <span className="text-base font-semibold text-olive-green">{formatINR(subtotal + gstTotal)}</span>
             </div>
             <p className="text-xs text-olive-green/70">Shipping calculated at checkout.</p>
             <Link

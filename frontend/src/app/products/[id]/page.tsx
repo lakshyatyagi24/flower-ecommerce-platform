@@ -46,7 +46,11 @@ export default function ProductPage() {
     api
       .getProductBySlug(slug)
       .then((p) => {
-        if (!cancelled) setProduct(p);
+        if (cancelled) return;
+        setProduct(p);
+        // Seed quantity at the product's minOrderQty so the user can't accidentally add fewer.
+        const minQty = p.minOrderQty && p.minOrderQty > 0 ? p.minOrderQty : 1;
+        setQuantity(minQty);
       })
       .catch((err: Error) => {
         if (!cancelled) setError(err.message || "Failed to load product");

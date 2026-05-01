@@ -10,7 +10,7 @@ import { ApiError, api } from "@/lib/api";
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, subtotal, count, clear } = useCart();
+  const { items, subtotal, gstTotal, count, clear } = useCart();
   const { user } = useAuth();
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -49,7 +49,7 @@ export default function CheckoutPage() {
     if (freeThreshold > 0 && subtotal >= freeThreshold) return 0;
     return flatRate;
   }, [subtotal, count, flatRate, freeThreshold]);
-  const total = subtotal + shipping;
+  const total = subtotal + shipping + gstTotal;
 
   if (count === 0) {
     return (
@@ -80,7 +80,8 @@ export default function CheckoutPage() {
         paymentMethod: form.paymentMethod,
       });
       clear();
-      router.push(`/checkout/success?orderId=${order.id}`);
+      const email = encodeURIComponent(form.customerEmail.trim());
+      router.push(`/checkout/success?orderId=${order.id}&email=${email}`);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : err instanceof Error ? err.message : "Could not place order";
       setError(message);
@@ -180,6 +181,9 @@ export default function CheckoutPage() {
             <div className="mt-4 pt-4 border-t border-olive-green/10 space-y-2 text-sm">
               <div className="flex justify-between"><span>Subtotal</span><span>{formatINR(subtotal)}</span></div>
               <div className="flex justify-between"><span>Shipping</span><span>{shipping === 0 ? "Free" : formatINR(shipping)}</span></div>
+              {gstTotal > 0 && (
+                <div className="flex justify-between"><span>GST</span><span>{formatINR(gstTotal)}</span></div>
+              )}
               <div className="flex justify-between text-base font-semibold text-olive-green pt-2 border-t border-olive-green/10"><span>Total</span><span>{formatINR(total)}</span></div>
             </div>
             <button type="submit" disabled={submitting} className="mt-5 w-full bg-olive-green text-white px-6 py-3 rounded-full font-semibold shadow-md hover:shadow-lg disabled:opacity-50">

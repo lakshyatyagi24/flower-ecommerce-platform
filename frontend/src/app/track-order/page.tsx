@@ -1,13 +1,22 @@
 "use client";
-import React, { useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
-export default function TrackOrderPage() {
+function TrackOrderInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [orderId, setOrderId] = useState("");
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  // Pre-fill from query (e.g., when arriving from /checkout/success as a guest).
+  useEffect(() => {
+    const qOrder = searchParams?.get("orderId");
+    const qEmail = searchParams?.get("email");
+    if (qOrder) setOrderId(qOrder);
+    if (qEmail) setEmail(qEmail);
+  }, [searchParams]);
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -75,5 +84,13 @@ export default function TrackOrderPage() {
         </form>
       </div>
     </main>
+  );
+}
+
+export default function TrackOrderPage() {
+  return (
+    <Suspense fallback={<main className="max-w-3xl mx-auto px-4 py-12">Loading…</main>}>
+      <TrackOrderInner />
+    </Suspense>
   );
 }

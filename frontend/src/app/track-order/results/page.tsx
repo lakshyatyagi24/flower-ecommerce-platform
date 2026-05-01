@@ -182,6 +182,12 @@ function TrackOrderResultsView() {
               <div className="text-slate-600">Shipping</div>
               <div>{order.shipping === 0 ? "Free" : formatINR(order.shipping)}</div>
             </div>
+            {order.gst && order.gst > 0 ? (
+              <div className="mb-3">
+                <div className="text-slate-600">GST</div>
+                <div>{formatINR(order.gst)}</div>
+              </div>
+            ) : null}
             <div>
               <div className="text-slate-600">Total</div>
               <div className="text-lg font-semibold text-olive-green">{formatINR(order.total)}</div>

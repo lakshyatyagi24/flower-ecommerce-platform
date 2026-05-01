@@ -3,10 +3,23 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
 
 function CheckoutSuccessView() {
   const params = useSearchParams();
   const orderId = params?.get("orderId");
+  const emailParam = params?.get("email");
+  const { user } = useAuth();
+
+  // Track-order requires (orderId + email). Prefer the email passed from checkout,
+  // fall back to the logged-in user's email; otherwise send guests to /track-order
+  // pre-filled with their orderId so they can enter the email used at checkout.
+  const trackEmail = emailParam || user?.email || null;
+  const trackHref = orderId
+    ? trackEmail
+      ? `/track-order/results?orderId=${orderId}&email=${encodeURIComponent(trackEmail)}`
+      : `/track-order?orderId=${orderId}`
+    : null;
 
   return (
     <main className="section-shell mt-12 mb-16 text-center">
@@ -18,10 +31,15 @@ function CheckoutSuccessView() {
             ? `Your order #${orderId} has been confirmed. We'll be in touch shortly with delivery details.`
             : "Your order has been confirmed. We'll be in touch shortly."}
         </p>
+        {orderId && !trackEmail && (
+          <p className="mt-2 text-xs text-slate-500">
+            Save your order number — you&apos;ll need it (with the email you provided) to track delivery status.
+          </p>
+        )}
         <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
-          {orderId && (
+          {trackHref && (
             <Link
-              href={`/track-order/results?orderId=${orderId}`}
+              href={trackHref}
               className="bg-olive-green text-white px-6 py-3 rounded-full font-semibold hover:opacity-95"
             >
               Track this order

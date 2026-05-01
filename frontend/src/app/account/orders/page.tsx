@@ -85,14 +85,35 @@ export default function MyOrdersPage() {
                   </li>
                 ))}
               </ul>
-              <div className="mt-4 flex items-center justify-between border-t border-olive-green/10 pt-4">
-                <div className="font-semibold text-olive-green">Total {formatINR(o.total)}</div>
-                <Link
-                  href={`/track-order/results?orderId=${o.id}&email=${encodeURIComponent(o.customerEmail || user?.email || "")}`}
-                  className="text-olive-green underline-offset-4 hover:underline"
-                >
-                  View details
-                </Link>
+              <div className="mt-4 border-t border-olive-green/10 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="text-sm text-slate-700 space-y-1">
+                  <div className="flex justify-between sm:justify-start sm:gap-3">
+                    <span className="text-slate-500">Subtotal</span>
+                    <span>{formatINR(o.subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between sm:justify-start sm:gap-3">
+                    <span className="text-slate-500">Shipping</span>
+                    <span>{o.shipping === 0 ? "Free" : formatINR(o.shipping)}</span>
+                  </div>
+                  {o.gst && o.gst > 0 ? (
+                    <div className="flex justify-between sm:justify-start sm:gap-3">
+                      <span className="text-slate-500">GST</span>
+                      <span>{formatINR(o.gst)}</span>
+                    </div>
+                  ) : null}
+                  <div className="flex justify-between sm:justify-start sm:gap-3 font-semibold text-olive-green">
+                    <span>Total</span>
+                    <span>{formatINR(o.total)}</span>
+                  </div>
+                </div>
+                <div className="flex sm:justify-end sm:items-end">
+                  <Link
+                    href={`/track-order/results?orderId=${o.id}&email=${encodeURIComponent(o.customerEmail || user?.email || "")}`}
+                    className="text-olive-green underline-offset-4 hover:underline"
+                  >
+                    View details →
+                  </Link>
+                </div>
               </div>
             </article>
           ))}
