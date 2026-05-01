@@ -6,8 +6,10 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ApiProduct, api } from "@/lib/api";
 import { useCart, formatINR } from "@/lib/cart-context";
+import { useSettings } from "@/lib/settings-context";
 import ProductReviews from "@/components/ProductReviews";
 import EnquiryModal from "@/components/EnquiryModal";
+import RelatedProducts from "@/components/RelatedProducts";
 
 const RatingStar: React.FC<{ filled?: boolean }> = ({ filled = false }) => (
   <svg
@@ -32,6 +34,7 @@ export default function ProductPage() {
   const [reviewStats, setReviewStats] = useState<{ averageRating: number; reviewCount: number } | null>(null);
   const [enquiryOpen, setEnquiryOpen] = useState(false);
   const { add } = useCart();
+  const { usps } = useSettings();
 
   const handleReviewStats = useCallback(
     (stats: { averageRating: number; reviewCount: number }) => setReviewStats(stats),
@@ -163,9 +166,12 @@ export default function ProductPage() {
             </div>
           ) : (
             <ul className="space-y-2 text-sm text-slate-700 bg-white/70 border border-olive-green/10 rounded-2xl p-4">
-              <li>• Sourced fresh from the mandi every morning</li>
-              <li>• Cab/bike delivery across Delhi NCR</li>
-              <li>• Bulk pricing available for corporate orders</li>
+              {usps.slice(0, 3).map((u, i) => (
+                <li key={u.title + i}>
+                  <span className="font-medium text-slate-900">• {u.title}</span>
+                  {u.body ? <span className="text-slate-600"> — {u.body}</span> : null}
+                </li>
+              ))}
             </ul>
           )}
 
@@ -235,6 +241,11 @@ export default function ProductPage() {
           ) : null}
         </div>
       </div>
+
+      <RelatedProducts
+        currentProductId={product.id}
+        categorySlug={product.category?.slug}
+      />
 
       <div id="product-reviews">
         <ProductReviews productId={product.id} onStatsChange={handleReviewStats} />

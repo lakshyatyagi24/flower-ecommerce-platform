@@ -16,6 +16,10 @@ const Footer: React.FC = () => {
   const emailHref = mailtoLink(settings.email);
   const waHref = whatsappLink(settings.whatsapp || settings.phone);
   const igHref = instagramLink(settings.instagram);
+  const fbHref = settings.social.facebook || null;
+  const ytHref = settings.social.youtube || null;
+  const ptHref = settings.social.pinterest || null;
+  const hasContact = !!(phoneHref || emailHref || settings.address);
 
   return (
     <footer className="bg-gradient-to-b from-[#f9f5ef] to-[#f2e6d9] border-t border-olive-green/10 text-sm text-gray-700 mt-16">
@@ -27,24 +31,27 @@ const Footer: React.FC = () => {
               Farm-fresh cut flowers sourced daily from the mandi. Bulk supply for corporates, custom bouquets and arrangements on enquiry.
             </p>
 
-            <div className="mt-6 p-4 bg-white/70 border border-olive-green/10 rounded-2xl shadow-sm max-w-md">
-              <p className="text-xs font-semibold tracking-[0.16em] uppercase text-olive-green">Customer care</p>
-              {phoneHref ? (
-                <a href={phoneHref} className="mt-2 block text-base font-semibold text-olive-green hover:underline">
-                  {settings.phone}
-                </a>
-              ) : (
-                <p className="mt-2 text-sm text-gray-500 italic">Phone number coming soon</p>
-              )}
-              {emailHref ? (
-                <a href={emailHref} className="text-sm text-gray-600 hover:text-olive-green">
-                  {settings.email}
-                </a>
-              ) : null}
-              {settings.address ? (
-                <p className="mt-3 text-xs uppercase tracking-[0.18em] text-gray-500">{settings.address}</p>
-              ) : null}
-            </div>
+            {hasContact && (
+              <div className="mt-6 p-4 bg-white/70 border border-olive-green/10 rounded-2xl shadow-sm max-w-md">
+                <p className="text-xs font-semibold tracking-[0.16em] uppercase text-olive-green">Customer care</p>
+                {phoneHref && (
+                  <a href={phoneHref} className="mt-2 block text-base font-semibold text-olive-green hover:underline">
+                    {settings.phone}
+                  </a>
+                )}
+                {emailHref && (
+                  <a href={emailHref} className="text-sm text-gray-600 hover:text-olive-green">
+                    {settings.email}
+                  </a>
+                )}
+                {settings.address && (
+                  <p className="mt-3 text-xs uppercase tracking-[0.18em] text-gray-500">{settings.address}</p>
+                )}
+                {settings.delivery.businessHours && (
+                  <p className="mt-2 text-xs text-gray-500">Hours: {settings.delivery.businessHours}</p>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-8 flex-none min-w-[300px]">
@@ -70,12 +77,21 @@ const Footer: React.FC = () => {
             <div>
               <h4 className="font-semibold mb-3 text-olive-green uppercase tracking-wide text-xs">Connect</h4>
               <ul className="space-y-2">
-                {igHref ? (
+                {igHref && (
                   <li><a href={igHref} className="text-gray-700 hover:text-olive-green" target="_blank" rel="noreferrer">Instagram</a></li>
-                ) : null}
-                {waHref ? (
+                )}
+                {fbHref && (
+                  <li><a href={fbHref} className="text-gray-700 hover:text-olive-green" target="_blank" rel="noreferrer">Facebook</a></li>
+                )}
+                {ytHref && (
+                  <li><a href={ytHref} className="text-gray-700 hover:text-olive-green" target="_blank" rel="noreferrer">YouTube</a></li>
+                )}
+                {ptHref && (
+                  <li><a href={ptHref} className="text-gray-700 hover:text-olive-green" target="_blank" rel="noreferrer">Pinterest</a></li>
+                )}
+                {waHref && (
                   <li><a href={waHref} className="text-gray-700 hover:text-olive-green" target="_blank" rel="noreferrer">WhatsApp</a></li>
-                ) : null}
+                )}
                 <li><Link href="/about" className="text-gray-700 hover:text-olive-green">Our story</Link></li>
               </ul>
             </div>

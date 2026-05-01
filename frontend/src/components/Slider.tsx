@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Image, { StaticImageData } from 'next/image';
+import { API_BASE } from '@/lib/api';
 
 type Position =
   | 'top-left'
@@ -122,18 +123,15 @@ export default function Slider() {
   const autoplayRef = useRef<number | null>(null);
 
   useEffect(() => {
-    // fetch remote slides from backend
-    const base = process.env.NEXT_PUBLIC_API_BASE;
-    if (!base) return;
+    // Always try to fetch admin-managed sliders. We use the centralized API_BASE so
+    // this works in dev (localhost), preview and prod without env wiring.
     setLoading(true);
-    fetch(`${base}/sliders`)
-      .then((r) => r.json())
+    fetch(`${API_BASE}/sliders`)
+      .then((r) => (r.ok ? r.json() : []))
       .then((data: any[]) => {
         // map backend slider shape to Slide[]
         const mapped: Slide[] = data.map((s: any, i: number) => {
           const cfg = s.config ?? {};
-          console.log('Slider config:', JSON.stringify(cfg, null, 2));
-          console.log('Slider routing:', cfg.routing);
           const overlayFromCfg = (() => {
             if (cfg.overlay) {
               const pos = (cfg.overlay.position ?? 'center') as Position;

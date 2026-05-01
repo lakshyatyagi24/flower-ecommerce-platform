@@ -167,6 +167,16 @@ function TrackOrderResultsView() {
               <h3 className="text-sm font-semibold text-slate-700 mb-3">Order progress</h3>
               <OrderTimeline phases={phases} currentIndex={currentIndex} />
             </div>
+
+            {order.trackingNumber && (
+              <div className="mt-6 rounded-md border border-olive-green/15 bg-olive-green/5 p-4">
+                <h3 className="text-sm font-semibold text-slate-700 mb-1">Shipment tracking</h3>
+                <div className="text-sm text-slate-700">
+                  {order.courierName && <span className="block text-xs uppercase tracking-wide text-olive-green/70">{order.courierName}</span>}
+                  <span className="font-mono text-base text-slate-900 break-all">{order.trackingNumber}</span>
+                </div>
+              </div>
+            )}
           </div>
 
           <aside className="bg-slate-50 p-4 rounded-md text-sm">

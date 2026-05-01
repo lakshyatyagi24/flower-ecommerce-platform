@@ -11,7 +11,7 @@ import { ApiError, api } from "@/lib/api";
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, subtotal, gstTotal, count, clear } = useCart();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,6 +26,15 @@ export default function CheckoutPage() {
     notes: "",
     paymentMethod: "COD",
   });
+
+  // Login is required to place an order. Send guests to /account/login with a
+  // callback so they bounce back here once authenticated.
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      router.replace(`/account/login?callbackUrl=${encodeURIComponent("/checkout")}`);
+    }
+  }, [authLoading, user, router]);
 
   useEffect(() => {
     api.getSettings().then(setSettings).catch(() => {});
@@ -50,6 +59,19 @@ export default function CheckoutPage() {
     return flatRate;
   }, [subtotal, count, flatRate, freeThreshold]);
   const total = subtotal + shipping + gstTotal;
+
+  // Don't render the form for guests — they're being redirected to /account/login.
+  if (authLoading || !user) {
+    return (
+      <main className="section-shell mt-12 mb-16">
+        <div className="animate-pulse space-y-4 max-w-3xl">
+          <div className="h-8 bg-slate-200 rounded w-1/3" />
+          <div className="h-4 bg-slate-200 rounded w-2/3" />
+          <div className="h-64 bg-slate-200 rounded" />
+        </div>
+      </main>
+    );
+  }
 
   if (count === 0) {
     return (

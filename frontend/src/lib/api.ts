@@ -212,6 +212,8 @@ export type ApiOrder = {
   city: string | null;
   postalCode: string | null;
   notes: string | null;
+  trackingNumber?: string | null;
+  courierName?: string | null;
   createdAt: string;
   updatedAt: string;
   items: ApiOrderItem2[];

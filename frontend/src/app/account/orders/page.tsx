@@ -17,7 +17,7 @@ export default function MyOrdersPage() {
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
-      router.replace("/");
+      router.replace(`/account/login?callbackUrl=${encodeURIComponent("/account/orders")}`);
       return;
     }
     let cancelled = false;

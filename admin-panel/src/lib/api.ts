@@ -133,6 +133,7 @@ export type AdminOrder = {
   userId: number | null;
   subtotal: number;
   shipping: number;
+  gst?: number;
   total: number;
   status: 'PENDING' | 'PAID' | 'SHIPPED' | 'COMPLETED' | 'CANCELLED';
   paymentMethod: string;
@@ -143,6 +144,9 @@ export type AdminOrder = {
   city: string | null;
   postalCode: string | null;
   notes: string | null;
+  trackingNumber?: string | null;
+  courierName?: string | null;
+  adminNotes?: string | null;
   createdAt: string;
   updatedAt: string;
   items: {
@@ -153,6 +157,17 @@ export type AdminOrder = {
     unitPrice: number;
   }[];
   user?: { id: number; email: string; name: string | null } | null;
+};
+
+export type AdminOrderPatch = {
+  status?: string;
+  trackingNumber?: string | null;
+  courierName?: string | null;
+  adminNotes?: string | null;
+  shippingAddress?: string | null;
+  city?: string | null;
+  postalCode?: string | null;
+  customerPhone?: string | null;
 };
 
 export type AdminCustomer = {
@@ -169,7 +184,27 @@ export type AdminCategory = {
   name: string;
   slug: string;
   image?: string | null;
+  description?: string | null;
   parentId?: number | null;
+  productType?: AdminProductType;
+  defaultSaleMode?: AdminSaleMode;
+  defaultGstRate?: number;
+  sortOrder?: number;
+  active?: boolean;
+  children?: AdminCategory[];
+};
+
+export type AdminCategoryInput = {
+  name: string;
+  slug: string;
+  image?: string | null;
+  description?: string | null;
+  parentId?: number | null;
+  productType?: AdminProductType;
+  defaultSaleMode?: AdminSaleMode;
+  defaultGstRate?: number;
+  sortOrder?: number;
+  active?: boolean;
 };
 
 export type AdminReview = {
@@ -227,6 +262,8 @@ export const adminApi = {
   getOrder: (id: number) => apiFetch<AdminOrder>(`/orders/${id}`),
   updateOrderStatus: (id: number, status: string) =>
     apiFetch<AdminOrder>(`/orders/${id}/status`, { method: 'PUT', body: { status } }),
+  updateOrder: (id: number, patch: AdminOrderPatch) =>
+    apiFetch<AdminOrder>(`/orders/${id}`, { method: 'PUT', body: patch }),
   stats: () =>
     apiFetch<{
       orderCount: number;
@@ -266,6 +303,13 @@ export const adminApi = {
 
   // Categories
   listCategories: () => apiFetch<AdminCategory[]>('/categories/all'),
+  listCategoriesPublic: () => apiFetch<AdminCategory[]>('/categories'),
+  createCategory: (body: AdminCategoryInput) =>
+    apiFetch<AdminCategory>('/categories', { method: 'POST', body }),
+  updateCategory: (id: number, body: Partial<AdminCategoryInput>) =>
+    apiFetch<AdminCategory>(`/categories/${id}`, { method: 'PUT', body }),
+  deleteCategory: (id: number) =>
+    apiFetch<{ success: true } | AdminCategory>(`/categories/${id}`, { method: 'DELETE' }),
 
   // Reviews
   listReviews: (params: { productId?: number; take?: number; skip?: number } = {}) => {
