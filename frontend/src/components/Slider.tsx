@@ -78,7 +78,7 @@ const staticSlides: Slide[] = [
       eyebrow: 'Bestselling bouquet',
       title: "Blue Gardenia",
       subtitle: 'Hydrangeas, oriental lilies and avalanche roses — hand-tied and delivered fresh.',
-      cta: { label: 'Shop Bouquets', href: '/products?category=bouquets' },
+      cta: { label: 'Shop Bouquets', href: '/corporate' },
       textClass: 'text-white drop-shadow-md',
       buttonClass: 'inline-block bg-[#4a3b2a] text-white px-6 py-2.5 rounded-full font-semibold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition',
     },
@@ -218,8 +218,9 @@ export default function Slider() {
               <a
                 href={s.overlay.cta.href}
                 className="absolute inset-0 z-10"
-                target="_blank"
-                rel="noopener noreferrer"
+                {...(/^https?:\/\//i.test(s.overlay.cta.href)
+                  ? { target: '_blank', rel: 'noopener noreferrer' }
+                  : {})}
               />
             )}
             

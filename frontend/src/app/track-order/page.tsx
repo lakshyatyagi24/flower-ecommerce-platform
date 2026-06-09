@@ -26,6 +26,10 @@ function TrackOrderInner() {
       setError("Please enter your Order ID.");
       return;
     }
+    if (!/^\d+$/.test(orderId.trim())) {
+      setError("Order ID must be a number (e.g., 1042).");
+      return;
+    }
     if (!email.trim()) {
       setError("Please enter the email used at checkout.");
       return;

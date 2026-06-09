@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import Image, { StaticImageData } from "next/image";
+import React, { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { products as allProducts } from "@/lib/products";
+import { api } from "@/lib/api";
+import { formatINR } from "@/lib/cart-context";
 
 type Suggestion =
-  | { type: "product"; id: string; label: string; price: string; img: StaticImageData }
-  | { type: "collection"; collection: string; label: string }
+  | { type: "product"; slug: string; label: string; price: string; img: string | null }
+  | { type: "category"; slug: string; label: string }
   | { type: "static"; label: string; href: string };
 
 // Accessible search with live suggestions, keyboard navigation and routing
@@ -33,49 +34,59 @@ const SearchBar: React.FC = () => {
     }
   }, []);
 
-  // build a simple suggestion source from products + collections
-  const computeSuggestions = useCallback((q: string) => {
-    const normalized = q.trim().toLowerCase();
-    if (!normalized) return [] as Suggestion[];
-
-    const collectionNames = Array.from(new Set(allProducts.map((p) => p.collection).filter(Boolean))) as string[];
-
-    const productMatches = allProducts
-      .filter((p) => p.title.toLowerCase().includes(normalized))
-      .slice(0, 5)
-      .map((p) => ({ type: "product", id: p.id, label: p.title, price: p.price, img: p.img } as Suggestion));
-
-    const collectionMatches = collectionNames
-      .filter((c) => c.toLowerCase().includes(normalized))
-      .slice(0, 4)
-      .map((c) => ({ type: "collection", collection: c, label: c.replace(/-/g, " ") } as Suggestion));
-
-    const staticPages = [
-      { label: "Event Services", href: "/events" },
-      { label: "FAQ", href: "/faq" },
-    ];
-
-    const staticMatches = staticPages
-      .filter((p) => p.label.toLowerCase().includes(normalized))
-      .map((p) => ({ type: "static", label: p.label, href: p.href } as Suggestion));
-
-    // products first, then collections, then static pages
-    return [...productMatches, ...collectionMatches, ...staticMatches];
-  }, []);
-
+  // Build suggestions from LIVE backend data (debounced) so every product and
+  // category suggestion is real and reachable by its actual slug.
   useEffect(() => {
-    if (!query) {
+    const q = query.trim();
+    if (!q) {
       setSuggestions([]);
       setOpen(false);
       setHighlightIndex(-1);
       return;
     }
-
-    const next = computeSuggestions(query);
-    setSuggestions(next);
-    setOpen(next.length > 0);
-    setHighlightIndex(-1);
-  }, [query, computeSuggestions]);
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const [prodRes, cats] = await Promise.all([
+          api.listProducts({ q, take: 5 }),
+          api.listCategories().catch(() => []),
+        ]);
+        if (cancelled) return;
+        const normalized = q.toLowerCase();
+        const productMatches: Suggestion[] = prodRes.items.map((p) => ({
+          type: "product",
+          slug: p.slug,
+          label: p.name,
+          price: formatINR(p.price),
+          img: p.image,
+        }));
+        const categoryMatches: Suggestion[] = (cats || [])
+          .filter((c) => c.name.toLowerCase().includes(normalized))
+          .slice(0, 4)
+          .map((c) => ({ type: "category", slug: c.slug, label: c.name }));
+        const staticPages = [
+          { label: "Event Services", href: "/corporate" },
+          { label: "FAQ", href: "/faq" },
+        ];
+        const staticMatches: Suggestion[] = staticPages
+          .filter((p) => p.label.toLowerCase().includes(normalized))
+          .map((p) => ({ type: "static", label: p.label, href: p.href }));
+        const next = [...productMatches, ...categoryMatches, ...staticMatches];
+        setSuggestions(next);
+        setOpen(next.length > 0);
+        setHighlightIndex(-1);
+      } catch {
+        if (!cancelled) {
+          setSuggestions([]);
+          setHighlightIndex(-1);
+        }
+      }
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [query]);
 
   // click outside to close
   useEffect(() => {
@@ -89,16 +100,34 @@ const SearchBar: React.FC = () => {
     return () => document.removeEventListener("mousedown", onDocClick);
   }, []);
 
+  const pushRecent = (term: string) => {
+    const q = term.trim();
+    if (!q) return;
+    setRecent((prev) => {
+      const next = [q, ...prev.filter((r) => r !== q)].slice(0, 8);
+      try {
+        localStorage.setItem("recent_searches", JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
+
   const navigateFor = (s: Suggestion | { raw: string }) => {
     if ((s as Suggestion).type === "product") {
       const prod = s as Suggestion & { type: "product" };
-      router.push(`/products/${prod.id}`);
-    } else if ((s as Suggestion).type === "collection") {
-      const col = s as Suggestion & { type: "collection" };
-      router.push(`/products?collection=${encodeURIComponent(col.collection)}`);
+      router.push(`/products/${prod.slug}`);
+    } else if ((s as Suggestion).type === "category") {
+      const cat = s as Suggestion & { type: "category" };
+      router.push(`/products?category=${encodeURIComponent(cat.slug)}`);
+    } else if ((s as Suggestion).type === "static") {
+      const st = s as Suggestion & { type: "static" };
+      router.push(st.href);
     } else {
       const r = s as { raw: string };
-      router.push(`/search?q=${encodeURIComponent(r.raw)}`);
+      pushRecent(r.raw);
+      router.push(`/products?q=${encodeURIComponent(r.raw)}`);
     }
     setOpen(false);
   };
@@ -239,7 +268,7 @@ const SearchBar: React.FC = () => {
               return (
                 <li
                   id={`search-suggestion-${idx}`}
-                  key={`p-${s.id}`}
+                  key={`p-${s.slug}`}
                   role="option"
                   aria-selected={highlightIndex === idx}
                   onMouseDown={(e) => {
@@ -249,8 +278,12 @@ const SearchBar: React.FC = () => {
                   onMouseEnter={() => setHighlightIndex(idx)}
                   className={`px-3 py-2 cursor-pointer flex items-center gap-x-3 ${highlightIndex === idx ? "bg-olive-green/10" : "hover:bg-gray-50"}`}
                 >
-                  <div className="w-10 h-10 relative rounded overflow-hidden flex-shrink-0">
-                    <Image src={s.img} alt={s.label} fill className="object-cover" />
+                  <div className="w-10 h-10 relative rounded overflow-hidden flex-shrink-0 bg-slate-100">
+                    {s.img ? (
+                      <Image src={s.img} alt={s.label} fill sizes="40px" className="object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-sm">🌸</div>
+                    )}
                   </div>
                   <div className="flex-1">
                     <div className="text-sm font-medium text-gray-800">{s.label}</div>
@@ -261,11 +294,11 @@ const SearchBar: React.FC = () => {
               );
             }
 
-            if (s.type === "collection") {
+            if (s.type === "category") {
               return (
                 <li
                   id={`search-suggestion-${idx}`}
-                  key={`c-${s.collection}`}
+                  key={`c-${s.slug}`}
                   role="option"
                   aria-selected={highlightIndex === idx}
                   onMouseDown={(e) => {
@@ -308,7 +341,9 @@ const SearchBar: React.FC = () => {
             aria-selected={false}
             onMouseDown={(e) => {
               e.preventDefault();
+              pushRecent(query.trim());
               router.push(`/products?q=${encodeURIComponent(query.trim())}`);
+              setOpen(false);
             }}
             className="px-3 py-2 cursor-pointer text-sm text-center text-olive-green hover:bg-gray-50 border-t border-gray-100"
           >

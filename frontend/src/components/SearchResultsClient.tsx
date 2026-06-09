@@ -128,7 +128,7 @@ export default function SearchResultsClient({ initialQuery = "", initialProducts
               <div className="bg-white p-4 rounded-md shadow-sm">
                 <h3 className="font-semibold mb-3">Event Services</h3>
                 <p className="text-sm text-gray-600 mb-3">Looking for help with weddings, corporate events or parties? Explore our services.</p>
-                <Link href="/events" className="inline-block text-olive-green font-medium">View event services</Link>
+                <Link href="/corporate" className="inline-block text-olive-green font-medium">View event services</Link>
               </div>
             </div>
 

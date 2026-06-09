@@ -71,12 +71,12 @@ function TrackOrderResultsView() {
       setError("Email is required to track this order.");
       return;
     }
-    const idNum = parseInt(orderId, 10);
-    if (isNaN(idNum)) {
+    if (!/^\d+$/.test(orderId.trim())) {
       setLoading(false);
       setError("Order ID must be numeric.");
       return;
     }
+    const idNum = parseInt(orderId.trim(), 10);
     let cancelled = false;
     setLoading(true);
     api

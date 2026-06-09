@@ -5,7 +5,7 @@ import Link from "next/link";
 
 type Submenu = {
   title: string;
-  items: string[];
+  items: { name: string; slug: string }[];
 };
 
 type Category = {
@@ -127,8 +127,8 @@ export default function MegaMenu({ category, anchorRect, onRequestClose, clearHi
       <h4 className="text-sm font-semibold mb-1">{col.title}</h4>
       <ul className="space-y-1 text-sm">
                 {col.items.map((it) => (
-                  <li key={it}>
-                    <Link href={`#${it.toLowerCase().replace(/\s+/g, "-")}`} className="text-gray-600 hover:text-olive-green">{it}</Link>
+                  <li key={it.slug}>
+                    <Link href={`/products?category=${encodeURIComponent(it.slug)}`} className="text-gray-600 hover:text-olive-green">{it.name}</Link>
                   </li>
                 ))}
               </ul>

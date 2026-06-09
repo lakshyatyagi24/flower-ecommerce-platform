@@ -5,7 +5,7 @@ import MegaMenu from "./MegaMenu";
 
 type Submenu = {
   title: string;
-  items: string[];
+  items: { name: string; slug: string }[];
 };
 
 type Category = {
@@ -68,7 +68,7 @@ const Categories: React.FC<CategoriesProps> = ({ categories = defaultCategories,
         const mapped: Category[] = data.map((c: any) => ({
           name: c.name,
           slug: c.slug,
-          submenus: c.children && c.children.length ? [{ title: 'Subcategories', items: c.children.map((ch: any) => ch.name) }] : undefined,
+          submenus: c.children && c.children.length ? [{ title: 'Subcategories', items: c.children.map((ch: any) => ({ name: ch.name, slug: ch.slug })) }] : undefined,
         }));
         setRemoteCategories(mapped);
       } catch (e) {
