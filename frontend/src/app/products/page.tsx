@@ -260,6 +260,8 @@ function ProductsView() {
                             image: p.image,
                             saleMode: p.saleMode,
                             gstRate: p.gstRate,
+                            minOrderQty: p.minOrderQty,
+                            stock: p.stock,
                           },
                           minQty,
                         )

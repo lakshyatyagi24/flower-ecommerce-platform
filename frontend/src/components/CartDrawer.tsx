@@ -78,23 +78,34 @@ export default function CartDrawer() {
                     </Link>
                     <div className="text-sm text-olive-green font-semibold mt-1">{formatINR(it.price)}</div>
                     <div className="flex items-center gap-2 mt-2">
-                      <button
-                        type="button"
-                        onClick={() => setQuantity(it.productId, it.quantity - 1)}
-                        className="w-7 h-7 rounded border border-olive-green/20 hover:bg-olive-green/5 text-olive-green"
-                        aria-label="Decrease quantity"
-                      >
-                        −
-                      </button>
-                      <span className="text-sm font-medium w-6 text-center">{it.quantity}</span>
-                      <button
-                        type="button"
-                        onClick={() => setQuantity(it.productId, it.quantity + 1)}
-                        className="w-7 h-7 rounded border border-olive-green/20 hover:bg-olive-green/5 text-olive-green"
-                        aria-label="Increase quantity"
-                      >
-                        +
-                      </button>
+                      {(() => {
+                        const minQ = it.minOrderQty && it.minOrderQty > 0 ? it.minOrderQty : 1;
+                        const atMin = it.quantity <= minQ;
+                        const atMax = typeof it.stock === "number" && it.stock > 0 && it.quantity >= it.stock;
+                        return (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => setQuantity(it.productId, it.quantity - 1)}
+                              disabled={atMin}
+                              className="w-7 h-7 rounded border border-olive-green/20 hover:bg-olive-green/5 text-olive-green disabled:opacity-40 disabled:hover:bg-transparent"
+                              aria-label="Decrease quantity"
+                            >
+                              −
+                            </button>
+                            <span className="text-sm font-medium w-6 text-center">{it.quantity}</span>
+                            <button
+                              type="button"
+                              onClick={() => setQuantity(it.productId, it.quantity + 1)}
+                              disabled={atMax}
+                              className="w-7 h-7 rounded border border-olive-green/20 hover:bg-olive-green/5 text-olive-green disabled:opacity-40 disabled:hover:bg-transparent"
+                              aria-label="Increase quantity"
+                            >
+                              +
+                            </button>
+                          </>
+                        );
+                      })()}
                       <button
                         type="button"
                         onClick={() => remove(it.productId)}

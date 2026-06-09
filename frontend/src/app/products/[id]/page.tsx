@@ -198,8 +198,15 @@ export default function ProductPage() {
                   <span className="px-4 font-medium" aria-live="polite">{quantity}</span>
                   <button
                     type="button"
-                    onClick={() => setQuantity((q) => q + 1)}
-                    className="px-3 py-2 text-olive-green hover:bg-olive-green/5"
+                    onClick={() =>
+                      setQuantity((q) =>
+                        typeof product.stock === "number" && product.stock > 0
+                          ? Math.min(q + 1, product.stock)
+                          : q + 1,
+                      )
+                    }
+                    disabled={typeof product.stock === "number" && product.stock > 0 && quantity >= product.stock}
+                    className="px-3 py-2 text-olive-green hover:bg-olive-green/5 disabled:opacity-40 disabled:hover:bg-transparent"
                     aria-label="Increase"
                   >
                     +
@@ -218,6 +225,8 @@ export default function ProductPage() {
                         image: product.image,
                         saleMode: product.saleMode,
                         gstRate: product.gstRate,
+                        minOrderQty: product.minOrderQty,
+                        stock: product.stock,
                       },
                       quantity,
                     )

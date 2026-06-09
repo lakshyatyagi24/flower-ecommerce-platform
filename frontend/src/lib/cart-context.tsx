@@ -11,6 +11,17 @@ export interface CartItem {
   quantity: number;
   saleMode?: 'PURCHASE' | 'ENQUIRY';
   gstRate?: number;
+  minOrderQty?: number;
+  stock?: number;
+}
+
+// Clamp a requested quantity into the product's [minOrderQty, stock] window so
+// the displayed cart can never disagree with what the backend will accept.
+function clampQty(item: { minOrderQty?: number; stock?: number }, requested: number): number {
+  const min = item.minOrderQty && item.minOrderQty > 0 ? item.minOrderQty : 1;
+  let q = Math.max(min, Math.floor(requested));
+  if (typeof item.stock === 'number' && item.stock > 0) q = Math.min(q, item.stock);
+  return q;
 }
 
 interface CartState {
@@ -77,10 +88,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const existing = prev.find((i) => i.productId === item.productId);
       if (existing) {
         return prev.map((i) =>
-          i.productId === item.productId ? { ...i, quantity: i.quantity + qty } : i,
+          i.productId === item.productId ? { ...i, quantity: clampQty(i, i.quantity + qty) } : i,
         );
       }
-      return [...prev, { ...item, quantity: qty }];
+      return [...prev, { ...item, quantity: clampQty(item, qty) }];
     });
     setIsOpen(true);
   }, []);
@@ -88,7 +99,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const setQuantity = useCallback((productId: number, quantity: number) => {
     setItems((prev) => {
       if (quantity <= 0) return prev.filter((i) => i.productId !== productId);
-      return prev.map((i) => (i.productId === productId ? { ...i, quantity } : i));
+      return prev.map((i) => (i.productId === productId ? { ...i, quantity: clampQty(i, quantity) } : i));
     });
   }, []);
 

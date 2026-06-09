@@ -10,11 +10,17 @@ import { ApiError, api } from "@/lib/api";
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, subtotal, gstTotal, count, clear } = useCart();
+  const { items, count, clear } = useCart();
   const { user, loading: authLoading } = useAuth();
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Live prices re-fetched at checkout time. The backend charges the current DB
+  // price (the order payload sends only productId+quantity), so we display these
+  // fresh values — not the prices cached in the cart at add-time — and warn if
+  // they changed, so the amount the customer reviews equals what they're charged.
+  const [freshPrices, setFreshPrices] = useState<Record<number, { price: number; gstRate: number }>>({});
+  const [priceChanged, setPriceChanged] = useState(false);
 
   const [form, setForm] = useState({
     customerName: "",
@@ -40,6 +46,42 @@ export default function CheckoutPage() {
     api.getSettings().then(setSettings).catch(() => {});
   }, []);
 
+  // Re-fetch live prices whenever the set of products in the cart changes.
+  const productKey = items.map((i) => i.productId).sort((a, b) => a - b).join(",");
+  useEffect(() => {
+    let cancelled = false;
+    const snapshot = items;
+    Promise.all(snapshot.map((it) => api.getProductBySlug(it.slug).catch(() => null))).then((results) => {
+      if (cancelled) return;
+      const map: Record<number, { price: number; gstRate: number }> = {};
+      let changed = false;
+      results.forEach((p, idx) => {
+        if (!p) return;
+        map[p.id] = { price: p.price, gstRate: p.gstRate ?? 0 };
+        if (Math.abs((p.price ?? 0) - snapshot[idx].price) > 0.001) changed = true;
+      });
+      setFreshPrices(map);
+      setPriceChanged(changed);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productKey]);
+
+  const priceOf = (it: (typeof items)[number]) => freshPrices[it.productId]?.price ?? it.price;
+  const gstRateOf = (it: (typeof items)[number]) => freshPrices[it.productId]?.gstRate ?? it.gstRate ?? 0;
+  const liveSubtotal = useMemo(
+    () => items.reduce((s, it) => s + priceOf(it) * it.quantity, 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [items, freshPrices],
+  );
+  const liveGstTotal = useMemo(
+    () => items.reduce((s, it) => s + (gstRateOf(it) ? (priceOf(it) * it.quantity * gstRateOf(it)) / 100 : 0), 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [items, freshPrices],
+  );
+
   useEffect(() => {
     if (user) {
       setForm((f) => ({
@@ -55,10 +97,10 @@ export default function CheckoutPage() {
   const freeThreshold = parseFloat(settings["shipping.freeThreshold"] || "0") || 0;
   const shipping = useMemo(() => {
     if (count === 0) return 0;
-    if (freeThreshold > 0 && subtotal >= freeThreshold) return 0;
+    if (freeThreshold > 0 && liveSubtotal >= freeThreshold) return 0;
     return flatRate;
-  }, [subtotal, count, flatRate, freeThreshold]);
-  const total = subtotal + shipping + gstTotal;
+  }, [liveSubtotal, count, flatRate, freeThreshold]);
+  const total = liveSubtotal + shipping + liveGstTotal;
 
   // Don't render the form for guests — they're being redirected to /account/login.
   if (authLoading || !user) {
@@ -196,15 +238,20 @@ export default function CheckoutPage() {
                     <div className="text-sm font-medium text-slate-900 truncate">{it.name}</div>
                     <div className="text-xs text-slate-600">Qty {it.quantity}</div>
                   </div>
-                  <div className="text-sm font-semibold text-olive-green">{formatINR(it.price * it.quantity)}</div>
+                  <div className="text-sm font-semibold text-olive-green">{formatINR(priceOf(it) * it.quantity)}</div>
                 </li>
               ))}
             </ul>
+            {priceChanged && (
+              <div className="mt-4 px-3 py-2 rounded bg-amber-50 text-amber-800 text-xs" role="status">
+                Some prices were updated since you added these items. The total below reflects current pricing.
+              </div>
+            )}
             <div className="mt-4 pt-4 border-t border-olive-green/10 space-y-2 text-sm">
-              <div className="flex justify-between"><span>Subtotal</span><span>{formatINR(subtotal)}</span></div>
+              <div className="flex justify-between"><span>Subtotal</span><span>{formatINR(liveSubtotal)}</span></div>
               <div className="flex justify-between"><span>Shipping</span><span>{shipping === 0 ? "Free" : formatINR(shipping)}</span></div>
-              {gstTotal > 0 && (
-                <div className="flex justify-between"><span>GST</span><span>{formatINR(gstTotal)}</span></div>
+              {liveGstTotal > 0 && (
+                <div className="flex justify-between"><span>GST</span><span>{formatINR(liveGstTotal)}</span></div>
               )}
               <div className="flex justify-between text-base font-semibold text-olive-green pt-2 border-t border-olive-green/10"><span>Total</span><span>{formatINR(total)}</span></div>
             </div>
