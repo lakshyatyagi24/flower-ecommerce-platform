@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { adminApi, AdminUser, getStoredToken, setStoredToken } from "./api";
+import { adminApi, AdminUser, ApiError, getStoredToken, setStoredToken } from "./api";
 
 interface AuthState {
   user: AdminUser | null;
@@ -36,9 +36,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setUser(me);
       }
-    } catch {
-      setStoredToken(null);
-      setUser(null);
+    } catch (err) {
+      // Only treat genuine auth failures as "logged out" and clear the token.
+      // A transient network/5xx error (backend restarting, DNS hiccup) must NOT
+      // destroy a valid session — keep the token so a retry/reload restores it.
+      if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+        setStoredToken(null);
+        setUser(null);
+      } else {
+        setError("Cannot reach the API server. Please check your connection and try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -47,6 +54,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     verify();
   }, [verify]);
+
+  // Mid-session 401 from any data request → clear user and return to login.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onUnauthorized = () => {
+      setUser(null);
+      router.replace("/login");
+    };
+    window.addEventListener("admin-auth:unauthorized", onUnauthorized);
+    return () => window.removeEventListener("admin-auth:unauthorized", onUnauthorized);
+  }, [router]);
 
   // route guard — redirect to /login if not authenticated
   useEffect(() => {

@@ -77,6 +77,14 @@ export async function apiFetch<T = unknown>(path: string, opts: ApiOptions = {})
     }
   }
   if (!res.ok) {
+    // Centralized mid-session 401 handling: an authed request whose token has
+    // expired/been revoked clears the stored token and notifies the app so it
+    // can drop the stale user and redirect to login, instead of stranding the
+    // user on a broken page that keeps 401-ing.
+    if (res.status === 401 && opts.auth && typeof window !== 'undefined') {
+      setStoredToken(null);
+      window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+    }
     const message =
       (payload && typeof payload === 'object' && 'message' in payload && typeof (payload as { message: unknown }).message === 'string'
         ? (payload as { message: string }).message

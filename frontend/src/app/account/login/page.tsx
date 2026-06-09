@@ -6,11 +6,12 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { ApiError } from "@/lib/api";
+import { safeRedirect } from "@/lib/safe-redirect";
 
 function LoginView() {
   const router = useRouter();
   const params = useSearchParams();
-  const callbackUrl = params?.get("callbackUrl") || params?.get("redirect") || "/account/orders";
+  const callbackUrl = safeRedirect(params?.get("callbackUrl") || params?.get("redirect")) || "/account/orders";
   const { login, user, loading: authLoading } = useAuth();
 
   const [email, setEmail] = useState("");

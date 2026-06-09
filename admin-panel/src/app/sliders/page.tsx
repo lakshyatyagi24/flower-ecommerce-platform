@@ -13,7 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Edit, Trash2, Loader2, ArrowUp, ArrowDown, Copy, Eye } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
-import { getStoredToken } from '@/lib/api';
+import { getStoredToken, API_BASE } from '@/lib/api';
 
 function authHeaders(): Record<string, string> {
   const token = getStoredToken();
@@ -174,7 +174,7 @@ export default function SlidersPage() {
 
   const fetchSliders = useCallback(async () => {
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const baseUrl = API_BASE;
       const response = await fetch(`${baseUrl}/sliders?includeInactive=${includeInactive}`);
       if (!response.ok) {
         throw new Error('Failed to fetch sliders');
@@ -320,14 +320,14 @@ export default function SlidersPage() {
 
       let response;
       if (editingSlider) {
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        const baseUrl = API_BASE;
         response = await fetch(`${baseUrl}/sliders/${editingSlider.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', ...authHeaders() },
           body: JSON.stringify(payload),
         });
       } else {
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        const baseUrl = API_BASE;
         response = await fetch(`${baseUrl}/sliders`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', ...authHeaders() },
@@ -454,7 +454,7 @@ export default function SlidersPage() {
   const handleDelete = async (id: number) => {
     setIsDeleting(id);
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const baseUrl = API_BASE;
       const response = await fetch(`${baseUrl}/sliders/${id}`, {
         method: 'DELETE',
         headers: authHeaders(),
@@ -486,7 +486,7 @@ export default function SlidersPage() {
 
   const handleToggleActive = async (slider: Slider) => {
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const baseUrl = API_BASE;
       const response = await fetch(`${baseUrl}/sliders/${slider.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
@@ -570,7 +570,7 @@ export default function SlidersPage() {
 
     try {
       // Swap sort orders
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const baseUrl = API_BASE;
       await Promise.all([
         fetch(`${baseUrl}/sliders/${slider.id}`, {
           method: 'PUT',

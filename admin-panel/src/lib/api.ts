@@ -63,6 +63,13 @@ export async function apiFetch<T = unknown>(path: string, opts: FetchOptions = {
     try { payload = await res.text(); } catch { payload = null; }
   }
   if (!res.ok) {
+    // Centralized mid-session 401: clear the token and bounce the admin to
+    // login from wherever the failing request originated, instead of leaving
+    // them on a dashboard where every request 401s with no recovery path.
+    if (res.status === 401 && opts.auth !== false && typeof window !== 'undefined') {
+      setStoredToken(null);
+      window.dispatchEvent(new CustomEvent('admin-auth:unauthorized'));
+    }
     const message =
       payload && typeof payload === 'object' && 'message' in payload && typeof (payload as { message: unknown }).message === 'string'
         ? (payload as { message: string }).message
@@ -230,16 +237,14 @@ export const adminApi = {
     }),
   me: () => apiFetch<AdminUser>('/auth/me'),
 
-  // Products
-  listProducts: (params: { active?: boolean; take?: number; skip?: number } = {}) => {
+  // Products — uses the admin endpoint so inactive/soft-disabled products are
+  // visible (the public /products endpoint only ever returns active ones).
+  listProducts: (params: { active?: boolean | 'all'; take?: number; skip?: number } = {}) => {
     const qs = new URLSearchParams();
-    if (params.active !== undefined) qs.set('active', String(params.active));
+    qs.set('active', params.active === true || params.active === false ? String(params.active) : 'all');
     if (params.take !== undefined) qs.set('take', String(params.take));
     if (params.skip !== undefined) qs.set('skip', String(params.skip));
-    const suffix = qs.toString();
-    return apiFetch<{ items: AdminProduct[]; total: number }>(
-      `/products${suffix ? `?${suffix}` : ''}`,
-    );
+    return apiFetch<{ items: AdminProduct[]; total: number }>(`/products/admin?${qs.toString()}`);
   },
   createProduct: (body: Partial<AdminProduct> & { name: string; price: number }) =>
     apiFetch<AdminProduct>('/products', { method: 'POST', body }),

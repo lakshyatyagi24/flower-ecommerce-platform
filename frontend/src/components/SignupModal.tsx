@@ -39,8 +39,8 @@ const SignupModal: React.FC<Props> = ({ onClose, onBackToSignIn }) => {
       setAlert({ type: 'error', message: 'Email and password are required' });
       return;
     }
-    if (password.length < 6) {
-      setAlert({ type: 'error', message: 'Password must be at least 6 characters' });
+    if (password.length < 8) {
+      setAlert({ type: 'error', message: 'Password must be at least 8 characters' });
       return;
     }
     setSubmitting(true);
@@ -90,7 +90,7 @@ const SignupModal: React.FC<Props> = ({ onClose, onBackToSignIn }) => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700">Password</label>
-            <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 6 characters" className="mt-1 w-full rounded-md border-gray-200 shadow-sm focus:ring-2 focus:ring-olive-green/40" />
+            <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" className="mt-1 w-full rounded-md border-gray-200 shadow-sm focus:ring-2 focus:ring-olive-green/40" />
           </div>
 
           <div>

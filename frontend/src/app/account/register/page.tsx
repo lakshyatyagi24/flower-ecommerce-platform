@@ -6,11 +6,12 @@ import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { ApiError } from "@/lib/api";
+import { safeRedirect } from "@/lib/safe-redirect";
 
 function RegisterView() {
   const router = useRouter();
   const params = useSearchParams();
-  const callbackUrl = params?.get("callbackUrl") || params?.get("redirect") || "/account/orders";
+  const callbackUrl = safeRedirect(params?.get("callbackUrl") || params?.get("redirect")) || "/account/orders";
   const { register, user, loading: authLoading } = useAuth();
 
   const [name, setName] = useState("");
@@ -34,7 +35,7 @@ function RegisterView() {
     const next: Record<string, string> = {};
     if (!name.trim()) next.name = "Please enter your name";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) next.email = "Please enter a valid email";
-    if (password.length < 6) next.password = "Password must be at least 6 characters";
+    if (password.length < 8) next.password = "Password must be at least 8 characters";
     if (confirm !== password) next.confirm = "Passwords do not match";
     if (phone && !/^[0-9+\-\s()]{6,}$/.test(phone)) next.phone = "Please enter a valid phone number";
     setErrors(next);

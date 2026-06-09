@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import FocusTrap from 'focus-trap-react';
 import { useAuth } from '@/lib/auth-context';
 import { ApiError } from '@/lib/api';
+import { safeRedirect } from '@/lib/safe-redirect';
 
 type Props = {
   onClose: () => void;
@@ -35,7 +36,14 @@ const SignInModal: React.FC<Props> = ({ onClose }) => {
   const getAttemptRecord = (e: string) => {
     try {
       const v = sessionStorage.getItem(makeKey(e));
-      return v ? JSON.parse(v) as { count: number; lockUntil?: number } : { count: 0 };
+      const rec = v ? (JSON.parse(v) as { count: number; lockUntil?: number }) : { count: 0 };
+      // Once a lock window has elapsed, grant a fresh set of attempts instead of
+      // leaving count pinned at MAX (which permanently showed "no attempts
+      // remaining" and re-locked on the very next failure).
+      if (rec.lockUntil && rec.lockUntil <= Date.now()) {
+        return { count: 0 };
+      }
+      return rec;
     } catch {
       return { count: 0 };
     }
@@ -124,7 +132,7 @@ const SignInModal: React.FC<Props> = ({ onClose }) => {
         } catch {}
         return null;
       };
-      const target = getRedirectTarget();
+      const target = safeRedirect(getRedirectTarget());
       try { sessionStorage.removeItem('post_signin_redirect'); } catch {}
       setAlert({ type: 'success', message: 'Signed in — welcome back.' });
       setTimeout(() => {
