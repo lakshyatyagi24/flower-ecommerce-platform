@@ -403,6 +403,7 @@ export default function ProductsPage() {
                   <TableHead className="w-20">Image</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Category</TableHead>
+                  <TableHead>Type</TableHead>
                   <TableHead>Price</TableHead>
                   <TableHead>Stock</TableHead>
                   <TableHead>Status</TableHead>
@@ -424,6 +425,18 @@ export default function ProductsPage() {
                       <div className="text-xs text-muted-foreground">{p.slug}</div>
                     </TableCell>
                     <TableCell>{p.category?.name ?? "—"}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-0.5 text-xs">
+                        <span className={p.saleMode === "ENQUIRY" ? "text-purple-700 font-medium" : "text-slate-600"}>
+                          {p.saleMode === "ENQUIRY" ? "Enquiry-only" : "Purchase"}
+                        </span>
+                        {p.productType && (
+                          <span className="text-muted-foreground capitalize">
+                            {p.productType.replace(/_/g, " ").toLowerCase()}
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>{formatINR(p.price)}</TableCell>
                     <TableCell>{p.stock}</TableCell>
                     <TableCell>

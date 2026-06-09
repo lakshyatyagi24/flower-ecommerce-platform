@@ -31,7 +31,7 @@ const SECTIONS: Section[] = [
   {
     id: "store",
     title: "Store Information",
-    description: "Used in the storefront footer, contact page and order confirmation emails.",
+    description: "Used in the storefront footer and contact page.",
     fields: [
       { key: "store.name", label: "Store name", placeholder: "Fresh Petals India" },
       { key: "store.email", label: "Contact email", type: "email", placeholder: "orders@example.com" },

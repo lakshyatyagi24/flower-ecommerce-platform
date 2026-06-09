@@ -128,11 +128,9 @@ export default function CategoriesPage() {
         title = 'Limit reached';
         description = 'You can only have a maximum of 8 main (top-level) categories.';
       }
-      setIsDialogOpen(false);
-      resetForm();
-      setTimeout(() => {
-        addToast({ type: 'error', title, description });
-      }, 100);
+      // Keep the dialog open and preserve the admin's input so they can correct
+      // the issue and retry, instead of losing everything they typed.
+      addToast({ type: 'error', title, description });
     } finally {
       setIsSubmitting(false);
     }
@@ -255,7 +253,8 @@ export default function CategoriesPage() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This will permanently delete the category &ldquo;{category.name}&rdquo; and all its subcategories.
+                    This will permanently delete the category &ldquo;{category.name}&rdquo;. A category can
+                    only be deleted if it has no subcategories and no products assigned to it.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
