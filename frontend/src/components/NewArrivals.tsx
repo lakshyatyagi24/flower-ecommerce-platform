@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { api, ApiProduct } from "../lib/api";
 import { useCart } from "../lib/cart-context";
-
-const FALLBACK_IMG = 'https://images.unsplash.com/photo-1490750967868-88df5691cc0f?w=400&q=80';
+import { useApi } from '../lib/use-api';
+import { productImage } from '../lib/product-image';
+import ErrorState from './ui/ErrorState';
+import EmptyState from './ui/EmptyState';
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 
 function SkeletonCard() {
@@ -24,17 +26,10 @@ function SkeletonCard() {
 }
 
 export default function NewArrivals() {
-  const [products, setProducts] = useState<ApiProduct[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, error, loading, reload } = useApi(() => api.listProducts({ take: 8 }), []);
+  const products = useMemo(() => data?.items ?? [], [data]);
   const [adding, setAdding] = useState<Record<string, boolean>>({});
   const [wishlisted, setWishlisted] = useState<Record<string, boolean>>({});
-
-  useEffect(() => {
-    api.listProducts({ take: 8 })
-      .then((r) => setProducts(r.items))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
 
   const { add } = useCart();
 
@@ -72,11 +67,16 @@ export default function NewArrivals() {
         <Link href="/products" className="text-olive-green font-semibold underline-offset-4 hover:underline focus:outline-none focus:ring-2 focus:ring-olive-green/30 rounded px-2 py-1 text-sm">View All</Link>
       </div>
 
+      {error ? (
+        <ErrorState message={error} onRetry={reload} />
+      ) : !loading && products.length === 0 ? (
+        <EmptyState title="Fresh stems arriving soon" cta={{ href: '/products', label: 'Browse all flowers' }} />
+      ) : (
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
         {loading
           ? Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
           : products.map((p) => {
-              const imgSrc = p.image || FALLBACK_IMG;
+              const imgSrc = productImage(p);
               const sid = String(p.id);
               return (
                 <article key={p.id} className="section-card overflow-hidden flex flex-col group hover:shadow-xl transition-shadow duration-300">
@@ -147,6 +147,7 @@ export default function NewArrivals() {
             })
         }
       </div>
+      )}
     </section>
   );
 }

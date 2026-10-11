@@ -5,6 +5,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { formatINR } from "@/lib/cart-context";
+import { productImage } from "@/lib/product-image";
 
 type Suggestion =
   | { type: "product"; slug: string; label: string; price: string; img: string | null }
@@ -279,11 +280,7 @@ const SearchBar: React.FC = () => {
                   className={`px-3 py-2 cursor-pointer flex items-center gap-x-3 ${highlightIndex === idx ? "bg-olive-green/10" : "hover:bg-gray-50"}`}
                 >
                   <div className="w-10 h-10 relative rounded overflow-hidden flex-shrink-0 bg-slate-100">
-                    {s.img ? (
-                      <Image src={s.img} alt={s.label} fill sizes="40px" className="object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-sm">🌸</div>
-                    )}
+                    <Image src={productImage({ image: s.img })} alt={s.label} fill sizes="40px" className="object-cover" />
                   </div>
                   <div className="flex-1">
                     <div className="text-sm font-medium text-gray-800">{s.label}</div>

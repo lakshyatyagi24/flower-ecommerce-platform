@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ApiOrder, api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { formatINR } from "@/lib/cart-context";
+import { setTrackEmail } from "@/lib/track-order-session";
 
 export default function MyOrdersPage() {
   const { user, loading: authLoading } = useAuth();
@@ -108,7 +109,8 @@ export default function MyOrdersPage() {
                 </div>
                 <div className="flex sm:justify-end sm:items-end">
                   <Link
-                    href={`/track-order/results?orderId=${o.id}&email=${encodeURIComponent(o.customerEmail || user?.email || "")}`}
+                    href={`/track-order/results?orderId=${o.id}`}
+                    onClick={() => setTrackEmail(o.customerEmail || user?.email || "")}
                     className="text-olive-green underline-offset-4 hover:underline"
                   >
                     View details →

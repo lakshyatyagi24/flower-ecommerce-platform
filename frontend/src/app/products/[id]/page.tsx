@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { ApiProduct, api } from "@/lib/api";
 import { useCart, formatINR } from "@/lib/cart-context";
+import { productImage } from "@/lib/product-image";
 import { useSettings } from "@/lib/settings-context";
 import ProductReviews from "@/components/ProductReviews";
 import EnquiryModal from "@/components/EnquiryModal";
@@ -105,11 +106,7 @@ export default function ProductPage() {
     <main className="section-shell mt-12 mb-16">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
         <div className="relative w-full h-[480px] lg:h-[560px] bg-white rounded-3xl overflow-hidden shadow-[0_28px_70px_rgba(24,20,13,0.14)]">
-          {product.image ? (
-            <Image src={product.image} alt={product.name} fill sizes="(max-width: 1024px) 100vw, 50vw" className="object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-9xl">🌸</div>
-          )}
+          <Image src={productImage(product)} alt={product.name} fill sizes="(max-width: 1024px) 100vw, 50vw" className="object-cover" />
           {product.featured && <div className="absolute top-4 left-4 pill">Featured</div>}
         </div>
         <div className="flex flex-col gap-4">

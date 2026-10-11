@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Image, { StaticImageData } from 'next/image';
 import { API_BASE } from '@/lib/api';
+import { safeImage } from '@/lib/product-image';
 
 type Position =
   | 'top-left'
@@ -174,7 +175,11 @@ export default function Slider() {
         });
         setRemoteSlides(mapped);
       })
-      .catch(() => setRemoteSlides(null))
+      .catch((err) => {
+        // Decorative: keep the static slides. Surface the failure in dev only.
+        if (process.env.NODE_ENV !== 'production') console.warn('[Slider] failed to load sliders, using static fallback', err);
+        setRemoteSlides(null);
+      })
       .finally(() => setLoading(false));
     // note: empty array [] is treated as "no data" → falls back to staticSlides
   }, []);
@@ -228,7 +233,7 @@ export default function Slider() {
             {s.img && (
               <div className="absolute inset-0">
                 <Image
-                  src={s.img as any}
+                  src={typeof s.img === 'string' ? safeImage(s.img) : s.img}
                   alt={s.alt ?? s.overlay?.title ?? `slide-${s.id}`}
                   fill
                   className="object-cover object-center"

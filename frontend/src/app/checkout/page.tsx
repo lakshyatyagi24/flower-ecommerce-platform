@@ -5,22 +5,22 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart, formatINR } from "@/lib/cart-context";
+import { productImage } from "@/lib/product-image";
 import { useAuth } from "@/lib/auth-context";
 import { ApiError, api } from "@/lib/api";
+import { useApi } from "@/lib/use-api";
+import ErrorState from "@/components/ui/ErrorState";
 
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, count, clear } = useCart();
   const { user, loading: authLoading } = useAuth();
-  const [settings, setSettings] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Live prices re-fetched at checkout time. The backend charges the current DB
   // price (the order payload sends only productId+quantity), so we display these
   // fresh values — not the prices cached in the cart at add-time — and warn if
   // they changed, so the amount the customer reviews equals what they're charged.
-  const [freshPrices, setFreshPrices] = useState<Record<number, { price: number; gstRate: number }>>({});
-  const [priceChanged, setPriceChanged] = useState(false);
 
   const [form, setForm] = useState({
     customerName: "",
@@ -42,32 +42,47 @@ export default function CheckoutPage() {
     }
   }, [authLoading, user, router]);
 
-  useEffect(() => {
-    api.getSettings().then(setSettings).catch(() => {});
-  }, []);
+  // Shipping settings and live prices are hard prerequisites: if either fails to
+  // load we render an ErrorState instead of the form, so an order can never be
+  // submitted against unknown shipping or stale prices.
+  const {
+    data: settingsData,
+    error: settingsError,
+    loading: settingsLoading,
+    reload: reloadSettings,
+  } = useApi(() => api.getSettings(), []);
+  const settings = settingsData ?? {};
 
   // Re-fetch live prices whenever the set of products in the cart changes.
   const productKey = items.map((i) => i.productId).sort((a, b) => a - b).join(",");
-  useEffect(() => {
-    let cancelled = false;
+  const {
+    data: pricing,
+    error: pricesError,
+    loading: pricesLoading,
+    reload: reloadPrices,
+  } = useApi(async () => {
     const snapshot = items;
-    Promise.all(snapshot.map((it) => api.getProductBySlug(it.slug).catch(() => null))).then((results) => {
-      if (cancelled) return;
-      const map: Record<number, { price: number; gstRate: number }> = {};
-      let changed = false;
-      results.forEach((p, idx) => {
-        if (!p) return;
-        map[p.id] = { price: p.price, gstRate: p.gstRate ?? 0 };
-        if (Math.abs((p.price ?? 0) - snapshot[idx].price) > 0.001) changed = true;
-      });
-      setFreshPrices(map);
-      setPriceChanged(changed);
+    const results = await Promise.all(
+      snapshot.map((it) =>
+        // A product that no longer exists (404) is skipped here; the backend
+        // rejects the order with a readable message. Any other failure aborts.
+        api.getProductBySlug(it.slug).catch((e: unknown) => {
+          if (e instanceof ApiError && e.status === 404) return null;
+          throw e;
+        }),
+      ),
+    );
+    const map: Record<number, { price: number; gstRate: number }> = {};
+    let changed = false;
+    results.forEach((p, idx) => {
+      if (!p) return;
+      map[p.id] = { price: p.price, gstRate: p.gstRate ?? 0 };
+      if (Math.abs((p.price ?? 0) - snapshot[idx].price) > 0.001) changed = true;
     });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return { map, changed };
   }, [productKey]);
+  const freshPrices = pricing?.map ?? {};
+  const priceChanged = pricing?.changed ?? false;
 
   const priceOf = (it: (typeof items)[number]) => freshPrices[it.productId]?.price ?? it.price;
   const gstRateOf = (it: (typeof items)[number]) => freshPrices[it.productId]?.gstRate ?? it.gstRate ?? 0;
@@ -115,6 +130,31 @@ export default function CheckoutPage() {
     );
   }
 
+  if (count > 0 && (settingsError || pricesError)) {
+    return (
+      <main className="section-shell mt-12 mb-16">
+        <ErrorState
+          message="We couldn't load delivery charges. Please refresh."
+          onRetry={() => {
+            reloadSettings();
+            reloadPrices();
+          }}
+        />
+      </main>
+    );
+  }
+
+  if (count > 0 && (settingsLoading || pricesLoading || !settingsData || !pricing)) {
+    return (
+      <main className="section-shell mt-12 mb-16">
+        <div className="animate-pulse space-y-4 max-w-3xl" aria-busy="true">
+          <div className="h-8 bg-slate-200 rounded w-1/3" />
+          <div className="h-64 bg-slate-200 rounded" />
+        </div>
+      </main>
+    );
+  }
+
   if (count === 0) {
     return (
       <main className="section-shell mt-12 mb-16 text-center">
@@ -144,8 +184,7 @@ export default function CheckoutPage() {
         paymentMethod: form.paymentMethod,
       });
       clear();
-      const email = encodeURIComponent(form.customerEmail.trim());
-      router.push(`/checkout/success?orderId=${order.id}&email=${email}`);
+      router.push(`/checkout/success?orderId=${order.id}`);
     } catch (err) {
       const message = err instanceof ApiError ? err.message : err instanceof Error ? err.message : "Could not place order";
       setError(message);
@@ -159,7 +198,7 @@ export default function CheckoutPage() {
   return (
     <main className="section-shell mt-12 mb-16">
       <h1 className="text-3xl md:text-4xl font-semibold text-slate-900 mb-2">Checkout</h1>
-      <p className="text-slate-700 mb-8">Cash on delivery is our MVP option — your order is secured the moment you confirm.</p>
+      <p className="text-slate-700 mb-8">Payment is by cash on delivery — your order is secured the moment you confirm.</p>
 
       <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-6">
@@ -211,7 +250,7 @@ export default function CheckoutPage() {
               <input type="radio" checked={form.paymentMethod === "COD"} onChange={() => update("paymentMethod", "COD")} className="mt-1" />
               <div>
                 <span className="font-medium text-slate-900">Cash on delivery</span>
-                <p className="text-sm text-slate-700 mt-1">Pay our courier when your bouquet arrives. Online card and UPI payments are coming soon.</p>
+                <p className="text-sm text-slate-700 mt-1">Pay our courier when your bouquet arrives. This is currently our only payment option.</p>
               </div>
             </label>
           </section>
@@ -228,11 +267,7 @@ export default function CheckoutPage() {
               {items.map((it) => (
                 <li key={it.productId} className="flex gap-3">
                   <div className="relative w-14 h-14 flex-shrink-0 rounded bg-slate-100 overflow-hidden">
-                    {it.image ? (
-                      <Image src={it.image} alt={it.name} fill sizes="56px" className="object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">🌸</div>
-                    )}
+                    <Image src={productImage(it)} alt={it.name} fill sizes="56px" className="object-cover" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium text-slate-900 truncate">{it.name}</div>

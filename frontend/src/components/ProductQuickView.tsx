@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useRef } from 'react';
 import Image, { StaticImageData } from 'next/image';
+import { safeImage } from '@/lib/product-image';
 import { createPortal } from 'react-dom';
 
 export type QuickViewProduct = {
@@ -50,7 +51,7 @@ export default function ProductQuickView({ product, onClose, open, onAdd }: Prop
         </button>
         <div className="grid md:grid-cols-2 gap-6 p-6">
           <div className="relative aspect-square rounded-xl overflow-hidden bg-gray-50">
-            <Image src={product.img} alt={product.title} fill className="object-cover" />
+            <Image src={typeof product.img === 'string' ? safeImage(product.img) : product.img} alt={product.title} fill className="object-cover" />
           </div>
           <div className="flex flex-col">
             <h3 className="text-2xl font-semibold text-slate-900">{product.title}</h3>

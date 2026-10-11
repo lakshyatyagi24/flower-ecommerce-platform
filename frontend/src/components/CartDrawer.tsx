@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect } from "react";
 import { useCart, formatINR } from "@/lib/cart-context";
+import { productImage } from "@/lib/product-image";
 
 export default function CartDrawer() {
   const { items, isOpen, close, count, subtotal, gstTotal, setQuantity, remove } = useCart();
@@ -62,11 +63,7 @@ export default function CartDrawer() {
               {items.map((it) => (
                 <li key={it.productId} className="flex gap-4 border-b border-olive-green/10 pb-4">
                   <div className="relative w-20 h-20 flex-shrink-0 bg-slate-100 rounded-md overflow-hidden">
-                    {it.image ? (
-                      <Image src={it.image} alt={it.name} fill sizes="80px" className="object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-2xl">🌸</div>
-                    )}
+                    <Image src={productImage(it)} alt={it.name} fill sizes="80px" className="object-cover" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <Link

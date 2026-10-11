@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import s7 from "../assets/test6.png";
-import { api, ApiProduct } from "../lib/api";
-
-const FALLBACK_IMG = 'https://images.unsplash.com/photo-1490750967868-88df5691cc0f?w=400&q=80';
+import { api } from "../lib/api";
+import { useApi } from '../lib/use-api';
+import { productImage } from '../lib/product-image';
+import ErrorState from './ui/ErrorState';
+import EmptyState from './ui/EmptyState';
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 
 function SkeletonCard() {
@@ -22,15 +24,8 @@ function SkeletonCard() {
 }
 
 export default function SeasonalCollection() {
-  const [products, setProducts] = useState<ApiProduct[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    api.listProducts({ category: 'cut-flowers', take: 6 })
-      .then((r) => setProducts(r.items))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+  const { data, error, loading, reload } = useApi(() => api.listProducts({ category: 'cut-flowers', take: 6 }), []);
+  const products = useMemo(() => data?.items ?? [], [data]);
 
   return (
     <section className="section-shell mt-12">
@@ -52,7 +47,7 @@ export default function SeasonalCollection() {
           <Image src={s7} alt="Fresh cut flowers from Indian farms" fill className="object-cover mix-blend-multiply" />
           <div className="relative z-10 p-8 lg:p-10 flex flex-col h-full justify-center text-slate-900">
             <p className="pill w-fit mb-3">Farm fresh</p>
-            <h3 className="text-2xl md:text-3xl font-semibold">Nature's finest blooms</h3>
+            <h3 className="text-2xl md:text-3xl font-semibold">Nature&apos;s finest blooms</h3>
             <p className="mt-2 text-sm text-slate-700 max-w-sm leading-relaxed">
               Hand-selected cut flowers delivered fresh — vibrant colours, long-lasting stems, and natural fragrance for every occasion.
             </p>
@@ -66,6 +61,11 @@ export default function SeasonalCollection() {
         </div>
 
         {/* Product grid */}
+        {error ? (
+          <div className="lg:col-span-7"><ErrorState message={error} onRetry={reload} /></div>
+        ) : !loading && products.length === 0 ? (
+          <div className="lg:col-span-7"><EmptyState title="Fresh stems arriving soon" cta={{ href: '/products', label: 'Browse all flowers' }} /></div>
+        ) : (
         <div className="lg:col-span-7 grid grid-cols-2 sm:grid-cols-3 gap-4">
           {loading
             ? Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)
@@ -73,7 +73,7 @@ export default function SeasonalCollection() {
                 <article key={p.id} className="section-card overflow-hidden flex flex-col group hover:shadow-lg transition-shadow duration-200">
                   <div className="relative w-full h-28 sm:h-36 overflow-hidden">
                     <Image
-                      src={p.image || FALLBACK_IMG}
+                      src={productImage(p)}
                       alt={p.name}
                       fill
                       sizes="(max-width:1024px) 33vw,20vw"
@@ -95,6 +95,7 @@ export default function SeasonalCollection() {
               ))
           }
         </div>
+        )}
       </div>
     </section>
   );

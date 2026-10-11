@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { ApiProduct, api } from "@/lib/api";
 import { formatINR } from "@/lib/cart-context";
+import { productImage } from "@/lib/product-image";
 
 type Props = {
   /** ID of the product currently being viewed — excluded from related results. */
@@ -38,7 +39,9 @@ const RelatedProducts: React.FC<Props> = ({
         const filtered = res.items.filter((p) => p.id !== currentProductId).slice(0, limit);
         setItems(filtered);
       })
-      .catch(() => {
+      .catch((err) => {
+        // Secondary section: hide it rather than block the page.
+        if (process.env.NODE_ENV !== 'production') console.warn('[RelatedProducts] failed to load', err);
         if (!cancelled) setItems([]);
       })
       .finally(() => {
@@ -80,17 +83,13 @@ const RelatedProducts: React.FC<Props> = ({
           {items.map((p) => (
             <article key={p.id} className="section-card overflow-hidden group flex flex-col">
               <Link href={`/products/${p.slug}`} className="relative w-full h-48 bg-slate-100 block">
-                {p.image ? (
-                  <Image
-                    src={p.image}
+                <Image
+                    src={productImage(p)}
                     alt={p.name}
                     fill
                     sizes="(max-width: 768px) 50vw, 25vw"
                     className="object-cover transition duration-500 group-hover:scale-105"
                   />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-5xl">🌸</div>
-                )}
               </Link>
               <div className="p-4 flex flex-col gap-1">
                 <h3 className="font-semibold text-base text-slate-900 leading-snug">

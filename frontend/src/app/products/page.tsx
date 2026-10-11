@@ -4,7 +4,9 @@ import React, { Suspense, useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ApiProduct, ApiCategory, api } from "@/lib/api";
+import { ApiProduct, api } from "@/lib/api";
+import { useApi } from "@/lib/use-api";
+import { productImage } from "@/lib/product-image";
 import { useCart, formatINR } from "@/lib/cart-context";
 
 function ProductsView() {
@@ -15,27 +17,13 @@ function ProductsView() {
   const q = searchParams?.get("q") || undefined;
   const sort = searchParams?.get("sort") || "newest";
   const [products, setProducts] = useState<ApiProduct[]>([]);
-  const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { add } = useCart();
 
   // Load categories once for the filter chips.
-  useEffect(() => {
-    let cancelled = false;
-    api
-      .listCategories()
-      .then((res) => {
-        if (cancelled) return;
-        setCategories(res.filter((c) => c.active !== false));
-      })
-      .catch(() => {
-        /* fail silently — filter chips simply won't render */
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { data: allCategories, error: categoriesError, reload: reloadCategories } = useApi(() => api.listCategories(), []);
+  const categories = React.useMemo(() => (allCategories ?? []).filter((c) => c.active !== false), [allCategories]);
 
   useEffect(() => {
     let cancelled = false;
@@ -98,6 +86,13 @@ function ProductsView() {
           Back to home
         </Link>
       </div>
+
+      {categoriesError && (
+        <p role="alert" className="mb-4 text-sm">
+          Couldn&apos;t load category filters.{" "}
+          <button type="button" onClick={reloadCategories} className="underline underline-offset-4">Try again</button>
+        </p>
+      )}
 
       {(categories.length > 0 || q) && (
         <div className="mb-8 flex flex-col gap-3">
@@ -191,17 +186,13 @@ function ProductsView() {
             return (
               <article key={p.id} className="section-card overflow-hidden group flex flex-col">
                 <Link href={`/products/${p.slug}`} className="relative w-full h-48 sm:h-56 bg-slate-100 block">
-                  {p.image ? (
-                    <Image
-                      src={p.image}
-                      alt={p.name}
-                      fill
-                      sizes="(max-width: 640px) 50vw, 25vw"
-                      className="object-cover transition duration-500 group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-5xl">🌸</div>
-                  )}
+                  <Image
+                    src={productImage(p)}
+                    alt={p.name}
+                    fill
+                    sizes="(max-width: 640px) 50vw, 25vw"
+                    className="object-cover transition duration-500 group-hover:scale-105"
+                  />
                   {p.featured && (
                     <span className="absolute top-2 left-2 pill text-[10px]">Featured</span>
                   )}

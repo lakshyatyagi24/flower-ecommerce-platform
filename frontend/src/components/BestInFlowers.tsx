@@ -1,13 +1,15 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { api, ApiProduct } from '../lib/api';
 import { useCart } from '../lib/cart-context';
 import ProductQuickView, { QuickViewProduct } from './ProductQuickView';
-
-const FALLBACK_IMG = 'https://images.unsplash.com/photo-1490750967868-88df5691cc0f?w=400&q=80';
+import { useApi } from '../lib/use-api';
+import { productImage } from '../lib/product-image';
+import ErrorState from './ui/ErrorState';
+import EmptyState from './ui/EmptyState';
 
 const fmt = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 
@@ -33,20 +35,13 @@ function SkeletonCard() {
 }
 
 const BestInFlowers: React.FC = () => {
-  const [products, setProducts] = useState<ApiProduct[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, error, loading, reload } = useApi(() => api.listProducts({ featured: true, take: 8 }), []);
+  const products = useMemo(() => data?.items ?? [], [data]);
   const [added, setAdded] = useState<Record<string, boolean>>({});
   const [wishlisted, setWishlisted] = useState<Record<string, boolean>>({});
   const [quickViewId, setQuickViewId] = useState<number | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScroll, setCanScroll] = useState({ left: false, right: true });
-
-  useEffect(() => {
-    api.listProducts({ featured: true, take: 8 })
-      .then((r) => setProducts(r.items))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
 
   function updateScrollState() {
     const el = scrollRef.current;
@@ -94,7 +89,7 @@ const BestInFlowers: React.FC = () => {
       id: String(p.id),
       title: p.name,
       category: p.category?.name || 'Flowers',
-      img: p.image || FALLBACK_IMG,
+      img: productImage(p),
       price: p.price,
       description: p.description || undefined,
     };
@@ -123,11 +118,16 @@ const BestInFlowers: React.FC = () => {
         </div>
       </div>
 
+      {error ? (
+        <ErrorState message={error} onRetry={reload} />
+      ) : !loading && products.length === 0 ? (
+        <EmptyState title="Fresh stems arriving soon" cta={{ href: '/products', label: 'Browse all flowers' }} />
+      ) : (
       <div ref={scrollRef} onScroll={updateScrollState} className="flex gap-5 snap-x overflow-x-auto pb-3 no-scrollbar" role="list" aria-label="Featured flower picks">
         {loading
           ? Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
           : products.map((p, i) => {
-              const imgSrc = p.image || FALLBACK_IMG;
+              const imgSrc = productImage(p);
               const sid = String(p.id);
               return (
                 <article
@@ -203,6 +203,7 @@ const BestInFlowers: React.FC = () => {
             })
         }
       </div>
+      )}
 
       {quickViewProduct && (
         <ProductQuickView

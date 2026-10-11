@@ -2,6 +2,7 @@
 import React, { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { setTrackEmail } from "@/lib/track-order-session";
 
 function TrackOrderInner() {
   const router = useRouter();
@@ -10,12 +11,10 @@ function TrackOrderInner() {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  // Pre-fill from query (e.g., when arriving from /checkout/success as a guest).
+  // Pre-fill from query (orderId only — the email is never put in a URL).
   useEffect(() => {
     const qOrder = searchParams?.get("orderId");
-    const qEmail = searchParams?.get("email");
     if (qOrder) setOrderId(qOrder);
-    if (qEmail) setEmail(qEmail);
   }, [searchParams]);
 
   function onSubmit(e: React.FormEvent) {
@@ -37,7 +36,7 @@ function TrackOrderInner() {
 
     const params = new URLSearchParams();
     params.set("orderId", orderId.trim());
-    params.set("email", email.trim());
+    setTrackEmail(email.trim());
     router.push(`/track-order/results?${params.toString()}`);
   }
 

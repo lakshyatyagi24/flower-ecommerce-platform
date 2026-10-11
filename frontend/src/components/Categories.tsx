@@ -1,7 +1,9 @@
 "use client";
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import Link from "next/link";
 import MegaMenu from "./MegaMenu";
+import { api } from "../lib/api";
+import { useApi } from "../lib/use-api";
 
 type Submenu = {
   title: string;
@@ -24,8 +26,6 @@ const defaultCategories: Category[] = [];
 
 const Categories: React.FC<CategoriesProps> = ({ categories = defaultCategories, onCategoryClick }) => {
   const [active, setActive] = useState<string | null>(null);
-  const [remoteCategories, setRemoteCategories] = useState<Category[] | null>(null);
-  const [loading, setLoading] = useState<boolean>(false);
   const [menuRect, setMenuRect] = useState<{ left: number; top: number; bottom: number; width: number } | null>(null);
   const hideTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -51,35 +51,21 @@ const Categories: React.FC<CategoriesProps> = ({ categories = defaultCategories,
     };
   }, []);
 
-    // Fetch categories from backend on mount. Use NEXT_PUBLIC_API_BASE if available, otherwise try origin and localhost:3001
-  useEffect(() => {
-    let cancelled = false;
-    const fetchCategories = async () => {
-      try {
-        const envBase = typeof process !== 'undefined' && (process.env as any).NEXT_PUBLIC_API_BASE;
-        if (!envBase) return; // no configured API base — don't attempt fallbacks
-        setLoading(true);
-        const url = envBase.replace(/\/$/, '') + '/categories';
-        const res = await fetch(url, { cache: 'no-store' });
-        if (!res.ok) return;
-        const data = await res.json();
-        if (cancelled) return;
-        // map backend category shape -> component shape
-        const mapped: Category[] = data.map((c: any) => ({
-          name: c.name,
-          slug: c.slug,
-          submenus: c.children && c.children.length ? [{ title: 'Subcategories', items: c.children.map((ch: any) => ({ name: ch.name, slug: ch.slug })) }] : undefined,
-        }));
-        setRemoteCategories(mapped);
-      } catch (e) {
-        // ignore - keep defaults
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchCategories();
-    return () => { cancelled = true; };
-  }, []);
+  const { data: apiCategories, error: categoriesError, loading, reload } = useApi(() => api.listCategories(), []);
+  const remoteCategories = useMemo<Category[] | null>(
+    () =>
+      apiCategories
+        ? apiCategories.map((c) => ({
+            name: c.name,
+            slug: c.slug,
+            submenus:
+              c.children && c.children.length
+                ? [{ title: 'Subcategories', items: c.children.map((ch) => ({ name: ch.name, slug: ch.slug })) }]
+                : undefined,
+          }))
+        : null,
+    [apiCategories],
+  );
 
   // determine effective categories from remote or defaults
   const effectiveCategories = remoteCategories ?? categories;
@@ -134,9 +120,16 @@ const Categories: React.FC<CategoriesProps> = ({ categories = defaultCategories,
     >
     <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 relative">
   <div className="overflow-x-auto overflow-y-visible">
+          {categoriesError && visibleCategories.length === 0 ? (
+            <p role="alert" className="text-sm py-3 px-2 text-center">
+              Couldn&apos;t load categories.{' '}
+              <button type="button" onClick={reload} className="underline underline-offset-4">Try again</button>
+            </p>
+          ) : (
           <ul className="flex gap-x-8 items-center whitespace-nowrap text-sm py-3 px-2 justify-start md:justify-center overflow-x-auto">
             {categoryItems}
           </ul>
+          )}
         </div>
       </div>
     </div>

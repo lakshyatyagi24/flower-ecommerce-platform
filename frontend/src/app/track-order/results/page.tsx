@@ -7,6 +7,8 @@ import { useSearchParams } from "next/navigation";
 import OrderTimeline from "@/components/OrderTimeline";
 import { ApiOrder, api, ApiError } from "@/lib/api";
 import { formatINR } from "@/lib/cart-context";
+import { getTrackEmail } from "@/lib/track-order-session";
+import { productImage } from "@/lib/product-image";
 
 type Phase = { key: string; label: string; time: Date | null };
 
@@ -55,12 +57,17 @@ function fmt(d?: Date | null) {
 function TrackOrderResultsView() {
   const params = useSearchParams();
   const orderId = params?.get("orderId") || "";
-  const email = params?.get("email") || params?.get("contact") || "";
+  // Email arrives via sessionStorage (never the URL). null = not read yet.
+  const [email, setEmail] = useState<string | null>(null);
+  useEffect(() => {
+    setEmail(getTrackEmail());
+  }, []);
   const [order, setOrder] = useState<ApiOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (email === null) return;
     if (!orderId) {
       setLoading(false);
       setError("No Order ID provided.");
@@ -68,7 +75,7 @@ function TrackOrderResultsView() {
     }
     if (!email) {
       setLoading(false);
-      setError("Email is required to track this order.");
+      setError("Please re-enter the email used at checkout to track this order.");
       return;
     }
     if (!/^\d+$/.test(orderId.trim())) {
@@ -113,7 +120,7 @@ function TrackOrderResultsView() {
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h2 className="text-xl font-semibold mb-2">We couldn&apos;t find that order</h2>
           <p className="text-sm text-red-600">{error}</p>
-          <Link href="/track-order" className="mt-4 inline-block text-olive-green underline-offset-4 hover:underline">
+          <Link href={/^\d+$/.test(orderId) ? `/track-order?orderId=${orderId}` : "/track-order"} className="mt-4 inline-block text-olive-green underline-offset-4 hover:underline">
             Try again
           </Link>
         </div>
@@ -212,11 +219,7 @@ function TrackOrderResultsView() {
               {order.items.map((it) => (
                 <li key={it.id} className="flex items-center gap-3">
                   <div className="w-14 h-14 rounded-md overflow-hidden bg-white flex-shrink-0 relative">
-                    {it.product?.image ? (
-                      <Image src={it.product.image} alt={it.productName} fill sizes="56px" className="object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">🌸</div>
-                    )}
+                    <Image src={productImage(it.product)} alt={it.productName} fill sizes="56px" className="object-cover" />
                   </div>
                   <div className="flex-1 text-sm">
                     <div className="font-medium text-slate-800">{it.productName}</div>

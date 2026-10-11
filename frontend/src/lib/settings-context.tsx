@@ -176,7 +176,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       .then((raw) => {
         if (!cancelled) setSettings(fromRaw(raw));
       })
-      .catch(() => {});
+      .catch((err) => {
+        // Fall back to built-in defaults; surface the failure in dev only.
+        if (process.env.NODE_ENV !== 'production') console.warn('[settings] failed to load store settings, using fallback', err);
+      });
     return () => {
       cancelled = true;
     };
