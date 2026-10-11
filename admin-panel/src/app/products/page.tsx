@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Plus, Edit, Trash2, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
-import { adminApi, AdminProduct, AdminCategory, ApiError, AdminProductType, AdminSaleMode } from "@/lib/api";
+import { adminApi, AdminProduct, AdminCategory, ApiError, AdminProductType, AdminSaleMode, validateImageFile } from "@/lib/api";
 
 const PRODUCT_TYPES: { value: AdminProductType; label: string }[] = [
   { value: "CUT_FLOWER", label: "Cut flower" },
@@ -94,6 +94,7 @@ export default function ProductsPage() {
   const [editing, setEditing] = useState<AdminProduct | null>(null);
   const [form, setForm] = useState<ProductForm>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState<number | null>(null);
   const { addToast } = useToast();
 
@@ -159,18 +160,20 @@ export default function ProductsPage() {
 
   const handleImageFile = async (file: File | null) => {
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      addToast({ type: "error", title: "File too large", description: "Please select an image under 2MB." });
+    const problem = validateImageFile(file);
+    if (problem) {
+      addToast({ type: "error", title: "Invalid image", description: problem });
       return;
     }
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result;
-      if (typeof result === "string") {
-        setForm((f) => ({ ...f, image: result }));
-      }
-    };
-    reader.readAsDataURL(file);
+    setUploading(true);
+    try {
+      const { url } = await adminApi.uploadImage(file, "products");
+      setForm((f) => ({ ...f, image: url }));
+    } catch (e) {
+      addToast({ type: "error", title: "Upload failed", description: (e as Error).message });
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -193,7 +196,8 @@ export default function ProductsPage() {
         slug: form.slug.trim() || slugify(form.name),
         description: form.description.trim() || undefined,
         price: isEnquiry ? (isNaN(priceNum) ? 0 : priceNum) : priceNum,
-        image: form.image || undefined,
+        // Never send legacy base64 data: URLs (they exceed the DTO limit); omit unless replaced by an upload/URL.
+        image: form.image && !form.image.startsWith("data:") ? form.image : undefined,
         stock: isNaN(stockNum) ? 0 : Math.max(0, stockNum),
         featured: form.featured,
         active: form.active,
@@ -350,15 +354,31 @@ export default function ProductsPage() {
                 <Label>Product image</Label>
                 <div className="space-y-2 mt-1">
                   <Input
-                    placeholder="Image URL or paste a data: URL"
+                    placeholder="Image URL (https://…) or upload below"
                     value={form.image}
                     onChange={(e) => setForm({ ...form, image: e.target.value })}
                   />
-                  <Input type="file" accept="image/*" onChange={(e) => handleImageFile(e.target.files?.[0] || null)} />
+                  <Input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/avif"
+                    disabled={uploading}
+                    onChange={(e) => {
+                      handleImageFile(e.target.files?.[0] || null);
+                      e.target.value = "";
+                    }}
+                  />
+                  {uploading && (
+                    <p className="text-xs text-muted-foreground flex items-center">
+                      <Loader2 className="mr-2 h-3 w-3 animate-spin" /> Uploading image…
+                    </p>
+                  )}
                   {form.image && (
                     <div className="w-32 h-32 rounded border overflow-hidden bg-cover bg-center" style={{ backgroundImage: `url(${form.image})` }} />
                   )}
-                  <p className="text-xs text-muted-foreground">Images under 2MB are stored inline as base64.</p>
+                  {form.image.startsWith("data:") && (
+                    <p className="text-xs text-amber-600">Legacy inline image. It will be left unchanged unless you upload a new one or paste a URL.</p>
+                  )}
+                  <p className="text-xs text-muted-foreground">JPEG, PNG, WebP or AVIF, up to 5 MB. Uploaded to Cloudinary.</p>
                 </div>
               </div>
               <div className="flex flex-col sm:flex-row gap-4">
@@ -375,9 +395,9 @@ export default function ProductsPage() {
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={submitting}>
-                  {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {editing ? "Update" : "Create"}
+                <Button type="submit" disabled={submitting || uploading}>
+                  {(submitting || uploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {uploading ? "Uploading…" : editing ? "Update" : "Create"}
                 </Button>
               </div>
             </form>

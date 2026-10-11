@@ -13,7 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Edit, Trash2, Loader2, ArrowUp, ArrowDown, Copy, Eye } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
-import { getStoredToken, API_BASE } from '@/lib/api';
+import { getStoredToken, API_BASE, uploadImage, validateImageFile } from '@/lib/api';
 
 function authHeaders(): Record<string, string> {
   const token = getStoredToken();
@@ -116,61 +116,6 @@ export default function SlidersPage() {
   const [previewData, setPreviewData] = useState<SliderFormData | null>(null);
   const [isReplacingImage, setIsReplacingImage] = useState(false);
   const { addToast } = useToast();
-
-  // Image compression utility
-  const compressImage = (file: File): Promise<File> => {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = document.createElement('img');
-
-      const objectUrl = URL.createObjectURL(file);
-
-      img.onload = () => {
-        URL.revokeObjectURL(objectUrl);
-
-        // Calculate new dimensions (max 1200px width/height)
-        const maxSize = 1200;
-        let { width, height } = img;
-
-        if (width > height) {
-          if (width > maxSize) {
-            height = (height * maxSize) / width;
-            width = maxSize;
-          }
-        } else {
-          if (height > maxSize) {
-            width = (width * maxSize) / height;
-            height = maxSize;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-
-        ctx?.drawImage(img, 0, 0, width, height);
-
-        canvas.toBlob((blob) => {
-          if (blob) {
-            const compressedFile = new File([blob], file.name, {
-              type: 'image/jpeg',
-              lastModified: Date.now(),
-            });
-            resolve(compressedFile);
-          } else {
-            resolve(file); // fallback to original
-          }
-        }, 'image/jpeg', 0.8); // 80% quality
-      };
-
-      img.onerror = () => {
-        URL.revokeObjectURL(objectUrl);
-        resolve(file);
-      };
-
-      img.src = objectUrl;
-    });
-  };
 
   const fetchSliders = useCallback(async () => {
     try {
@@ -286,24 +231,14 @@ export default function SlidersPage() {
       // Handle image upload or URL
       let finalImageUrl = formData.image;
       if (formData.imageUploadMethod === 'upload' && formData.imageFile) {
-        // Check file size before processing (limit to 2MB)
-        if (formData.imageFile.size > 2 * 1024 * 1024) {
-          addToast({
-            type: 'error',
-            title: 'File Too Large',
-            description: 'Please select an image smaller than 2MB.',
-          });
+        // Pre-check type/size, then upload to Cloudinary (the saved value is an https URL, never base64)
+        const problem = validateImageFile(formData.imageFile);
+        if (problem) {
+          addToast({ type: 'error', title: 'Invalid image', description: problem });
           setIsSubmitting(false);
           return;
         }
-
-        // Compress and convert to base64
-        const compressedFile = await compressImage(formData.imageFile);
-        finalImageUrl = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onload = (e) => resolve(e.target?.result as string);
-          reader.readAsDataURL(compressedFile);
-        });
+        finalImageUrl = (await uploadImage(formData.imageFile, 'sliders')).url;
       }
 
       const payload = {
@@ -749,9 +684,16 @@ export default function SlidersPage() {
                             <Input
                               id="image-file"
                               type="file"
-                              accept="image/*"
+                              accept="image/jpeg,image/png,image/webp,image/avif"
                               onChange={(e) => {
                                 const file = e.target.files?.[0] || null;
+                                const problem = file ? validateImageFile(file) : null;
+                                if (file && problem) {
+                                  addToast({ type: 'error', title: 'Invalid image', description: problem });
+                                  e.target.value = '';
+                                  setFormData({ ...formData, imageFile: null });
+                                  return;
+                                }
                                 setFormData({ ...formData, imageFile: file });
                                 // Reset replace state when a new file is selected
                                 if (isReplacingImage) {
@@ -766,9 +708,6 @@ export default function SlidersPage() {
                               <span className="text-xs">
                                 ({(formData.imageFile.size / 1024 / 1024).toFixed(2)} MB)
                               </span>
-                              {formData.imageFile.size > 2 * 1024 * 1024 && (
-                                <span className="text-red-500 text-xs">⚠️ File too large (max 2MB)</span>
-                              )}
                             </div>
                           )}
                           {formData.image && formData.imageUploadMethod !== 'upload' && !formData.image.startsWith('data:') && (
@@ -780,7 +719,7 @@ export default function SlidersPage() {
                             </div>
                           )}
                           <p className="text-xs text-muted-foreground">
-                            Recommended: Images under 2MB. Larger images will be compressed.
+                            JPEG, PNG, WebP or AVIF, up to 5 MB. Uploaded to Cloudinary when you save.
                           </p>
                         </div>
                       )}

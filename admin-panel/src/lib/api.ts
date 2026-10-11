@@ -53,6 +53,33 @@ export function extractErrorMessage(payload: unknown, status: number): string {
   return `Request failed (${status})`;
 }
 
+export const IMAGE_UPLOAD_MAX_BYTES = 5 * 1024 * 1024;
+export const IMAGE_UPLOAD_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
+
+/** Client-side pre-check mirroring the server gate. Returns an error message, or null if OK. */
+export function validateImageFile(file: File): string | null {
+  if (!IMAGE_UPLOAD_TYPES.includes(file.type)) return 'Only JPEG, PNG, WebP or AVIF images are allowed.';
+  if (file.size > IMAGE_UPLOAD_MAX_BYTES) return 'Image must be under 5 MB.';
+  return null;
+}
+
+export async function uploadImage(
+  file: File,
+  folder: 'products' | 'sliders' | 'categories' = 'products',
+): Promise<{ url: string }> {
+  const fd = new FormData();
+  fd.append('file', file);
+  const token = getStoredToken();
+  const res = await fetch(`${API_BASE}/uploads?folder=${folder}`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: fd,
+  });
+  const payload = await res.json().catch(() => null);
+  if (!res.ok) throw new ApiError(extractErrorMessage(payload, res.status), res.status, payload);
+  return payload;
+}
+
 export async function apiFetch<T = unknown>(path: string, opts: FetchOptions = {}): Promise<T> {
   const url = `${API_BASE}${path.startsWith('/') ? '' : '/'}${path}`;
   const headers: Record<string, string> = { ...(opts.headers || {}) };
@@ -339,6 +366,9 @@ export const adminApi = {
   },
   deleteReview: (id: number) =>
     apiFetch<{ success: true }>(`/reviews/${id}`, { method: 'DELETE' }),
+
+  // Uploads
+  uploadImage,
 
   // Settings
   getAdminSettings: () => apiFetch<Record<string, string>>('/settings/admin'),
