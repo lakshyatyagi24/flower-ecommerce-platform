@@ -44,6 +44,19 @@ export type ApiOptions = {
   cache?: RequestCache;
 };
 
+// Nest's ValidationPipe returns `message` as string[]; join those so users see
+// the actual hint (e.g. "Enter a valid 10-digit Indian mobile number").
+export function extractErrorMessage(payload: unknown, status: number): string {
+  if (payload && typeof payload === 'object' && 'message' in payload) {
+    const m = (payload as { message: unknown }).message;
+    if (typeof m === 'string') return m;
+    if (Array.isArray(m) && m.length > 0 && m.every((x) => typeof x === 'string')) {
+      return (m as string[]).join('. ');
+    }
+  }
+  return `Request failed (${status})`;
+}
+
 export async function apiFetch<T = unknown>(path: string, opts: ApiOptions = {}): Promise<T> {
   const url = `${API_BASE}${path.startsWith('/') ? '' : '/'}${path}`;
   const headers: Record<string, string> = { ...(opts.headers || {}) };
@@ -85,10 +98,7 @@ export async function apiFetch<T = unknown>(path: string, opts: ApiOptions = {})
       setStoredToken(null);
       window.dispatchEvent(new CustomEvent('auth:unauthorized'));
     }
-    const message =
-      (payload && typeof payload === 'object' && 'message' in payload && typeof (payload as { message: unknown }).message === 'string'
-        ? (payload as { message: string }).message
-        : `Request failed (${res.status})`);
+    const message = extractErrorMessage(payload, res.status);
     throw new ApiError(message, res.status, payload);
   }
   return payload as T;

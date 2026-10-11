@@ -54,9 +54,17 @@ function fmtDateTime(value: string) {
   }
 }
 
+// 10-digit stored numbers get +91 so the dialer link is unambiguous.
+function telNumber(phone: string) {
+  const cleaned = phone.replace(/[^\d+]/g, "");
+  return /^\d{10}$/.test(cleaned) ? `+91${cleaned}` : cleaned;
+}
+
 function whatsappUrl(phone: string, customerName: string) {
-  const digits = phone.replace(/\D+/g, "");
+  let digits = phone.replace(/\D+/g, "");
   if (digits.length < 8) return null;
+  // Backend stores normalised 10-digit Indian numbers; wa.me needs the country code.
+  if (digits.length === 10) digits = `91${digits}`;
   const text = `Hi ${customerName}, this is the team at Fresh Petals India. We received your enquiry — `;
   return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
 }
@@ -322,7 +330,7 @@ export default function EnquiriesPage() {
 
                 <div className="flex flex-wrap gap-2 pt-3 border-t">
                   <a
-                    href={`tel:${selected.customerPhone.replace(/[^\d+]/g, "")}`}
+                    href={`tel:${telNumber(selected.customerPhone)}`}
                     className="inline-flex items-center px-3 py-1.5 text-sm border rounded-md hover:bg-muted"
                   >
                     Call
