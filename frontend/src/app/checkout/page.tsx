@@ -136,10 +136,10 @@ export default function CheckoutPage() {
         items: items.map((it) => ({ productId: it.productId, quantity: it.quantity })),
         customerName: form.customerName.trim(),
         customerEmail: form.customerEmail.trim(),
-        customerPhone: form.customerPhone.trim() || undefined,
+        customerPhone: form.customerPhone.trim(),
         shippingAddress: form.shippingAddress.trim(),
-        city: form.city.trim() || undefined,
-        postalCode: form.postalCode.trim() || undefined,
+        city: form.city.trim(),
+        postalCode: form.postalCode.trim(),
         notes: form.notes.trim() || undefined,
         paymentMethod: form.paymentMethod,
       });
@@ -176,7 +176,7 @@ export default function CheckoutPage() {
               </label>
               <label className="block sm:col-span-2">
                 <span className="text-sm font-medium text-gray-700">Phone</span>
-                <input value={form.customerPhone} onChange={(e) => update("customerPhone", e.target.value)} placeholder="+91 99999 11111" className="mt-1 w-full rounded-md border-gray-200 shadow-sm focus:ring-2 focus:ring-olive-green/40" />
+                <input type="tel" inputMode="tel" required pattern="(\+?91[\s\-]?|0)?[6-9][0-9]{4}[\s\-]?[0-9]{5}" title="Enter a valid 10-digit Indian mobile number" value={form.customerPhone} onChange={(e) => update("customerPhone", e.target.value)} placeholder="+91 99999 11111" className="mt-1 w-full rounded-md border-gray-200 shadow-sm focus:ring-2 focus:ring-olive-green/40" />
               </label>
             </div>
           </section>
@@ -191,11 +191,11 @@ export default function CheckoutPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <label className="block">
                   <span className="text-sm font-medium text-gray-700">City</span>
-                  <input value={form.city} onChange={(e) => update("city", e.target.value)} className="mt-1 w-full rounded-md border-gray-200 shadow-sm focus:ring-2 focus:ring-olive-green/40" />
+                  <input required maxLength={80} value={form.city} onChange={(e) => update("city", e.target.value)} className="mt-1 w-full rounded-md border-gray-200 shadow-sm focus:ring-2 focus:ring-olive-green/40" />
                 </label>
                 <label className="block">
                   <span className="text-sm font-medium text-gray-700">Postal code</span>
-                  <input value={form.postalCode} onChange={(e) => update("postalCode", e.target.value)} className="mt-1 w-full rounded-md border-gray-200 shadow-sm focus:ring-2 focus:ring-olive-green/40" />
+                  <input required inputMode="numeric" pattern="[1-9][0-9]{5}" maxLength={6} title="Enter a valid 6-digit PIN code" value={form.postalCode} onChange={(e) => update("postalCode", e.target.value)} className="mt-1 w-full rounded-md border-gray-200 shadow-sm focus:ring-2 focus:ring-olive-green/40" />
                 </label>
               </div>
               <label className="block">

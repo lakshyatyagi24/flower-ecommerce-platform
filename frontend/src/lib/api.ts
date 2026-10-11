@@ -258,10 +258,10 @@ export const api = {
     items: { productId: number; quantity: number }[];
     customerName: string;
     customerEmail: string;
-    customerPhone?: string;
+    customerPhone: string;
     shippingAddress: string;
-    city?: string;
-    postalCode?: string;
+    city: string;
+    postalCode: string;
     notes?: string;
     paymentMethod?: string;
   }) => apiFetch<ApiOrder>('/orders', { method: 'POST', body, auth: true }),
