@@ -13,6 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Edit, Trash2, Loader2, ArrowUp, ArrowDown, Copy, Eye } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
+import { isAllowedImageUrl, IMAGE_URL_ERROR } from '@/lib/image-url';
 import { getStoredToken, API_BASE, uploadImage, validateImageFile } from '@/lib/api';
 
 function authHeaders(): Record<string, string> {
@@ -671,12 +672,17 @@ export default function SlidersPage() {
                       )}
                       
                       {formData.imageUploadMethod === 'url' ? (
-                        <Input
-                          id="image"
-                          value={formData.image}
-                          onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                          placeholder="https://example.com/image.jpg"
-                        />
+                        <div className="space-y-1">
+                          <Input
+                            id="image"
+                            value={formData.image}
+                            onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                            placeholder="https://res.cloudinary.com/… or /images/…"
+                          />
+                          {!isAllowedImageUrl(formData.image) && (
+                            <p className="text-xs text-red-600">{IMAGE_URL_ERROR}</p>
+                          )}
+                        </div>
                       ) : (
                         <div className="space-y-2">
                           {/* Show file input only if not editing existing uploaded image or if replacing */}
@@ -1098,7 +1104,7 @@ export default function SlidersPage() {
                     <Eye className="h-4 w-4 mr-2" />
                     Preview
                   </Button>
-                  <Button type="submit" disabled={isSubmitting}>
+                  <Button type="submit" disabled={isSubmitting || (formData.imageUploadMethod === 'url' && !isAllowedImageUrl(formData.image))}>
                     {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     {editingSlider ? 'Update' : 'Create'} Slider
                   </Button>

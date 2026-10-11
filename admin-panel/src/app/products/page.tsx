@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Plus, Edit, Trash2, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
+import { isAllowedImageUrl, IMAGE_URL_ERROR } from "@/lib/image-url";
 import { adminApi, AdminProduct, AdminCategory, ApiError, AdminProductType, AdminSaleMode, validateImageFile } from "@/lib/api";
 
 const PRODUCT_TYPES: { value: AdminProductType; label: string }[] = [
@@ -358,6 +359,9 @@ export default function ProductsPage() {
                     value={form.image}
                     onChange={(e) => setForm({ ...form, image: e.target.value })}
                   />
+                  {!form.image.startsWith("data:") && !isAllowedImageUrl(form.image) && (
+                    <p className="text-xs text-red-600">{IMAGE_URL_ERROR}</p>
+                  )}
                   <Input
                     type="file"
                     accept="image/jpeg,image/png,image/webp,image/avif"
@@ -395,7 +399,7 @@ export default function ProductsPage() {
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={submitting || uploading}>
+                <Button type="submit" disabled={submitting || uploading || (!form.image.startsWith("data:") && !isAllowedImageUrl(form.image))}>
                   {(submitting || uploading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {uploading ? "Uploading…" : editing ? "Update" : "Create"}
                 </Button>

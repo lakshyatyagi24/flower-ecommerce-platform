@@ -4,6 +4,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import Image, { StaticImageData } from 'next/image';
 import { API_BASE } from '@/lib/api';
 import { safeImage } from '@/lib/product-image';
+import slider1 from '@/assets/slider1.png';
+import slider2 from '@/assets/slider2.png';
+import slider3 from '@/assets/slider3.png';
+import slider4 from '@/assets/slider4.png';
 
 type Position =
   | 'top-left'
@@ -52,15 +56,16 @@ type Slide = {
   };
 };
 
-// default static slides using real product images from theflora.in
+// Default slides shown when the API returns no sliders. Static imports (local assets) so
+// they render regardless of next/image remotePatterns.
 const staticSlides: Slide[] = [
   {
     id: 0,
-    img: 'https://cdn.shopify.com/s/files/1/0047/4637/9362/files/The_Flora_Banner.jpg?v=1727676100',
-    alt: 'Fresh flowers delivered across India',
+    img: slider4,
+    alt: 'Autumn bouquet of burnt-orange blooms on a deep blue backdrop',
     overlay: {
       combined: true,
-      position: 'center-left',
+      position: 'center-right',
       eyebrow: 'Farm fresh, delivered fast',
       title: 'Flowers for Every Occasion',
       subtitle: 'Hand-tied bouquets sourced from the finest Indian farms. Same-day delivery across 8+ cities.',
@@ -71,11 +76,11 @@ const staticSlides: Slide[] = [
   },
   {
     id: 1,
-    img: 'https://cdn.shopify.com/s/files/1/0047/4637/9362/products/BlueGardenia2.jpg?v=1623742081',
-    alt: 'Blue Gardenia – Premium hand-tied bouquet',
+    img: slider3,
+    alt: 'Hand-painted floral pattern on a soft green background',
     overlay: {
       combined: true,
-      position: 'center-right',
+      position: 'center',
       eyebrow: 'Bestselling bouquet',
       title: "Blue Gardenia",
       subtitle: 'Hydrangeas, oriental lilies and avalanche roses — hand-tied and delivered fresh.',
@@ -86,11 +91,11 @@ const staticSlides: Slide[] = [
   },
   {
     id: 2,
-    img: 'https://cdn.shopify.com/s/files/1/0047/4637/9362/products/a0e57ed4-4638-4eb9-948f-ad139bb042d5.jpg?v=1660194809',
-    alt: 'Opulent Prosperity – Premium arrangement',
+    img: slider1,
+    alt: 'Sunflower and rose arrangement in a rustic pot',
     overlay: {
       combined: true,
-      position: 'center-left',
+      position: 'center-right',
       eyebrow: 'Gifting made beautiful',
       title: 'Flowers for Every Occasion',
       subtitle: 'Lush, hand-crafted arrangements delivered fresh — perfect for anniversaries, birthdays and events.',
@@ -101,11 +106,11 @@ const staticSlides: Slide[] = [
   },
   {
     id: 3,
-    img: 'https://cdn.shopify.com/s/files/1/0047/4637/9362/products/TheFlora_AllTheColors_2.jpg?v=1665732723',
-    alt: 'A Riot of Colours – Vibrant mixed bouquet',
+    img: slider2,
+    alt: 'Fresh pink hand-tied bouquet on a blush background',
     overlay: {
       combined: true,
-      position: 'center-right',
+      position: 'bottom-right',
       eyebrow: 'Events & celebrations',
       title: 'Florals for Every Event',
       subtitle: 'Weddings, birthdays, corporate setups — vibrant arrangements delivered pan-India.',
@@ -115,6 +120,10 @@ const staticSlides: Slide[] = [
     },
   },
 ];
+
+export function getFallbackSlides(): Slide[] {
+  return staticSlides;
+}
 
 export default function Slider() {
   const [index, setIndex] = useState(0);

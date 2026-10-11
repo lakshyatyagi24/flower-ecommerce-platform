@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Plus, Edit, Trash2, ChevronRight, ChevronDown, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/toast';
+import { isAllowedImageUrl, IMAGE_URL_ERROR } from '@/lib/image-url';
 import { adminApi, AdminCategory, AdminCategoryInput, AdminProductType, AdminSaleMode, ApiError } from '@/lib/api';
 
 const PRODUCT_TYPES: AdminProductType[] = ['CUT_FLOWER', 'PLANT', 'BOUQUET', 'ARRANGEMENT', 'HAMPER'];
@@ -357,6 +358,9 @@ export default function CategoriesPage() {
                   disabled={isSubmitting}
                   placeholder="https://…"
                 />
+                {!isAllowedImageUrl(formData.image) && (
+                  <p className="text-xs text-red-600">{IMAGE_URL_ERROR}</p>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -450,7 +454,7 @@ export default function CategoriesPage() {
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isSubmitting}>
                   Cancel
                 </Button>
-                <Button type="submit" disabled={isSubmitting}>
+                <Button type="submit" disabled={isSubmitting || !isAllowedImageUrl(formData.image)}>
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {editingCategory ? 'Update' : 'Create'}
                 </Button>
