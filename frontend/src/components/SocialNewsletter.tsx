@@ -1,20 +1,25 @@
 "use client";
 import React, { useState } from "react";
 import Link from "next/link";
+import { api } from "@/lib/api";
 
 export default function SocialNewsletter() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [errorMsg, setErrorMsg] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email) return;
+    const trimmed = email.trim();
+    if (!trimmed || status === "sending") return;
     setStatus("sending");
+    setErrorMsg("");
     try {
-      await new Promise((r) => setTimeout(r, 600));
+      await api.subscribeNewsletter(trimmed);
       setStatus("sent");
       setEmail("");
-    } catch {
+    } catch (err) {
+      setErrorMsg(err instanceof Error && err.message ? err.message : "Something went wrong. Please try again.");
       setStatus("error");
     }
   }
@@ -65,7 +70,7 @@ export default function SocialNewsletter() {
                 <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden>
                   <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-                <span>You're subscribed! Thank you.</span>
+                <span role="status">You're on the list</span>
               </div>
             ) : (
               <form
@@ -92,7 +97,7 @@ export default function SocialNewsletter() {
               </form>
             )}
             {status === "error" && (
-              <p className="mt-2 text-xs text-red-600">Something went wrong. Please try again.</p>
+              <p role="alert" className="mt-2 text-xs text-red-600">{errorMsg}</p>
             )}
           </div>
         </div>

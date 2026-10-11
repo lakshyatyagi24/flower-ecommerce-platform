@@ -314,6 +314,10 @@ export const api = {
     source?: string;
   }) => apiFetch<ApiEnquiry>('/enquiries', { method: 'POST', body }),
 
+  // Newsletter
+  subscribeNewsletter: (email: string) =>
+    apiFetch<{ ok: true }>('/newsletter', { method: 'POST', body: { email, source: 'footer' } }),
+
   // Settings
   getSettings: () => apiFetch<Record<string, string>>('/settings'),
 };

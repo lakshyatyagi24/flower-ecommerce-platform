@@ -17,6 +17,7 @@ import {
   LogOut,
   Star,
   MessageSquare,
+  Mail,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { adminApi } from "@/lib/api";
@@ -30,6 +31,7 @@ const menuItems = [
   { name: "Enquiries", href: "/enquiries", icon: MessageSquare, badgeKey: "openEnquiries" },
   { name: "Reviews", href: "/reviews", icon: Star, badgeKey: null },
   { name: "Customers", href: "/customers", icon: Users, badgeKey: null },
+  { name: "Subscribers", href: "/subscribers", icon: Mail, badgeKey: null },
   { name: "Analytics", href: "/analytics", icon: BarChart3, badgeKey: null },
   { name: "Settings", href: "/settings", icon: Settings, badgeKey: null },
 ];

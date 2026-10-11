@@ -223,6 +223,13 @@ export type AdminCustomer = {
   orderCount: number;
 };
 
+export type AdminSubscriber = {
+  id: number;
+  email: string;
+  source: string;
+  createdAt: string;
+};
+
 export type AdminCategory = {
   id: number;
   name: string;
@@ -343,6 +350,10 @@ export const adminApi = {
   // Customers
   listCustomers: () => apiFetch<AdminCustomer[]>('/users/customers'),
 
+  // Newsletter subscribers
+  listSubscribers: (take = 50, skip = 0) =>
+    apiFetch<{ items: AdminSubscriber[]; total: number }>(`/newsletter?take=${take}&skip=${skip}`),
+
   // Categories
   listCategories: () => apiFetch<AdminCategory[]>('/categories/all'),
   listCategoriesPublic: () => apiFetch<AdminCategory[]>('/categories'),
@@ -375,3 +386,27 @@ export const adminApi = {
   updateSettings: (values: Record<string, string>) =>
     apiFetch<Record<string, string>>('/settings', { method: 'PUT', body: values }),
 };
+
+/** Downloads the subscribers CSV with the bearer token (a plain link cannot send it). */
+export async function downloadSubscribersCsv(): Promise<void> {
+  const token = getStoredToken();
+  const res = await fetch(`${API_BASE}/newsletter/export.csv`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) {
+    const payload = await res.json().catch(() => null);
+    throw new ApiError(extractErrorMessage(payload, res.status), res.status, payload);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  try {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'subscribers.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
