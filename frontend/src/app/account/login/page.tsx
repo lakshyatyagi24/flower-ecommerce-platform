@@ -144,6 +144,11 @@ function LoginView() {
                 </button>
               </div>
               {passwordError && <p className="mt-1 text-sm text-red-600">{passwordError}</p>}
+              <p className="mt-2 text-sm">
+                <Link href="/account/forgot-password" className="text-olive-green hover:underline">
+                  Forgot password?
+                </Link>
+              </p>
             </div>
 
             <button

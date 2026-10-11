@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import SignupModal from './SignupModal';
 import Tooltip from './Tooltip';
 import { useRouter } from 'next/navigation';
@@ -244,6 +245,9 @@ const SignInModal: React.FC<Props> = ({ onClose }) => {
                       </button>
                     </div>
                     {passwordError && <div id="signin-password-error" className="mt-1 text-sm text-red-600">{passwordError}</div>}
+                    <div className="mt-2 text-sm">
+                      <Link href="/account/forgot-password" onClick={onClose} className="text-olive-green hover:underline">Forgot password?</Link>
+                    </div>
                     <div className="mt-2 text-sm" aria-live="polite">
                       {(() => {
                         const key = (email || 'guest');
