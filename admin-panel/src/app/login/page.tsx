@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -74,6 +75,11 @@ export default function AdminLoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Your password"
               />
+              <p className="mt-2 text-sm">
+                <Link href="/forgot-password" className="text-primary hover:underline">
+                  Forgot password?
+                </Link>
+              </p>
             </div>
             {error && (
               <div className="p-3 bg-destructive/10 text-destructive rounded-md text-sm" role="alert">

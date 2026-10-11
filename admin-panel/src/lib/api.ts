@@ -280,6 +280,10 @@ export const adminApi = {
       auth: false,
     }),
   me: () => apiFetch<AdminUser>('/auth/me'),
+  forgotPassword: (email: string) =>
+    apiFetch<{ ok: true }>('/auth/forgot-password', { method: 'POST', body: { email }, auth: false }),
+  resetPassword: (token: string, password: string) =>
+    apiFetch<{ ok: true }>('/auth/reset-password', { method: 'POST', body: { token, password }, auth: false }),
 
   // Products — uses the admin endpoint so inactive/soft-disabled products are
   // visible (the public /products endpoint only ever returns active ones).

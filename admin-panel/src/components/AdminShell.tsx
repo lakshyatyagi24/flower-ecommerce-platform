@@ -4,14 +4,15 @@ import { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { AdminSidebar } from "./AdminSidebar";
 import { useAuth } from "@/lib/auth-context";
+import { isPublicAdminRoute } from "@/lib/public-routes";
 import { Loader2 } from "lucide-react";
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { user, loading } = useAuth();
 
-  // Login page gets a clean layout with no sidebar
-  if (pathname === "/login") {
+  // Login / password-reset pages get a clean layout with no sidebar
+  if (isPublicAdminRoute(pathname)) {
     return <main className="min-h-screen">{children}</main>;
   }
 

@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { isPublicAdminRoute } from "./public-routes";
 import { adminApi, AdminUser, ApiError, getStoredToken, setStoredToken } from "./api";
 
 interface AuthState {
@@ -69,7 +70,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // route guard — redirect to /login if not authenticated
   useEffect(() => {
     if (loading) return;
-    if (!user && pathname !== "/login") {
+    const isPublic = isPublicAdminRoute(pathname);
+    if (!user && !isPublic) {
       router.replace("/login");
     } else if (user && pathname === "/login") {
       router.replace("/");
