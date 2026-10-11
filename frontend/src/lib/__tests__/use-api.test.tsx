@@ -2,6 +2,26 @@ import { renderHook, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { useApi } from '../use-api';
 
+// Count every state-setter invocation made through React.useState so tests can
+// prove the hook never *attempts* an update after unmount (React 18 ignores
+// those silently, so warnings/render counts cannot).
+const spy = vi.hoisted(() => ({ setterCalls: 0 }));
+vi.mock('react', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react')>();
+  return {
+    ...actual,
+    default: actual,
+    useState: ((init: never) => {
+      const [v, set] = actual.useState(init);
+      const wrapped = (...a: unknown[]) => {
+        spy.setterCalls++;
+        return (set as (...x: unknown[]) => void)(...a);
+      };
+      return [v, wrapped];
+    }) as unknown as typeof actual.useState,
+  };
+});
+
 describe('useApi', () => {
   it('returns data', async () => {
     const { result } = renderHook(() => useApi(() => Promise.resolve(42), []));
@@ -21,18 +41,28 @@ describe('useApi', () => {
     expect(result.current.error).toBeNull();
   });
 
-  it('does not set state or warn when unmounted before resolve', async () => {
-    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+  it('does not call any state setter when the promise settles after unmount', async () => {
     let resolve!: (v: number) => void;
-    const p = new Promise<number>((r) => (resolve = r));
-    const { result, unmount } = renderHook(() => useApi(() => p, []));
-    unmount();
-    resolve(1);
-    await p;
-    await Promise.resolve();
-    expect(result.current.data).toBeNull();
-    expect(errSpy).not.toHaveBeenCalled();
-    errSpy.mockRestore();
+    let reject!: (e: Error) => void;
+    const ok = new Promise<number>((r) => (resolve = r));
+    const bad = new Promise<number>((_, r) => (reject = r));
+    bad.catch(() => {});
+
+    const a = renderHook(() => useApi(() => ok, []));
+    const b = renderHook(() => useApi(() => bad, []));
+    const callsAtUnmount = spy.setterCalls; // includes the synchronous loading/error resets on mount
+    a.unmount();
+    b.unmount();
+    await act(async () => {
+      resolve(1);
+      reject(new Error('late'));
+      await ok;
+      await bad.catch(() => {});
+    });
+
+    expect(spy.setterCalls).toBe(callsAtUnmount);
+    expect(a.result.current.data).toBeNull();
+    expect(b.result.current.error).toBeNull();
   });
 
   it('refetches when deps change and the latest result wins over a stale one', async () => {

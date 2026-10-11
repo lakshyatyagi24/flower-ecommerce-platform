@@ -7,7 +7,7 @@ import { useSearchParams } from "next/navigation";
 import OrderTimeline from "@/components/OrderTimeline";
 import { ApiOrder, api, ApiError } from "@/lib/api";
 import { formatINR } from "@/lib/cart-context";
-import { getTrackEmail } from "@/lib/track-order-session";
+import { clearTrackEmail, getTrackEmail } from "@/lib/track-order-session";
 import { productImage } from "@/lib/product-image";
 
 type Phase = { key: string; label: string; time: Date | null };
@@ -60,7 +60,8 @@ function TrackOrderResultsView() {
   // Email arrives via sessionStorage (never the URL). null = not read yet.
   const [email, setEmail] = useState<string | null>(null);
   useEffect(() => {
-    setEmail(getTrackEmail());
+    // Read once into state, then drop it from storage once the lookup finishes.
+    setEmail(getTrackEmail() ?? "");
   }, []);
   const [order, setOrder] = useState<ApiOrder | null>(null);
   const [loading, setLoading] = useState(true);
@@ -69,6 +70,7 @@ function TrackOrderResultsView() {
   useEffect(() => {
     if (email === null) return;
     if (!orderId) {
+      clearTrackEmail();
       setLoading(false);
       setError("No Order ID provided.");
       return;
@@ -79,6 +81,7 @@ function TrackOrderResultsView() {
       return;
     }
     if (!/^\d+$/.test(orderId.trim())) {
+      clearTrackEmail();
       setLoading(false);
       setError("Order ID must be numeric.");
       return;
@@ -95,7 +98,10 @@ function TrackOrderResultsView() {
         if (!cancelled) setError(err instanceof ApiError ? err.message : err.message || "Could not load order");
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          clearTrackEmail();
+          setLoading(false);
+        }
       });
     return () => {
       cancelled = true;

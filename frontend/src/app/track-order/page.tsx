@@ -2,7 +2,7 @@
 import React, { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { setTrackEmail } from "@/lib/track-order-session";
+import { clearTrackEmail, setTrackEmail } from "@/lib/track-order-session";
 
 function TrackOrderInner() {
   const router = useRouter();
@@ -12,6 +12,11 @@ function TrackOrderInner() {
   const [error, setError] = useState<string | null>(null);
 
   // Pre-fill from query (orderId only — the email is never put in a URL).
+  // Drop any email left over from an earlier lookup.
+  useEffect(() => {
+    clearTrackEmail();
+  }, []);
+
   useEffect(() => {
     const qOrder = searchParams?.get("orderId");
     if (qOrder) setOrderId(qOrder);

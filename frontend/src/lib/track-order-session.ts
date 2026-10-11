@@ -10,10 +10,20 @@ export function setTrackEmail(email: string): void {
   }
 }
 
-export function getTrackEmail(): string {
+export function getTrackEmail(): string | null {
   try {
-    return sessionStorage.getItem(KEY) || '';
+    return sessionStorage.getItem(KEY) || null;
   } catch {
-    return '';
+    return null;
+  }
+}
+
+// Remove the email as soon as it has been consumed so it doesn't linger for the
+// rest of the tab session or get reused by a later, unrelated lookup.
+export function clearTrackEmail(): void {
+  try {
+    sessionStorage.removeItem(KEY);
+  } catch {
+    /* storage unavailable — nothing to clear */
   }
 }
