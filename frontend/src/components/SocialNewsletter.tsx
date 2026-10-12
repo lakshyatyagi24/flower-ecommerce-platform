@@ -1,6 +1,8 @@
 "use client";
 import React, { useState } from "react";
-import Link from "next/link";
+import Button from "@/components/ui/Button";
+import Container from "@/components/ui/Container";
+import Eyebrow from "@/components/ui/Eyebrow";
 import { api } from "@/lib/api";
 
 export default function SocialNewsletter() {
@@ -25,83 +27,48 @@ export default function SocialNewsletter() {
   }
 
   return (
-    <section className="bg-gradient-to-r from-[#f8f1e8] via-[#f3e7da] to-[#f8f1e8] border-t border-olive-green/10 py-12 mt-12">
-      <div className="section-shell">
-        <div className="section-card bg-white/85 p-6 sm:p-8 flex flex-col lg:flex-row items-center justify-between gap-6 shadow-[0_18px_44px_rgba(24,20,13,0.10)]">
-          <div>
-            <div className="pill mb-3">Stay in bloom</div>
-            <h3 className="text-2xl font-semibold text-slate-900">Fresh flowers, fresh ideas</h3>
-            <p className="text-sm text-slate-600 mt-1 max-w-sm">
-              New arrivals, seasonal specials, care tips, and exclusive offers — straight to your inbox.
-            </p>
-            <div className="mt-3 flex items-center gap-4 text-sm">
-              <Link
-                href="https://instagram.com/freshpetalsindia"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-olive-green font-semibold hover:underline focus:outline-none focus:ring-2 focus:ring-olive-green/30 rounded"
-              >
-                Instagram
-              </Link>
-              <span className="text-slate-300">•</span>
-              <Link
-                href="https://facebook.com/freshpetalsindia"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-olive-green font-semibold hover:underline focus:outline-none focus:ring-2 focus:ring-olive-green/30 rounded"
-              >
-                Facebook
-              </Link>
-              <span className="text-slate-300">•</span>
-              <Link
-                href="https://pinterest.com/freshpetalsindia"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-olive-green font-semibold hover:underline focus:outline-none focus:ring-2 focus:ring-olive-green/30 rounded"
-              >
-                Pinterest
-              </Link>
-            </div>
-          </div>
+    <section className="border-t border-stone-light py-16 md:py-24" aria-labelledby="newsletter-title">
+      <Container>
+        <div className="mx-auto max-w-xl text-center">
+          <Eyebrow className="mb-4">Newsletter</Eyebrow>
+          <h2 id="newsletter-title" className="type-h2 text-charcoal">
+            Notes from the studio
+          </h2>
+          <p className="mt-4 text-base leading-relaxed text-stone-dark">Seasonal stems and studio news, occasionally.</p>
 
-          <div className="w-full lg:w-auto">
-            {status === "sent" ? (
-              <div className="flex items-center gap-3 px-6 py-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-sm text-emerald-700 font-medium">
-                <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden>
-                  <path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                <span role="status">You're on the list</span>
-              </div>
-            ) : (
-              <form
-                onSubmit={handleSubmit}
-                className="flex items-stretch gap-0 bg-white border border-olive-green/20 rounded-full shadow-sm overflow-hidden"
-              >
-                <label htmlFor="sn-email" className="sr-only">Your email address</label>
-                <input
-                  id="sn-email"
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="your@email.com"
-                  className="px-5 py-2.5 outline-none text-sm min-w-[200px] bg-transparent"
-                />
-                <button
-                  type="submit"
-                  disabled={status === "sending"}
-                  className="px-5 py-2.5 bg-olive-green text-white text-sm font-semibold hover:opacity-95 disabled:opacity-60 transition-opacity"
-                >
-                  {status === "sending" ? "Subscribing…" : "Subscribe"}
-                </button>
-              </form>
-            )}
-            {status === "error" && (
-              <p role="alert" className="mt-2 text-xs text-red-600">{errorMsg}</p>
-            )}
-          </div>
+          {status === "sent" ? (
+            <p role="status" className="mt-8 border border-stone-light px-6 py-4 text-sm text-charcoal">
+              You&apos;re on the list
+            </p>
+          ) : (
+            <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <label htmlFor="sn-email" className="sr-only">
+                Your email address
+              </label>
+              <input
+                id="sn-email"
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email address"
+                aria-invalid={status === "error"}
+                aria-describedby={status === "error" ? "sn-error" : undefined}
+                className="h-11 min-w-0 flex-1 rounded-sm border border-stone bg-transparent px-4 text-sm text-charcoal placeholder:text-stone-dark focus:border-charcoal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss"
+              />
+              <Button type="submit" disabled={status === "sending"}>
+                {status === "sending" ? "Subscribing…" : "Subscribe"}
+              </Button>
+            </form>
+          )}
+          {status === "error" && (
+            <p id="sn-error" role="alert" className="mt-3 text-sm font-medium text-charcoal">
+              {errorMsg}
+            </p>
+          )}
         </div>
-      </div>
+      </Container>
     </section>
   );
 }
