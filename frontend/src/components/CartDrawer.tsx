@@ -28,7 +28,7 @@ function Line({ it }: { it: CartItem }) {
   const atMax = typeof it.stock === "number" && it.stock > 0 && it.quantity >= it.stock;
   return (
     <li className="flex gap-4 border-b border-stone-light py-5">
-      <Link href={`/products/${it.slug}`} onClick={close} className={`relative block aspect-[4/5] w-[72px] shrink-0 overflow-hidden bg-ivory-deep ${focusRing}`} tabIndex={-1} aria-hidden>
+      <Link href={`/products/${it.slug}`} onClick={close} className={`relative block aspect-[4/5] w-[72px] shrink-0 overflow-hidden border border-stone-light bg-ivory-deep ${focusRing}`} tabIndex={-1} aria-hidden>
         <Image src={productImage(it)} alt="" fill sizes="72px" className="object-cover" />
       </Link>
       <div className="flex min-w-0 flex-1 flex-col">

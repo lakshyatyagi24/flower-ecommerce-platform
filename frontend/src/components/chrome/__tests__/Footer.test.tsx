@@ -31,18 +31,17 @@ describe('Footer', () => {
   });
 
   it('has labelled columns and the legal line with the current year', () => {
-    set({});
+    set({ email: 'hello@example.com' });
     render(<Footer />);
     for (const h of ['Shop', 'Help', 'Company', 'Contact']) expect(screen.getByRole('heading', { name: h })).toBeInTheDocument();
     expect(screen.getByText(new RegExp(`© ${new Date().getFullYear()} Fresh Petals India`))).toBeInTheDocument();
     expect(screen.queryByRole('textbox')).toBeNull(); // no newsletter
   });
 
-  it('shows no contact details that are not set (and no hardcoded ones)', () => {
+  it('renders no Contact column and no hardcoded details when nothing is set', () => {
     set({});
     render(<Footer />);
-    const contact = screen.getByRole('heading', { name: 'Contact' }).parentElement!;
-    expect(within(contact).queryAllByRole('link')).toHaveLength(0);
+    expect(screen.queryByRole('heading', { name: 'Contact' })).toBeNull();
     expect(document.body.innerHTML).not.toMatch(/tel:|mailto:|wa\.me/);
   });
 

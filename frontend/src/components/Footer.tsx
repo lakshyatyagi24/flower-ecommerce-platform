@@ -7,7 +7,8 @@ import { OCCASIONS } from "@/lib/occasions";
 // contact details (settings-driven) are a client island.
 const linkClass =
   "inline-block py-1.5 text-[15px] text-charcoal transition-colors duration-200 hover:text-moss focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss";
-const headingClass = "font-sans text-xs font-medium uppercase tracking-[0.16em] text-stone-dark";
+// The global h1-h6 rule (display font) is unlayered, so the heading utilities need `!` to win.
+const footerHeadingClass = "font-sans! text-xs font-medium! uppercase tracking-[0.16em] text-stone-dark";
 
 const HELP = [
   { href: "/track-order", label: "Track order" },
@@ -24,7 +25,7 @@ const COMPANY = [
 function Column({ title, className = "", children }: { title: string; className?: string; children: React.ReactNode }) {
   return (
     <div className={className}>
-      <h2 className={headingClass}>{title}</h2>
+      <h2 className={footerHeadingClass}>{title}</h2>
       {children}
     </div>
   );
@@ -52,7 +53,7 @@ export default function Footer() {
               ))}
               <li>
                 <Link href="/corporate" className={linkClass}>
-                  Corporate
+                  Corporate supply
                 </Link>
               </li>
             </ul>
@@ -82,9 +83,7 @@ export default function Footer() {
             </ul>
           </Column>
 
-          <Column title="Contact" className="col-span-2 lg:col-span-1">
-            <FooterContact />
-          </Column>
+          <FooterContact />
         </div>
 
         <div className="mt-16 flex flex-col gap-2 border-t border-stone-light pt-6 text-[13px] text-stone-dark sm:flex-row sm:items-center sm:justify-between">
