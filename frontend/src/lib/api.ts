@@ -223,6 +223,8 @@ export type ApiOrder = {
   total: number;
   status: 'PENDING' | 'PAID' | 'SHIPPED' | 'COMPLETED' | 'CANCELLED';
   paymentMethod: string;
+  paymentStatus?: 'UNPAID' | 'PAID' | 'FAILED' | 'REFUNDED';
+  paidAt?: string | null;
   customerName: string | null;
   customerEmail: string | null;
   customerPhone: string | null;
@@ -277,12 +279,40 @@ export const api = {
     city: string;
     postalCode: string;
     notes?: string;
-    paymentMethod?: string;
+    paymentMethod?: 'COD' | 'RAZORPAY';
   }) => apiFetch<ApiOrder>('/orders', { method: 'POST', body, auth: true }),
   listMyOrders: () => apiFetch<ApiOrder[]>('/orders/mine', { auth: true }),
   getMyOrder: (id: number) => apiFetch<ApiOrder>(`/orders/mine/${id}`, { auth: true }),
+  setOrderPaymentMethod: (orderId: number, email?: string) =>
+    apiFetch<ApiOrder>(`/orders/${orderId}/payment-method`, {
+      method: 'PUT',
+      body: { paymentMethod: 'COD', email },
+      auth: true,
+    }),
   trackOrder: (id: number, email: string) =>
     apiFetch<ApiOrder>(`/orders/track/${id}?email=${encodeURIComponent(email)}`),
+
+  // Payments (Razorpay)
+  createRazorpayOrder: (orderId: number, email?: string) =>
+    apiFetch<{
+      keyId: string;
+      razorpayOrderId: string;
+      amount: number;
+      currency: 'INR';
+      name: string;
+      prefill: { name: string; email: string; contact: string };
+    }>('/payments/razorpay/order', { method: 'POST', body: { orderId, email }, auth: true }),
+  verifyRazorpay: (body: {
+    orderId: number;
+    razorpayOrderId: string;
+    razorpayPaymentId: string;
+    signature: string;
+  }) =>
+    apiFetch<{ ok: true; status: 'PAID' | 'CANCELLED' }>('/payments/razorpay/verify', {
+      method: 'POST',
+      body,
+      auth: true,
+    }),
 
   // Reviews
   listProductReviews: (productId: number, params: { take?: number; skip?: number } = {}) => {

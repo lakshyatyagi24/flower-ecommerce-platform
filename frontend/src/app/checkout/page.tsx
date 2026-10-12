@@ -181,7 +181,7 @@ export default function CheckoutPage() {
         city: form.city.trim(),
         postalCode: form.postalCode.trim(),
         notes: form.notes.trim() || undefined,
-        paymentMethod: form.paymentMethod,
+        paymentMethod: "COD",
       });
       clear();
       router.push(`/checkout/success?orderId=${order.id}`);
