@@ -1,5 +1,6 @@
 import 'server-only';
 import type { ApiCategory, ApiProduct, ProductSort } from './api';
+import { HERO_FALLBACK, pickHero, type HeroContent } from './hero';
 
 /**
  * Server-side API access for Server Components (SSR). Never imported by client code.
@@ -59,4 +60,17 @@ export async function listCategories(): Promise<ApiCategory[]> {
 
 export async function getSettings(): Promise<Record<string, string>> {
   return (await get<Record<string, string>>('/settings', 300))!;
+}
+
+/**
+ * Hero content for the home page. Never throws: any API failure yields the static fallback,
+ * so the hero renders even when the API is down.
+ */
+export async function getHeroSlide(): Promise<HeroContent> {
+  try {
+    return pickHero(await get<unknown>('/sliders'));
+  } catch (err) {
+    console.error('[home] hero slider fetch failed, using static hero', err);
+    return HERO_FALLBACK;
+  }
 }
