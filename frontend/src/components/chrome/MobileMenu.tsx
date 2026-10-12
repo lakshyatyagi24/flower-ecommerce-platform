@@ -31,9 +31,10 @@ export default function MobileMenu({ onClose, onSignIn }: { onClose: () => void;
       tabIndex={-1}
       className="chrome-fade fixed inset-0 z-50 flex flex-col overflow-y-auto bg-ivory"
     >
-      <div className="mx-auto flex h-14 w-full max-w-[1280px] shrink-0 items-center justify-between border-b border-stone-light px-5 md:px-8">
+      <div className="mx-auto grid h-14 w-full max-w-[1280px] shrink-0 grid-cols-[1fr_auto_1fr] items-center border-b border-stone-light px-5 md:px-8">
+        <span aria-hidden />
         <Wordmark onClick={onClose} />
-        <button type="button" aria-label="Close menu" data-autofocus onClick={onClose} className={`${iconButton} -mr-3`}>
+        <button type="button" aria-label="Close menu" data-autofocus onClick={onClose} className={`${iconButton} -mr-3 justify-self-end`}>
           <CloseIcon />
         </button>
       </div>
@@ -77,7 +78,7 @@ export default function MobileMenu({ onClose, onSignIn }: { onClose: () => void;
           ))}
         </ul>
 
-        <ul className="mt-8">
+        <ul className="mt-auto pt-8">
           {MOBILE_EXTRA_LINKS.map((l) => (
             <li key={l.href}>
               <Link href={l.href} className={small} onClick={onClose}>

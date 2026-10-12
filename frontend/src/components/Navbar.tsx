@@ -11,6 +11,7 @@ import MobileMenu, { MOBILE_MENU_ID } from "./chrome/MobileMenu";
 import { PRIMARY_LINKS } from "./chrome/nav-data";
 import OccasionsMenu from "./chrome/OccasionsMenu";
 import { iconButton, navLink } from "./chrome/styles";
+import { useCloseOnRouteChange } from "./chrome/use-route-change";
 import Wordmark from "./chrome/Wordmark";
 
 /**
@@ -24,13 +25,17 @@ export default function Navbar() {
   const burgerRef = useRef<HTMLButtonElement>(null);
   const signInFrom = useRef<HTMLElement | null>(null);
 
-  const lastPath = useRef(pathname);
+  useCloseOnRouteChange(() => setMenuOpen(false));
+
+  // The mobile menu has no meaning from lg up (the desktop nav takes over): close it when the viewport crosses.
   useEffect(() => {
-    if (lastPath.current !== pathname) {
-      lastPath.current = pathname;
-      setMenuOpen(false);
-    }
-  }, [pathname]);
+    if (!menuOpen || typeof window.matchMedia !== "function") return;
+    const mql = window.matchMedia("(min-width: 1024px)");
+    const onChange = (e: { matches: boolean }) => e.matches && setMenuOpen(false);
+    if (mql.matches) setMenuOpen(false);
+    mql.addEventListener("change", onChange);
+    return () => mql.removeEventListener("change", onChange);
+  }, [menuOpen]);
 
   const openSignIn = (trigger: HTMLElement | null) => {
     signInFrom.current = trigger;
@@ -49,7 +54,7 @@ export default function Navbar() {
             type="button"
             aria-label="Open menu"
             aria-expanded={menuOpen}
-            aria-controls={MOBILE_MENU_ID}
+            aria-controls={menuOpen ? MOBILE_MENU_ID : undefined}
             onClick={() => setMenuOpen(true)}
             className={`${iconButton} col-start-1 row-start-1 -ml-3 justify-self-start lg:hidden`}
           >

@@ -11,7 +11,7 @@ import { CloseIcon } from "./chrome/icons";
 import { focusRing, iconButton } from "./chrome/styles";
 import { useModal } from "./chrome/use-modal";
 
-const stepButton = `flex h-11 w-11 items-center justify-center text-lg leading-none text-charcoal transition-colors hover:bg-ivory-deep disabled:cursor-not-allowed disabled:text-stone disabled:hover:bg-transparent sm:h-9 sm:w-9 ${focusRing}`;
+const stepButton = `flex h-11 w-11 items-center justify-center text-lg leading-none text-charcoal transition-colors hover:bg-ivory-deep aria-disabled:cursor-not-allowed aria-disabled:text-stone aria-disabled:hover:bg-transparent sm:h-9 sm:w-9 ${focusRing}`;
 
 /** Free-shipping threshold from settings (`shipping.freeThreshold`); null when it is not configured. */
 function freeShippingThreshold(raw: Record<string, string> | undefined): number | null {
@@ -46,9 +46,9 @@ function Line({ it }: { it: CartItem }) {
             <button
               type="button"
               className={stepButton}
-              disabled={atMin}
+              aria-disabled={atMin ? "true" : undefined}
               aria-label={`Decrease quantity of ${it.name}`}
-              onClick={() => setQuantity(it.productId, it.quantity - 1)}
+              onClick={() => !atMin && setQuantity(it.productId, it.quantity - 1)}
             >
               −
             </button>
@@ -58,9 +58,9 @@ function Line({ it }: { it: CartItem }) {
             <button
               type="button"
               className={stepButton}
-              disabled={atMax}
+              aria-disabled={atMax ? "true" : undefined}
               aria-label={`Increase quantity of ${it.name}`}
-              onClick={() => setQuantity(it.productId, it.quantity + 1)}
+              onClick={() => !atMax && setQuantity(it.productId, it.quantity + 1)}
             >
               +
             </button>
@@ -68,7 +68,19 @@ function Line({ it }: { it: CartItem }) {
           <button
             type="button"
             aria-label={`Remove ${it.name}`}
-            onClick={() => remove(it.productId)}
+            data-remove
+            onClick={(e) => {
+              // The focused button is about to unmount: hand focus to the next line's Remove button, else the
+              // previous one, else the Close button.
+              const all = Array.from(
+                (e.currentTarget.closest("[role=dialog]") ?? document).querySelectorAll<HTMLElement>("[data-remove]"),
+              );
+              const i = all.indexOf(e.currentTarget);
+              const target =
+                all[i + 1] ?? all[i - 1] ?? (e.currentTarget.closest("[role=dialog]")?.querySelector("[data-autofocus]") as HTMLElement | null);
+              target?.focus();
+              remove(it.productId);
+            }}
             className={`min-h-[44px] px-1 text-[13px] text-stone-dark underline underline-offset-4 hover:text-charcoal ${focusRing}`}
           >
             Remove
@@ -132,8 +144,8 @@ function Drawer() {
                       ? `Add ${formatINR(remaining)} more for free shipping`
                       : "Your order qualifies for free shipping"}
                   </p>
-                  <div aria-hidden className="mt-2 h-0.5 w-full bg-stone-light">
-                    <div className="h-full bg-charcoal" style={{ width: `${Math.min(100, (subtotal / threshold) * 100)}%` }} />
+                  <div aria-hidden className="mt-2 h-1 w-full bg-stone-light">
+                    <div data-testid="shipping-progress-fill" className="h-full bg-moss" style={{ width: `${Math.min(100, (subtotal / threshold) * 100)}%` }} />
                   </div>
                 </div>
               )}

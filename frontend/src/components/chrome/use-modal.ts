@@ -2,7 +2,7 @@
 import { useEffect, useRef, type RefObject } from "react";
 
 const FOCUSABLE =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  'a[href]:not([tabindex="-1"]), button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 let lockCount = 0;
 let saved: { overflow: string; paddingRight: string } | null = null;
@@ -43,7 +43,13 @@ export function useModal(active: boolean, containerRef: RefObject<HTMLElement | 
     const previous = document.activeElement as HTMLElement | null;
     const release = lockScroll();
     const container = containerRef.current;
-    const focusables = () => (container ? Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE)) : []);
+    const rendered = (el: HTMLElement) => {
+      if (el.closest("[hidden]")) return false;
+      const style = window.getComputedStyle(el);
+      return style.display !== "none" && style.visibility !== "hidden";
+    };
+    const focusables = () =>
+      container ? Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(rendered) : [];
 
     const first = container?.querySelector<HTMLElement>("[data-autofocus]") ?? focusables()[0] ?? container;
     first?.focus();

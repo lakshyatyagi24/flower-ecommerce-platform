@@ -6,7 +6,7 @@ import { OCCASIONS } from "@/lib/occasions";
 // Server component: every link list is static markup, so it is in the server HTML (R15). Only the
 // contact details (settings-driven) are a client island.
 const linkClass =
-  "inline-block py-1.5 text-[15px] text-charcoal transition-colors duration-200 hover:text-moss focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss";
+  "inline-flex min-h-[44px] items-center py-2.5 text-[15px] leading-6 lg:min-h-0 lg:py-1.5 text-charcoal transition-colors duration-200 hover:text-moss focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss";
 // The global h1-h6 rule (display font) is unlayered, so the heading utilities need `!` to win.
 const footerHeadingClass = "font-sans! text-xs font-medium! uppercase tracking-[0.16em] text-stone-dark";
 
@@ -36,14 +36,24 @@ export default function Footer() {
   return (
     <footer className="mt-24 border-t border-stone-light bg-ivory">
       <Container className="py-16 md:py-20">
-        <div className="grid grid-cols-2 gap-x-6 gap-y-12 lg:grid-cols-4 lg:gap-x-10">
-          <Column title="Shop" className="col-span-2 lg:col-span-1">
-            <ul className="mt-5 columns-2 gap-x-6 lg:columns-1">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-12 lg:grid-cols-5 lg:gap-x-10">
+          <Column title="Shop">
+            <ul className="mt-5">
               <li>
                 <Link href="/products" className={linkClass}>
                   All flowers
                 </Link>
               </li>
+              <li>
+                <Link href="/corporate" className={linkClass}>
+                  Corporate
+                </Link>
+              </li>
+            </ul>
+          </Column>
+
+          <Column title="Occasions">
+            <ul className="mt-5">
               {OCCASIONS.map((o) => (
                 <li key={o.slug}>
                   <Link href={`/occasions/${o.slug}`} className={linkClass}>
@@ -51,11 +61,6 @@ export default function Footer() {
                   </Link>
                 </li>
               ))}
-              <li>
-                <Link href="/corporate" className={linkClass}>
-                  Corporate supply
-                </Link>
-              </li>
             </ul>
           </Column>
 
@@ -86,9 +91,8 @@ export default function Footer() {
           <FooterContact />
         </div>
 
-        <div className="mt-16 flex flex-col gap-2 border-t border-stone-light pt-6 text-[13px] text-stone-dark sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-16 border-t border-stone-light pt-6 text-[13px] text-stone-dark">
           <p>© {year} Fresh Petals India</p>
-          <p className="font-display text-lg text-charcoal">Fresh Petals</p>
         </div>
       </Container>
     </footer>

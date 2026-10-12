@@ -33,7 +33,7 @@ describe('Footer', () => {
   it('has labelled columns and the legal line with the current year', () => {
     set({ email: 'hello@example.com' });
     render(<Footer />);
-    for (const h of ['Shop', 'Help', 'Company', 'Contact']) expect(screen.getByRole('heading', { name: h })).toBeInTheDocument();
+    for (const h of ['Shop', 'Occasions', 'Help', 'Company', 'Contact']) expect(screen.getByRole('heading', { name: h })).toBeInTheDocument();
     expect(screen.getByText(new RegExp(`© ${new Date().getFullYear()} Fresh Petals India`))).toBeInTheDocument();
     expect(screen.queryByRole('textbox')).toBeNull(); // no newsletter
   });
@@ -61,5 +61,22 @@ describe('Footer', () => {
     render(<Footer />);
     const contact = screen.getByRole('heading', { name: 'Contact' }).parentElement!;
     expect(within(contact).getAllByRole('link')).toHaveLength(1);
+  });
+
+  it('splits Shop and Occasions columns, with no duplicate Corporate link', () => {
+    set({});
+    render(<Footer />);
+    const shop = screen.getByRole('heading', { name: 'Shop' }).parentElement!;
+    expect(within(shop).getAllByRole('link').map((a) => a.getAttribute('href'))).toEqual(['/products', '/corporate']);
+    const occ = screen.getByRole('heading', { name: 'Occasions' }).parentElement!;
+    expect(within(occ).getAllByRole('link')).toHaveLength(OCCASIONS.length);
+    expect(screen.getAllByRole('link', { name: /^Corporate/ })).toHaveLength(2); // page + the Corporate occasion
+    expect(document.body.textContent).not.toContain('Corporate supply');
+  });
+
+  it('renders the legal line without a second wordmark', () => {
+    set({});
+    render(<Footer />);
+    expect(screen.queryByText('Fresh Petals', { exact: true })).toBeNull();
   });
 });

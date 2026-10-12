@@ -67,7 +67,11 @@ describe('CartDrawer', () => {
   it('honours minOrderQty and stock in the stepper', async () => {
     setCart([item({ quantity: 3, minOrderQty: 3, stock: 10 })]);
     const { rerender } = render(<CartDrawer />);
-    expect(screen.getByRole('button', { name: 'Decrease quantity of Red Roses' })).toBeDisabled();
+    const dec = screen.getByRole('button', { name: 'Decrease quantity of Red Roses' });
+    expect(dec).toHaveAttribute('aria-disabled', 'true');
+    expect(dec).not.toBeDisabled(); // stays focusable
+    await userEvent.click(dec);
+    expect(cart.setQuantity).not.toHaveBeenCalled(); // no-op at the bound
     await userEvent.click(screen.getByRole('button', { name: 'Increase quantity of Red Roses' }));
     expect(cart.setQuantity).toHaveBeenCalledWith(1, 4);
 
@@ -78,7 +82,20 @@ describe('CartDrawer', () => {
 
     setCart([item({ quantity: 10, minOrderQty: 3, stock: 10 })]);
     rerender(<CartDrawer />);
-    expect(screen.getByRole('button', { name: 'Increase quantity of Red Roses' })).toBeDisabled();
+    const inc = screen.getByRole('button', { name: 'Increase quantity of Red Roses' });
+    expect(inc).toHaveAttribute('aria-disabled', 'true');
+    cart.setQuantity.mockClear();
+    await userEvent.click(inc);
+    expect(cart.setQuantity).not.toHaveBeenCalled();
+  });
+
+  it('keeps focus on a stepper button that reaches its bound', async () => {
+    setCart([item({ quantity: 9, minOrderQty: 1, stock: 10 })]);
+    render(<CartDrawer />);
+    const inc = screen.getByRole('button', { name: 'Increase quantity of Red Roses' });
+    inc.focus();
+    await userEvent.click(inc);
+    expect(inc).toHaveFocus();
   });
 
   it('announces quantity changes politely', () => {
@@ -149,5 +166,34 @@ describe('CartDrawer', () => {
     rerender(<CartDrawer />);
     expect(trigger).toHaveFocus();
     trigger.remove();
+  });
+
+  it('after removing a middle line, focus moves to the next Remove button', async () => {
+    setCart([item({ productId: 1, name: 'A' }), item({ productId: 2, name: 'B' }), item({ productId: 3, name: 'C' })]);
+    render(<CartDrawer />);
+    await userEvent.click(screen.getByRole('button', { name: 'Remove B' }));
+    expect(cart.remove).toHaveBeenCalledWith(2);
+    expect(screen.getByRole('button', { name: 'Remove C' })).toHaveFocus();
+  });
+
+  it('after removing the last line, focus moves to the previous line, then to Close when none remain', async () => {
+    setCart([item({ productId: 1, name: 'A' }), item({ productId: 2, name: 'B' })]);
+    const { rerender } = render(<CartDrawer />);
+    await userEvent.click(screen.getByRole('button', { name: 'Remove B' }));
+    expect(screen.getByRole('button', { name: 'Remove A' })).toHaveFocus();
+    setCart([item({ productId: 1, name: 'A' })]);
+    rerender(<CartDrawer />);
+    await userEvent.click(screen.getByRole('button', { name: 'Remove A' }));
+    expect(screen.getByRole('button', { name: 'Close bag' })).toHaveFocus();
+  });
+
+  it('draws the free-shipping progress as a moss fill on a stone-light track', () => {
+    settingsRaw['shipping.freeThreshold'] = '2000';
+    setCart([item({ quantity: 3, price: 500 })]);
+    render(<CartDrawer />);
+    const fill = screen.getByTestId('shipping-progress-fill');
+    expect(fill.className).toContain('bg-moss');
+    expect(fill.parentElement!.className).toContain('bg-stone-light');
+    expect(fill.parentElement!.className).toContain('h-1');
   });
 });

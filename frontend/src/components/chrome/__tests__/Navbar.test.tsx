@@ -115,4 +115,17 @@ describe('Navbar', () => {
     render(<Navbar />);
     expect(screen.getByRole('link', { name: 'Corporate' })).toHaveAttribute('aria-current', 'page');
   });
+
+  it('styles the current page link with an underline (aria-current variant)', () => {
+    render(<Navbar />);
+    expect(screen.getByRole('link', { name: 'Flowers' }).className).toContain('aria-[current=page]:underline');
+  });
+
+  it('only sets aria-controls on search while its panel exists', async () => {
+    render(<Navbar />);
+    const trigger = screen.getByRole('button', { name: 'Search' });
+    expect(trigger).not.toHaveAttribute('aria-controls');
+    await userEvent.click(trigger);
+    expect(trigger).toHaveAttribute('aria-controls');
+  });
 });

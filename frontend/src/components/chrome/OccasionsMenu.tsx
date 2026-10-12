@@ -1,12 +1,12 @@
 "use client";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { api, type ApiCategory } from "@/lib/api";
 import { shownCategories } from "@/lib/categories";
 import { OCCASIONS } from "@/lib/occasions";
 import { ChevronIcon } from "./icons";
 import { useDismiss } from "./use-modal";
+import { useCloseOnRouteChange } from "./use-route-change";
 import { focusRing, navLink } from "./styles";
 
 const OPEN_DELAY = 120;
@@ -22,11 +22,12 @@ const panelLink = `inline-block py-1.5 text-charcoal transition-colors duration-
  * categories are fetched lazily the first time the menu opens and fail silently to a static link.
  */
 export default function OccasionsMenu() {
-  const pathname = usePathname();
   const panelId = useId();
   const [open, setOpen] = useState(false);
   const [categories, setCategories] = useState<ApiCategory[] | null>(null);
   const requested = useRef(false);
+  // True while the menu is open because of hover intent: the click that follows must not close it.
+  const openedByHover = useRef(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -37,7 +38,10 @@ export default function OccasionsMenu() {
   };
   const schedule = (next: boolean, delay: number) => {
     clearTimer();
-    timer.current = setTimeout(() => setOpen(next), delay);
+    timer.current = setTimeout(() => {
+      openedByHover.current = next;
+      setOpen(next);
+    }, delay);
   };
 
   useEffect(() => clearTimer, []);
@@ -52,18 +56,15 @@ export default function OccasionsMenu() {
       .catch(() => setCategories([]));
   }, [open]);
 
-  // Route change closes the menu.
-  const lastPath = useRef(pathname);
-  useEffect(() => {
-    if (lastPath.current !== pathname) {
-      lastPath.current = pathname;
-      clearTimer();
-      setOpen(false);
-    }
-  }, [pathname]);
+  useCloseOnRouteChange(() => {
+    clearTimer();
+    openedByHover.current = false;
+    setOpen(false);
+  });
 
   const dismiss = useCallback((reason: "escape" | "outside") => {
     clearTimer();
+    openedByHover.current = false;
     setOpen(false);
     if (reason === "escape") triggerRef.current?.focus();
   }, []);
@@ -78,6 +79,7 @@ export default function OccasionsMenu() {
         const next = e.relatedTarget as Node | null;
         if (next && wrapRef.current && !wrapRef.current.contains(next)) {
           clearTimer();
+          openedByHover.current = false;
           setOpen(false);
         }
       }}
@@ -86,9 +88,16 @@ export default function OccasionsMenu() {
         ref={triggerRef}
         type="button"
         aria-expanded={open}
-        aria-controls={panelId}
-        onClick={() => {
+        aria-controls={open ? panelId : undefined}
+        onClick={(e) => {
           clearTimer();
+          // A mouse click right after a hover-open confirms the menu instead of closing it. A keyboard
+          // activation (detail 0) always toggles.
+          if (openedByHover.current && open && e.detail > 0) {
+            openedByHover.current = false;
+            return;
+          }
+          openedByHover.current = false;
           setOpen((v) => !v);
         }}
         className={`${navLink} gap-1.5`}
@@ -102,8 +111,8 @@ export default function OccasionsMenu() {
         hidden={!open}
         className="chrome-fade absolute inset-x-0 top-full border-b border-stone-light bg-ivory"
       >
-        <div className="mx-auto grid w-full max-w-[1280px] grid-cols-[2fr_1fr] gap-x-16 px-8 pb-12 pt-10">
-          <div>
+        <div className="mx-auto grid w-full max-w-[1280px] grid-cols-4 gap-x-10 px-8 pb-12 pt-10">
+          <div className="col-span-2">
             <p className="text-xs font-medium uppercase tracking-[0.16em] text-stone-dark">Shop by occasion</p>
             <ul className="mt-5 columns-2 gap-x-10 font-display text-[22px] leading-tight">
               {OCCASIONS.map((o) => (

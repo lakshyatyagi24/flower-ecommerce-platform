@@ -1,14 +1,14 @@
 "use client";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { CloseIcon, SearchIcon } from "./icons";
 import { useDismiss } from "./use-modal";
+import { useCloseOnRouteChange } from "./use-route-change";
 import { focusRing, iconButton } from "./styles";
 
 /** Search icon that opens a full-width search field under the header and submits to /products?q=. */
 export default function HeaderSearch() {
   const router = useRouter();
-  const pathname = usePathname();
   const panelId = useId();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -20,13 +20,7 @@ export default function HeaderSearch() {
     if (open) inputRef.current?.focus();
   }, [open]);
 
-  const lastPath = useRef(pathname);
-  useEffect(() => {
-    if (lastPath.current !== pathname) {
-      lastPath.current = pathname;
-      setOpen(false);
-    }
-  }, [pathname]);
+  useCloseOnRouteChange(() => setOpen(false));
 
   const dismiss = useCallback((reason: "escape" | "outside") => {
     setOpen(false);
@@ -49,7 +43,7 @@ export default function HeaderSearch() {
         type="button"
         aria-label="Search"
         aria-expanded={open}
-        aria-controls={panelId}
+        aria-controls={open ? panelId : undefined}
         onClick={() => setOpen((v) => !v)}
         className={iconButton}
       >

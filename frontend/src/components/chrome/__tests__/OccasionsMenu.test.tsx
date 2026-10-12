@@ -31,7 +31,8 @@ describe('OccasionsMenu', () => {
   it('is collapsed by default but keeps every occasion link in the DOM; no fetch before first open', () => {
     render(<OccasionsMenu />);
     expect(trigger()).toHaveAttribute('aria-expanded', 'false');
-    const panel = document.getElementById(trigger().getAttribute('aria-controls')!)!;
+    expect(trigger()).not.toHaveAttribute('aria-controls'); // only while the panel is open
+    const panel = document.querySelector('a[href^="/occasions/"]')!.closest('[hidden]') as HTMLElement;
     expect(panel.hidden).toBe(true);
     expect(panel.querySelectorAll('a[href^="/occasions/"]').length).toBe(OCCASIONS.length);
     expect(listCategories).not.toHaveBeenCalled();
@@ -42,6 +43,7 @@ describe('OccasionsMenu', () => {
     render(<OccasionsMenu />);
     await userEvent.click(trigger());
     expect(trigger()).toHaveAttribute('aria-expanded', 'true');
+    expect(document.getElementById(trigger().getAttribute('aria-controls')!)).toBeVisible();
     expect(screen.getByText('Shop by occasion')).toBeVisible();
     expect(screen.getByText('Shop by flower')).toBeVisible();
     await waitFor(() =>
@@ -115,5 +117,40 @@ describe('OccasionsMenu', () => {
     await vi.advanceTimersByTimeAsync(300);
     expect(trigger()).toHaveAttribute('aria-expanded', 'false');
     vi.useRealTimers();
+  });
+
+  it('hover opens it, and a following mouse click keeps it open (then toggles normally)', async () => {
+    vi.useFakeTimers();
+    listCategories.mockResolvedValue([]);
+    render(<OccasionsMenu />);
+    const wrap = trigger().parentElement!;
+    fireEvent.mouseEnter(wrap);
+    await vi.advanceTimersByTimeAsync(200);
+    expect(trigger()).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.click(trigger(), { detail: 1 }); // the click that follows the hover
+    expect(trigger()).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.click(trigger(), { detail: 1 }); // the next click closes
+    expect(trigger()).toHaveAttribute('aria-expanded', 'false');
+    vi.useRealTimers();
+  });
+
+  it('keyboard Enter after a hover-open still toggles normally', async () => {
+    vi.useFakeTimers();
+    listCategories.mockResolvedValue([]);
+    render(<OccasionsMenu />);
+    fireEvent.mouseEnter(trigger().parentElement!);
+    await vi.advanceTimersByTimeAsync(200);
+    fireEvent.click(trigger(), { detail: 0 }); // keyboard-generated click
+    expect(trigger()).toHaveAttribute('aria-expanded', 'false');
+    vi.useRealTimers();
+  });
+
+  it('a plain click toggles open and closed', async () => {
+    listCategories.mockResolvedValue([]);
+    render(<OccasionsMenu />);
+    await userEvent.click(trigger());
+    expect(trigger()).toHaveAttribute('aria-expanded', 'true');
+    await userEvent.click(trigger());
+    expect(trigger()).toHaveAttribute('aria-expanded', 'false');
   });
 });

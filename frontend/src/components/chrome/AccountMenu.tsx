@@ -1,11 +1,10 @@
 "use client";
 import { useCallback, useId, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { UserIcon } from "./icons";
 import { useDismiss } from "./use-modal";
+import { useCloseOnRouteChange } from "./use-route-change";
 import { focusRing, iconButton } from "./styles";
 
 const item = `flex min-h-[44px] w-full items-center px-4 text-left text-sm text-charcoal transition-colors hover:bg-ivory-deep ${focusRing}`;
@@ -16,7 +15,6 @@ const item = `flex min-h-[44px] w-full items-center px-4 text-left text-sm text-
  */
 export default function AccountMenu({ onSignIn }: { onSignIn: (trigger: HTMLElement | null) => void }) {
   const { user, logout } = useAuth();
-  const pathname = usePathname();
   const menuId = useId();
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -28,13 +26,7 @@ export default function AccountMenu({ onSignIn }: { onSignIn: (trigger: HTMLElem
   }, []);
   useDismiss(open, wrapRef, dismiss);
 
-  const lastPath = useRef(pathname);
-  useEffect(() => {
-    if (lastPath.current !== pathname) {
-      lastPath.current = pathname;
-      setOpen(false);
-    }
-  }, [pathname]);
+  useCloseOnRouteChange(() => setOpen(false));
 
   if (!user) {
     return (
@@ -61,7 +53,7 @@ export default function AccountMenu({ onSignIn }: { onSignIn: (trigger: HTMLElem
         type="button"
         aria-label={`Account, ${name}`}
         aria-expanded={open}
-        aria-controls={menuId}
+        aria-controls={open ? menuId : undefined}
         onClick={() => setOpen((v) => !v)}
         className={iconButton}
       >

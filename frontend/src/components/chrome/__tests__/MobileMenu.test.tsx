@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -125,5 +125,37 @@ describe('Mobile menu', () => {
     const dialog = await open();
     await userEvent.click(within(dialog).getByRole('button', { name: 'Sign in' }));
     expect(screen.getByRole('dialog', { name: 'Sign in modal' })).toBeInTheDocument();
+  });
+
+  it('only points aria-controls at the menu while it is open', async () => {
+    render(<Navbar />);
+    const trigger = screen.getByRole('button', { name: 'Open menu' });
+    expect(trigger).not.toHaveAttribute('aria-controls');
+    await open();
+    expect(trigger).toHaveAttribute('aria-controls', 'mobile-menu');
+    expect(document.getElementById('mobile-menu')).not.toBeNull();
+  });
+
+  it('closes when the viewport crosses the lg breakpoint', async () => {
+    let handler: ((e: { matches: boolean }) => void) | null = null;
+    const mql = {
+      matches: false,
+      addEventListener: (_: string, h: any) => (handler = h),
+      removeEventListener: () => (handler = null),
+    };
+    const original = window.matchMedia;
+    window.matchMedia = vi.fn(() => mql) as any;
+    render(<Navbar />);
+    await open();
+    act(() => handler!({ matches: true }));
+    expect(screen.queryByRole('dialog', { name: 'Menu' })).toBeNull();
+    window.matchMedia = original;
+  });
+
+  it('keeps the wordmark in the same grid cell as the header', async () => {
+    render(<Navbar />);
+    const dialog = await open();
+    const link = within(dialog).getByRole('link', { name: 'Fresh Petals' });
+    expect(link.parentElement!.className).toContain('grid-cols-[1fr_auto_1fr]');
   });
 });
