@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Price from "@/components/ui/Price";
 import QuickAdd from "./QuickAdd";
-import { productImage } from "@/lib/product-image";
+import { PLACEHOLDER_IMAGE, productImage } from "@/lib/product-image";
 import { availability } from "@/lib/product-helpers";
 import type { ApiProduct } from "@/lib/api";
 
@@ -11,11 +11,16 @@ import type { ApiProduct } from "@/lib/api";
 const REVEAL =
   "[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:group-focus-within:opacity-100";
 
+// Photo-less products get a quiet "tile art" instead of 95 identical blank squares: a tone picked by product id
+// from the palette, with the product name set in the display serif. Real photos replace it automatically.
+const TONES = ["bg-ivory-deep", "bg-blush/25", "bg-moss/15", "bg-stone-light/50"];
+
 type Props = { product: ApiProduct; priority?: boolean; headingLevel?: 2 | 3 };
 
 export default function ProductCard({ product, priority = false, headingLevel = 2 }: Props) {
   const Heading = headingLevel === 3 ? "h3" : "h2";
   const href = `/products/${product.slug}`;
+  const src = productImage(product);
   const status = availability(product);
   const isEnquiry = status === "enquiry";
   const outOfStock = status === "out-of-stock";
@@ -23,16 +28,27 @@ export default function ProductCard({ product, priority = false, headingLevel = 
   return (
     <article className="group relative">
       <Link href={href} className="block focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-moss">
-        <div className="relative aspect-[4/5] overflow-hidden rounded-sm bg-ivory-deep">
-          <Image
-            src={productImage(product)}
-            alt={product.name}
-            fill
-            sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
-            priority={priority}
-            className="object-cover transition-transform duration-[600ms] ease-out group-hover:scale-[1.02] motion-reduce:group-hover:scale-100"
-          />
-        </div>
+        {src === PLACEHOLDER_IMAGE ? (
+          <div
+            className={`relative flex aspect-[4/5] items-center justify-center overflow-hidden rounded-sm p-5 text-center ${TONES[product.id % TONES.length]}`}
+          >
+            <span aria-hidden className="pointer-events-none absolute inset-3 border border-stone-light/70" />
+            <span aria-hidden className="relative font-display text-base leading-tight text-charcoal/80 sm:text-xl md:text-2xl">
+              {product.name}
+            </span>
+          </div>
+        ) : (
+          <div className="relative aspect-[4/5] overflow-hidden rounded-sm bg-ivory-deep">
+            <Image
+              src={src}
+              alt={product.name}
+              fill
+              sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
+              priority={priority}
+              className="object-cover transition-transform duration-[600ms] ease-out group-hover:scale-[1.02] motion-reduce:group-hover:scale-100"
+            />
+          </div>
+        )}
         <div className="mt-3 space-y-1">
           <Heading className="font-sans! text-sm font-normal leading-snug text-charcoal">{product.name}</Heading>
           <p className="flex flex-wrap items-baseline gap-x-3 text-sm">

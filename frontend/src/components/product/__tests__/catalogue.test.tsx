@@ -18,15 +18,32 @@ const product: ApiProduct = {
   featured: false, active: true, categoryId: 1, saleMode: 'PURCHASE',
 };
 
+const withPhoto: ApiProduct = { ...product, image: 'https://res.cloudinary.com/demo/image/upload/rose.jpg' };
+
 describe('ProductCard', () => {
-  it('links to the PDP with the name and price, using the placeholder for a null image', () => {
-    const { container } = render(<ProductCard product={product} />);
+  it('links to the PDP with the name and price', () => {
+    const { container } = render(<ProductCard product={withPhoto} />);
     const link = screen.getByRole('link', { name: /red rose/i });
     expect(link.getAttribute('href')).toBe('/products/red-rose');
     expect(link.textContent).toContain('₹1,499');
     const img = container.querySelector('img')!;
-    expect(decodeURIComponent(img.getAttribute('src')!)).toContain('placeholder-bloom.jpg');
+    expect(decodeURIComponent(img.getAttribute('src')!)).toContain('res.cloudinary.com');
     expect(img.getAttribute('alt')).toBe('Red Rose');
+  });
+
+  it('renders tile art (no image) for a product without a photo: name in the tile, hidden from assistive tech', () => {
+    const { container } = render(<ProductCard product={product} />);
+    expect(container.querySelector('img')).toBeNull();
+    const art = container.querySelector('[aria-hidden="true"].font-display')!;
+    expect(art.textContent).toBe('Red Rose');
+    // the accessible name is still the single heading
+    expect(screen.getAllByRole('heading', { name: 'Red Rose' })).toHaveLength(1);
+  });
+
+  it('picks the tile tone from the product id', () => {
+    const a = render(<ProductCard product={{ ...product, id: 1 }} />).container.innerHTML;
+    const b = render(<ProductCard product={{ ...product, id: 2 }} />).container.innerHTML;
+    expect(a).not.toBe(b);
   });
 
   it('keeps the quick-add button outside the anchor (valid HTML)', () => {
@@ -49,7 +66,7 @@ describe('ProductCard', () => {
   });
 
   it('does not scale on hover when reduced motion is requested', () => {
-    const { container } = render(<ProductCard product={product} />);
+    const { container } = render(<ProductCard product={withPhoto} />);
     expect(container.querySelector('img')!.className).toContain('motion-reduce:group-hover:scale-100');
   });
 
