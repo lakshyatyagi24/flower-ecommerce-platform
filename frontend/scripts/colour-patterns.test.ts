@@ -14,4 +14,13 @@ describe('findColourHits', () => {
     expect(findColourHits('&#123; <a href="#main">')).toEqual([]);
     expect(findColourHits('var(--color-moss)')).toEqual([]);
   });
+  it('ignores href fragments, matches 8-digit hex, de-duplicates', () => {
+    expect(findColourHits("<a href='#x'>")).toEqual([]);
+    expect(findColourHits('c: #11223344;')).toContain('#11223344');
+    expect(findColourHits('#fff #fff #fff')).toEqual(['#fff']);
+  });
+  it('known false positive: #123 style issue references in comments', () => {
+    // Documented limitation: "see issue #123" is flagged as a 3-digit hex colour.
+    expect(findColourHits('// see issue #123')).toEqual(['#123']);
+  });
 });

@@ -34,8 +34,21 @@ for (const p of files) {
   if (!SCAN.test(norm) || norm.endsWith('globals.css')) continue;
   if (/(^|\/)__tests__\/|\.test\.tsx?$/.test(norm)) continue;
   scanned++;
-  const hits = findColourHits(readFileSync(p, 'utf8'));
+  let text;
+  try {
+    text = readFileSync(p, 'utf8');
+  } catch (err) {
+    const why = err.code === 'ENOENT' ? 'no such file' : err.code === 'EISDIR' ? 'is a directory (pass files, not folders)' : err.message;
+    console.error(`check-colours: cannot read ${p}: ${why}`);
+    process.exit(1);
+  }
+  const hits = findColourHits(text);
   if (hits.length) bad.push({ p: norm, hits });
+}
+
+if (scanned === 0) {
+  console.error('check-colours: no scannable files (.tsx/.ts/.css, excluding globals.css and tests) matched.');
+  process.exit(1);
 }
 
 if (bad.length) {

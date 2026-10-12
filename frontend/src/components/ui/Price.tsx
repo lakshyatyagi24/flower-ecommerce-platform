@@ -1,7 +1,4 @@
-// Client component: formatINR lives in cart-context, a "use client" module, so it cannot be called from server components.
-"use client";
-
-import { formatINR } from '@/lib/cart-context';
+import { formatINR } from '@/lib/format';
 
 export default function Price({ amount, unit, className = '' }: { amount: number; unit?: string; className?: string }) {
   return (

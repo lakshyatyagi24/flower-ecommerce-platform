@@ -52,13 +52,15 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: 0;
 }
 
+h1, h2, h3, .type-display, .type-h1, .type-h2, .type-h3 { text-wrap: balance; }
+
 /* Fluid type scale */
-.type-display { font-family: var(--font-display); font-weight: 400; font-size: clamp(2.5rem, 6vw, 4.5rem); line-height: 1.04; letter-spacing: 0; }
+.type-display { font-family: var(--font-display); font-weight: 400; font-size: clamp(2.5rem, 6vw, 4.5rem); line-height: 1.02; letter-spacing: -0.01em; }
 .type-h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(2.25rem, 4.5vw, 3.5rem); line-height: 1.08; }
 .type-h2 { font-family: var(--font-display); font-weight: 400; font-size: clamp(1.75rem, 3.2vw, 2.5rem); line-height: 1.15; }
-.type-h3 { font-family: var(--font-display); font-weight: 500; font-size: clamp(1.375rem, 2vw, 1.75rem); line-height: 1.2; }
+.type-h3 { font-family: var(--font-display); font-weight: 500; font-size: clamp(1.5rem, 2.2vw, 1.875rem); line-height: 1.2; }
 .type-body { font-size: 1rem; line-height: 1.7; }
-.type-eyebrow { font-size: 11px; line-height: 1.4; text-transform: uppercase; letter-spacing: 0.18em; color: var(--color-stone-dark); }
+.type-eyebrow { font-size: 12px; line-height: 1.4; text-transform: uppercase; letter-spacing: 0.16em; color: var(--color-stone-dark); }
 
 /* LEGACY helpers (restyled flat; removed in Task 3.9) */
 .pill {

@@ -24,7 +24,7 @@ const swatches = [
 function ProductCard({ name, price, unit }: { name: string; price: number; unit?: string }) {
   return (
     <article className="group">
-      <div className="relative aspect-[4/5] w-full overflow-hidden bg-ivory-deep">
+      <div className="relative aspect-[4/5] w-full overflow-hidden bg-stone-light/50">
         <Image
           src="/images/placeholder-bloom.jpg"
           alt=""
@@ -104,6 +104,7 @@ export default function DesignPreviewPage() {
             intro="An eyebrow, a display heading, an optional introduction and an optional link."
             link={{ href: '/design-preview', label: 'Shop all' }}
           />
+          <div className="mt-16"><SectionHeading align="center" eyebrow="Centred" title="A centred section heading" intro="Used for editorial moments; stacks and centres at every width." link={{ href: '/design-preview', label: 'Explore' }} /></div>
           <div className="mt-10 flex flex-wrap items-baseline gap-10 border-t border-stone-light pt-8">
             <Price amount={1499} />
             <Price amount={85} unit="/ stem" />
@@ -121,6 +122,7 @@ export default function DesignPreviewPage() {
             <div className="w-[200px]"><ProductCard name="Ivory Garden" price={1499} /></div>
             <div className="w-[320px]"><ProductCard name="Ivory Garden" price={1499} /></div>
             <div className="w-full max-w-[480px]"><ProductCard name="Ivory Garden Bouquet" price={85} unit="/ stem" /></div>
+            <div className="w-[240px]" aria-hidden="true"><Skeleton className="aspect-[4/5] w-full" /><Skeleton className="mt-4 h-5 w-3/4" /><Skeleton className="mt-2 h-4 w-1/3" /></div>
           </div>
         </section>
       </Container>

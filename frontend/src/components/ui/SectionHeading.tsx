@@ -16,7 +16,7 @@ export default function SectionHeading({
 }) {
   const center = align === 'center';
   return (
-    <div className={`flex flex-col gap-4 md:flex-row md:items-end md:justify-between ${center ? 'items-center text-center md:flex-col md:items-center' : ''}`}>
+    <div className={`gap-4 ${center ? 'flex flex-col items-center text-center' : 'flex flex-col md:flex-row md:items-end md:justify-between'}`}>
       <div className={`max-w-2xl ${center ? 'mx-auto' : ''}`}>
         {eyebrow && <Eyebrow className="mb-3">{eyebrow}</Eyebrow>}
         <h2 className="type-h2 text-charcoal">{title}</h2>

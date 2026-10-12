@@ -77,7 +77,7 @@ const Categories: React.FC<CategoriesProps> = ({ categories = defaultCategories,
   const categoryItems = loading && !remoteCategories
     ? Array.from({ length: 8 }).map((_, i) => (
         <li key={`shimmer-${i}`} className="flex-shrink-0 relative">
-          <div className="h-6 w-24 rounded-md bg-neutral-200/60 dark:bg-neutral-700 animate-pulse" />
+          <div className="h-6 w-24 rounded-md bg-neutral-200/60 animate-pulse" />
         </li>
       ))
     : visibleCategories.map((cat) => (
