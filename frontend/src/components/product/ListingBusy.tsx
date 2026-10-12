@@ -8,7 +8,7 @@ import { useSearchParams } from "next/navigation";
  * shell before an API error or 404 is known), so while a filter/sort/page navigation is in flight we dim
  * the grid (`[data-grid]`) and set aria-busy. Cleared when the query string changes.
  */
-export default function ListingBusy({ children }: { children: ReactNode }) {
+export default function ListingBusy({ children, basePath = "/products" }: { children: ReactNode; basePath?: string }) {
   const search = useSearchParams()?.toString() ?? "";
   const [busy, setBusy] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -39,7 +39,7 @@ export default function ListingBusy({ children }: { children: ReactNode }) {
         const a = (e.target as HTMLElement).closest("a");
         if (!a || a.target === "_blank") return;
         const url = new URL(a.href, window.location.href);
-        if (url.pathname === "/products" && url.search !== window.location.search) start();
+        if (url.pathname === basePath && url.search !== window.location.search) start();
       }}
       onChangeCapture={() => start()}
     >

@@ -76,4 +76,9 @@ describe('pageWindow', () => {
     expect(pageWindow(1, 1)).toEqual([1]);
     expect(pageWindow(1, 0)).toEqual([]);
   });
+
+  it('builds links from the given basePath', () => {
+    expect(listHref({ page: 2, sort: 'popular' }, {}, '/collections/roses')).toBe('/collections/roses?sort=popular&page=2');
+    expect(listHref({ page: 3 }, { page: 1 }, '/occasions/birthday')).toBe('/occasions/birthday');
+  });
 });

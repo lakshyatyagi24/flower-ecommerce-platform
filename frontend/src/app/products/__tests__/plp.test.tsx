@@ -9,6 +9,9 @@ vi.mock('@/lib/server-api', () => ({
   listCategories: (...a: unknown[]) => listCategories(...a),
 }));
 vi.mock('next/navigation', () => ({
+  permanentRedirect: (url: string) => {
+    throw new Error(`NEXT_REDIRECT:${url}`);
+  },
   notFound: () => {
     throw new Error('NEXT_NOT_FOUND');
   },
@@ -38,21 +41,22 @@ describe('products listing page', () => {
   });
 
   it('whitelists params before calling the API', async () => {
-    await ProductsPage({ searchParams: { page: 'abc', sort: 'evil', category: '../x', q: 'x'.repeat(500), tag: ['birthday', 'x'] } });
+    await ProductsPage({ searchParams: { page: 'abc', sort: 'evil', category: '../x', q: 'x'.repeat(500), tag: ['christmas', 'x'] } });
     expect(listProducts).toHaveBeenCalledWith({
-      category: undefined, tag: 'birthday', sort: undefined, q: 'x'.repeat(100), page: 1, take: 24,
+      category: undefined, tag: 'christmas', sort: undefined, q: 'x'.repeat(100), page: 1, take: 24,
     });
   });
 
-  it('renders products, crawlable category links, count, pagination and ItemList JSON-LD', async () => {
-    const { container } = render(await ProductsPage({ searchParams: { category: 'roses', page: '2' } }));
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Roses');
+  it('renders products, crawlable category links to the collections, count, pagination and ItemList JSON-LD', async () => {
+    const { container } = render(await ProductsPage({ searchParams: { page: '2' } }));
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Fresh cut flowers');
     expect(screen.getByRole('link', { name: /red rose/i }).getAttribute('href')).toBe('/products/red-rose');
     const nav = screen.getByRole('navigation', { name: 'Categories' });
     const labels = [...nav.querySelectorAll('a')].map((a) => a.textContent);
     expect(labels).toEqual(['All', 'Roses', 'Plants']); // inactive and child categories are not in the bar
-    expect(nav.querySelector('[aria-current="page"]')!.textContent).toBe('Roses');
-    expect(screen.getByRole('link', { name: 'Next' }).getAttribute('href')).toBe('/products?category=roses&page=3');
+    expect(nav.querySelector('[aria-current="page"]')!.textContent).toBe('All');
+    expect([...nav.querySelectorAll('a')].map((a) => a.getAttribute('href'))).toEqual(['/products', '/collections/roses', '/collections/plants']);
+    expect(screen.getByRole('link', { name: 'Next' }).getAttribute('href')).toBe('/products?page=3');
     expect(container.textContent).toContain('30 products');
     const ld = JSON.parse(container.querySelector('script[type="application/ld+json"]')!.textContent!);
     expect(ld['@type']).toBe('ItemList');
@@ -75,15 +79,40 @@ describe('products listing page', () => {
     await expect(ProductsPage({ searchParams: { page: '9' } })).rejects.toThrow('NEXT_NOT_FOUND');
     await expect(generateMetadata({ searchParams: { page: '9' } })).rejects.toThrow('NEXT_NOT_FOUND');
     listProducts.mockResolvedValue({ items: [], total: 0, page: 1, pages: 0, take: 24 });
-    render(await ProductsPage({ searchParams: { category: 'plants' } }));
+    render(await ProductsPage({ searchParams: { tag: 'christmas' } }));
     expect(screen.getByText('No flowers match')).toBeTruthy();
   });
 
-  it('404s for an unknown category slug (also when nested), keeps known ones', async () => {
+  it('404s for an unknown category slug', async () => {
     await expect(ProductsPage({ searchParams: { category: 'nope' } })).rejects.toThrow('NEXT_NOT_FOUND');
+    await expect(generateMetadata({ searchParams: { category: 'nope' } })).rejects.toThrow('NEXT_NOT_FOUND');
+  });
+
+  it('permanently redirects a known category (also nested) to its collection, keeping sort, page and search', async () => {
+    await expect(ProductsPage({ searchParams: { category: 'plants', sort: 'price_asc', page: '2' } })).rejects.toThrow(
+      'NEXT_REDIRECT:/collections/plants?sort=price_asc&page=2',
+    );
+    await expect(generateMetadata({ searchParams: { category: 'roses' } })).rejects.toThrow('NEXT_REDIRECT:/collections/roses');
+    await expect(ProductsPage({ searchParams: { collection: 'sub', q: 'red' } })).rejects.toThrow('NEXT_REDIRECT:/collections/sub?q=red');
     listCategories.mockResolvedValue([{ ...cats[0], children: [{ id: 9, name: 'Child', slug: 'child' }] }]);
-    render(await ProductsPage({ searchParams: { category: 'child' } }));
-    expect(screen.getByRole('heading', { level: 1 })).toBeTruthy();
+    await expect(ProductsPage({ searchParams: { category: 'child' } })).rejects.toThrow('NEXT_REDIRECT:/collections/child');
+  });
+
+  it('does not redirect to an inactive category (its collection page would 404)', async () => {
+    render(await ProductsPage({ searchParams: { category: 'hidden' } }));
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Hidden');
+  });
+
+  it('permanently redirects a known occasion tag to its occasion page, keeping sort and page', async () => {
+    await expect(ProductsPage({ searchParams: { tag: 'birthday', sort: 'popular', page: '3' } })).rejects.toThrow(
+      'NEXT_REDIRECT:/occasions/birthday?sort=popular&page=3',
+    );
+    await expect(generateMetadata({ searchParams: { tag: 'get-well-soon' } })).rejects.toThrow('NEXT_REDIRECT:/occasions/get-well-soon');
+  });
+
+  it('ignores an unknown tag (no redirect, no 404)', async () => {
+    render(await ProductsPage({ searchParams: { tag: 'christmas' } }));
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Fresh cut flowers');
   });
 
   it('does not 404 an unknown category when the category list is unavailable', async () => {
@@ -124,16 +153,16 @@ describe('listing metadata', () => {
     expect(m.robots).toBeUndefined();
   });
 
-  it('category: title suffix and canonical keeps the category; sort is dropped', async () => {
-    const m = await generateMetadata({ searchParams: { category: 'roses', sort: 'popular' } });
-    expect(m.title).toBe('Fresh Cut Flowers Online — Roses');
-    expect(m.alternates?.canonical).toBe('/products?category=roses');
+  it('tag: canonical keeps an unknown tag; sort is dropped', async () => {
+    const m = await generateMetadata({ searchParams: { tag: 'christmas', sort: 'popular' } });
+    expect(m.title).toBe('Fresh Cut Flowers Online');
+    expect(m.alternates?.canonical).toBe('/products?tag=christmas');
   });
 
   it('page > 1 keeps the page in the canonical', async () => {
     listProducts.mockResolvedValue({ items: [mk(1, 'Red Rose')], total: 60, page: 3, pages: 3, take: 24 });
-    const m = await generateMetadata({ searchParams: { category: 'roses', page: '3' } });
-    expect(m.alternates?.canonical).toBe('/products?category=roses&page=3');
+    const m = await generateMetadata({ searchParams: { page: '3' } });
+    expect(m.alternates?.canonical).toBe('/products?page=3');
   });
 
   it('page > 1 appends Page N to title and description', async () => {
@@ -141,8 +170,6 @@ describe('listing metadata', () => {
     const m = await generateMetadata({ searchParams: { page: '2' } });
     expect(m.title).toBe('Fresh Cut Flowers Online — Page 2');
     expect(m.description).toMatch(/ — Page 2$/);
-    const c = await generateMetadata({ searchParams: { category: 'roses', page: '2' } });
-    expect(c.title).toBe('Fresh Cut Flowers Online — Roses — Page 2');
   });
 
   it('search: noindex,follow and canonical /products', async () => {
@@ -153,6 +180,6 @@ describe('listing metadata', () => {
 
   it('empty results are noindex', async () => {
     listProducts.mockResolvedValue({ items: [], total: 0, page: 1, pages: 0, take: 24 });
-    expect((await generateMetadata({ searchParams: { category: 'plants' } })).robots).toEqual({ index: false, follow: true });
+    expect((await generateMetadata({ searchParams: { tag: 'christmas' } })).robots).toEqual({ index: false, follow: true });
   });
 });

@@ -10,7 +10,7 @@ const OPTIONS = [
 ];
 
 /** Native select that rewrites the `sort` param, keeps other params and resets the page. */
-export default function SortSelect({ value = "newest" }: { value?: string }) {
+export default function SortSelect({ value = "newest", basePath = "/products" }: { value?: string; basePath?: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -18,7 +18,7 @@ export default function SortSelect({ value = "newest" }: { value?: string }) {
     const params = new URLSearchParams(searchParams?.toString() ?? "");
     params.set("sort", next);
     params.delete("page");
-    router.push(`/products?${params.toString()}`);
+    router.push(`${basePath}?${params.toString()}`);
   }
 
   return (

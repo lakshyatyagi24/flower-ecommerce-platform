@@ -41,8 +41,12 @@ export function parseListParams(sp: RawSearchParams): ListParams {
   return out;
 }
 
-/** /products URL for a parsed param set with optional overrides (an explicit undefined removes a key). */
-export function listHref(params: ListParams, overrides: Partial<ListParams> = {}): string {
+/**
+ * Listing URL for a parsed param set with optional overrides (an explicit undefined removes a key).
+ * `basePath` is the page's own path (/products, /collections/roses, /occasions/birthday) so sort and
+ * pagination links stay on the page they were rendered on.
+ */
+export function listHref(params: ListParams, overrides: Partial<ListParams> = {}, basePath = '/products'): string {
   const p = { ...params, ...overrides };
   const qs = new URLSearchParams();
   if (p.category) qs.set('category', p.category);
@@ -51,5 +55,5 @@ export function listHref(params: ListParams, overrides: Partial<ListParams> = {}
   if (p.q) qs.set('q', p.q);
   if (p.page > 1) qs.set('page', String(p.page));
   const s = qs.toString();
-  return s ? `/products?${s}` : '/products';
+  return s ? `${basePath}?${s}` : basePath;
 }

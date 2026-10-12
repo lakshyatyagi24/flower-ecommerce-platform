@@ -7,9 +7,19 @@ const item =
   "focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-moss";
 
 /** Crawlable numbered pagination. Hidden when there is only one page. */
-export default function Pagination({ params, page, pages }: { params: ListParams; page: number; pages: number }) {
+export default function Pagination({
+  params,
+  page,
+  pages,
+  basePath = "/products",
+}: {
+  params: ListParams;
+  page: number;
+  pages: number;
+  basePath?: string;
+}) {
   if (pages <= 1) return null;
-  const href = (n: number) => listHref(params, { page: n });
+  const href = (n: number) => listHref(params, { page: n }, basePath);
   return (
     <nav aria-label="Pagination" className="mt-16 flex items-center justify-center gap-1 border-t border-stone-light pt-8">
       {page > 1 ? (
