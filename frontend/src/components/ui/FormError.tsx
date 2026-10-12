@@ -9,13 +9,15 @@ type Props = {
   /** A plain message (e.g. a server error). */
   children?: ReactNode;
   className?: string;
+  /** Called with the field id when a summary link is activated. The default hash navigation is prevented. */
+  onItemClick?: (id: string) => void;
 };
 
 /**
  * Error summary for the top of a form. Focusable (tabIndex -1) so the page can move focus here after a failed
  * submit; screen readers read it as an alert.
  */
-const FormError = forwardRef<HTMLDivElement, Props>(function FormError({ title, items = [], children, className = '' }, ref) {
+const FormError = forwardRef<HTMLDivElement, Props>(function FormError({ title, items = [], children, className = '', onItemClick }, ref) {
   if (items.length === 0 && !children) return null;
   return (
     <div
@@ -30,7 +32,18 @@ const FormError = forwardRef<HTMLDivElement, Props>(function FormError({ title, 
         <ul className="mt-2 list-disc space-y-1 pl-5">
           {items.map((it) => (
             <li key={it.id}>
-              <a href={`#${it.id}`} className="underline underline-offset-4">
+              <a
+                href={`#${it.id}`}
+                className="inline-flex min-h-6 items-center underline underline-offset-4"
+                onClick={
+                  onItemClick
+                    ? (e) => {
+                        e.preventDefault();
+                        onItemClick(it.id);
+                      }
+                    : undefined
+                }
+              >
                 {it.message}
               </a>
             </li>

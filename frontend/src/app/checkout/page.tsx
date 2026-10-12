@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -13,6 +13,47 @@ import ErrorState from "@/components/ui/ErrorState";
 import { clearPendingOrder, readPendingOrderId, savePendingOrder } from "@/lib/pending-order";
 import { EXPIRED_COPY, reservedMessage, usePayForOrder, type ExpiredKind } from "@/lib/use-pay-for-order";
 import PaymentActions from "@/components/PaymentActions";
+import Container from "@/components/ui/Container";
+import Button from "@/components/ui/Button";
+import Skeleton from "@/components/ui/Skeleton";
+import Field from "@/components/ui/Field";
+import Input from "@/components/ui/Input";
+import Textarea from "@/components/ui/Textarea";
+import RadioCard from "@/components/ui/RadioCard";
+import FormError from "@/components/ui/FormError";
+import {
+  CHECKOUT_FIELD_ORDER,
+  PHONE_PATTERN,
+  PIN_PATTERN,
+  validateCheckout,
+  type CheckoutFieldName,
+} from "@/lib/checkout-validation";
+
+const FIELD_IDS: Record<CheckoutFieldName, string> = {
+  customerName: "checkout-name",
+  customerEmail: "checkout-email",
+  customerPhone: "checkout-phone",
+  shippingAddress: "checkout-address",
+  city: "checkout-city",
+  postalCode: "checkout-pin",
+};
+
+const Chevron = ({ open }: { open: boolean }) => (
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true" className={`transition-transform duration-200 ${open ? "rotate-180" : ""}`}>
+    <path d="M2 5l5 5 5-5" stroke="currentColor" strokeWidth="1.2" />
+  </svg>
+);
+
+function SectionLegend({ n, children }: { n: number; children: React.ReactNode }) {
+  return (
+    <legend className="mb-6 flex items-baseline gap-4 p-0">
+      <span className="font-sans text-xs font-medium tracking-[0.16em] text-stone-dark" aria-hidden="true">
+        {String(n).padStart(2, "0")}
+      </span>
+      <span className="font-display text-2xl text-charcoal md:text-3xl">{children}</span>
+    </legend>
+  );
+}
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -35,6 +76,23 @@ export default function CheckoutPage() {
     notes: "",
     paymentMethod: "RAZORPAY" as "COD" | "RAZORPAY",
   });
+
+  // Inline validation: a field shows its error once it was blurred or a submit was attempted.
+  const [touched, setTouched] = useState<Partial<Record<CheckoutFieldName, boolean>>>({});
+  const [attempted, setAttempted] = useState(false);
+  const [focusTick, setFocusTick] = useState(0);
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const summaryRef = useRef<HTMLDivElement>(null);
+  const submittingRef = useRef(false);
+  const errors = useMemo(() => validateCheckout(form), [form]);
+  const fieldError = (k: CheckoutFieldName) => (touched[k] || attempted ? errors[k] : undefined);
+  const summaryItems = attempted
+    ? CHECKOUT_FIELD_ORDER.filter((k) => errors[k]).map((k) => ({ id: FIELD_IDS[k], message: errors[k] as string }))
+    : [];
+  // Move focus to the error summary after a failed submit (validation or server error).
+  useEffect(() => {
+    if (focusTick > 0) summaryRef.current?.focus();
+  }, [focusTick]);
 
   // Online-payment state. `pendingId` is an order that exists on the server but
   // is not paid yet: while set, the checkout form is not rendered, so a second
@@ -206,108 +264,125 @@ export default function CheckoutPage() {
   // Don't render the form for guests — they're being redirected to /account/login.
   if (authLoading || !user) {
     return (
-      <main className="section-shell mt-12 mb-16">
-        <div className="animate-pulse space-y-4 max-w-3xl">
-          <div className="h-8 bg-slate-200 rounded w-1/3" />
-          <div className="h-4 bg-slate-200 rounded w-2/3" />
-          <div className="h-64 bg-slate-200 rounded" />
-        </div>
+      <main>
+        <Container className="py-12 lg:py-16">
+          <div className="max-w-3xl space-y-4" aria-busy="true">
+            <Skeleton className="h-10 w-1/3" />
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="h-64" />
+          </div>
+        </Container>
       </main>
     );
   }
 
   if (restoring) {
     return (
-      <main className="section-shell mt-12 mb-16">
-        <div className="animate-pulse space-y-4 max-w-3xl" aria-busy="true">
-          <div className="h-8 bg-slate-200 rounded w-1/3" />
-          <div className="h-32 bg-slate-200 rounded" />
-        </div>
+      <main>
+        <Container className="py-12 lg:py-16">
+          <div className="max-w-3xl space-y-4" aria-busy="true">
+            <Skeleton className="h-10 w-1/3" />
+            <Skeleton className="h-32" />
+          </div>
+        </Container>
       </main>
     );
   }
 
   if (pendingId !== null) {
     return (
-      <main className="section-shell mt-12 mb-16">
-        <div className="section-card p-8 max-w-xl mx-auto">
-          <h1 className="text-2xl font-semibold text-slate-900">
-            {pay.switched ? "Refund due" : "Payment pending"}
-          </h1>
-          {!pay.switched && (
-            <p className="mt-2 text-slate-700">
-              Your order #{pendingId} has been created and is waiting for payment. It stays reserved for 30 minutes.
-            </p>
-          )}
-          <PaymentActions pay={pay} orderId={pendingId} />
-        </div>
+      <main>
+        <Container className="py-12 lg:py-20">
+          <div className="mx-auto max-w-xl">
+            <h1 className="type-h2">{pay.switched ? "Refund due" : "Payment pending"}</h1>
+            {!pay.switched && (
+              <p className="mt-4 text-base leading-relaxed text-stone-dark">
+                Your order #{pendingId} has been created and is waiting for payment. It stays reserved for 30 minutes.
+              </p>
+            )}
+            <PaymentActions pay={pay} orderId={pendingId} />
+          </div>
+        </Container>
       </main>
     );
   }
 
   if (expired) {
     return (
-      <main className="section-shell mt-12 mb-16 text-center">
-        <h1 className="text-2xl font-semibold text-slate-900">
-          {expired === "unpaid" ? "Order expired" : expired === "refunded" ? "Payment refunded" : "Order cancelled"}
-        </h1>
-        <p className="mt-2 text-slate-700">{EXPIRED_COPY[expired]}</p>
-        <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
-          <button
-            type="button"
-            onClick={() => setExpired(null)}
-            className="bg-olive-green text-white px-6 py-3 rounded-full font-semibold"
-          >
-            Back to checkout
-          </button>
-          <Link href="/products" className="text-olive-green font-semibold underline-offset-4 hover:underline self-center">
-            Continue shopping — browse products
-          </Link>
-        </div>
+      <main>
+        <Container className="py-12 text-center lg:py-20">
+          <div className="mx-auto max-w-xl">
+            <h1 className="type-h2">
+              {expired === "unpaid" ? "Order expired" : expired === "refunded" ? "Payment refunded" : "Order cancelled"}
+            </h1>
+            <p className="mt-4 text-base leading-relaxed text-stone-dark">{EXPIRED_COPY[expired]}</p>
+            <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-center">
+              <Button type="button" onClick={() => setExpired(null)}>
+                Back to checkout
+              </Button>
+              <Button variant="ghost" href="/products">
+                Continue shopping — browse products
+              </Button>
+            </div>
+          </div>
+        </Container>
       </main>
     );
   }
 
   if (count > 0 && (settingsError || pricesError)) {
     return (
-      <main className="section-shell mt-12 mb-16">
-        <ErrorState
-          message="We couldn't load delivery charges. Please refresh."
-          onRetry={() => {
-            reloadSettings();
-            reloadPrices();
-          }}
-        />
+      <main>
+        <Container className="py-12">
+          <ErrorState
+            message="We couldn't load delivery charges. Please refresh."
+            onRetry={() => {
+              reloadSettings();
+              reloadPrices();
+            }}
+          />
+        </Container>
       </main>
     );
   }
 
   if (count > 0 && (settingsLoading || pricesLoading || configLoading || !settingsData || !pricing)) {
     return (
-      <main className="section-shell mt-12 mb-16">
-        <div className="animate-pulse space-y-4 max-w-3xl" aria-busy="true">
-          <div className="h-8 bg-slate-200 rounded w-1/3" />
-          <div className="h-64 bg-slate-200 rounded" />
-        </div>
+      <main>
+        <Container className="py-12 lg:py-16">
+          <div className="max-w-3xl space-y-4" aria-busy="true">
+            <Skeleton className="h-10 w-1/3" />
+            <Skeleton className="h-64" />
+          </div>
+        </Container>
       </main>
     );
   }
 
   if (count === 0) {
     return (
-      <main className="section-shell mt-12 mb-16 text-center">
-        <h1 className="text-3xl font-semibold text-slate-900">Your cart is empty</h1>
-        <p className="mt-2 text-slate-700">Add some florals before you can check out.</p>
-        <Link href="/products" className="mt-6 inline-block bg-olive-green text-white px-6 py-3 rounded-full font-semibold hover:opacity-95">
-          Browse florals
-        </Link>
+      <main>
+        <Container className="py-16 text-center lg:py-24">
+          <h1 className="type-h2">Your cart is empty</h1>
+          <p className="mt-4 text-base text-stone-dark">Add some florals before you can check out.</p>
+          <div className="mt-8">
+            <Button href="/products">Browse florals</Button>
+          </div>
+        </Container>
       </main>
     );
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current) return;
     setError(null);
+    setAttempted(true);
+    if (Object.keys(errors).length > 0) {
+      setFocusTick((t) => t + 1);
+      return;
+    }
+    submittingRef.current = true;
     setSubmitting(true);
     try {
       const order = await api.createOrder({
@@ -333,125 +408,206 @@ export default function CheckoutPage() {
     } catch (err) {
       const message = err instanceof ApiError ? err.message : err instanceof Error ? err.message : "Could not place order";
       setError(message);
+      setFocusTick((t) => t + 1);
     } finally {
+      submittingRef.current = false;
       setSubmitting(false);
     }
   };
 
   const update = (key: keyof typeof form, value: string) => setForm((f) => ({ ...f, [key]: value }));
+  const blur = (k: CheckoutFieldName) => () => setTouched((t) => (t[k] ? t : { ...t, [k]: true }));
+  const focusField = (id: string) => document.getElementById(id)?.focus();
+
+  const itemsLabel = `${count} ${count === 1 ? "item" : "items"}`;
 
   return (
-    <main className="section-shell mt-12 mb-16">
-      <h1 className="text-3xl md:text-4xl font-semibold text-slate-900 mb-2">Checkout</h1>
-      <p className="text-slate-700 mb-8">Choose how you would like to pay. Online orders are held for 30 minutes while you complete payment.</p>
+    <main>
+      <Container className="py-10 lg:py-16">
+        <h1 className="type-h1">Checkout</h1>
+        <p className="mt-4 max-w-xl text-base leading-relaxed text-stone-dark">
+          Choose how you would like to pay. Online orders are held for 30 minutes while you complete payment.
+        </p>
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
-          <section className="section-card p-6">
-            <h2 className="text-xl font-semibold text-slate-900 mb-4">Contact details</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <label className="block">
-                <span className="text-sm font-medium text-gray-700">Full name</span>
-                <input required value={form.customerName} onChange={(e) => update("customerName", e.target.value)} className="mt-1 w-full rounded-md border-gray-200 shadow-sm focus:ring-2 focus:ring-olive-green/40" />
-              </label>
-              <label className="block">
-                <span className="text-sm font-medium text-gray-700">Email</span>
-                <input type="email" required value={form.customerEmail} onChange={(e) => update("customerEmail", e.target.value)} className="mt-1 w-full rounded-md border-gray-200 shadow-sm focus:ring-2 focus:ring-olive-green/40" />
-              </label>
-              <label className="block sm:col-span-2">
-                <span className="text-sm font-medium text-gray-700">Phone</span>
-                <input type="tel" inputMode="tel" required pattern="(\+?91[\s\-]?|0)?[6-9][0-9]{4}[\s\-]?[0-9]{5}" title="Enter a valid 10-digit Indian mobile number" value={form.customerPhone} onChange={(e) => update("customerPhone", e.target.value)} placeholder="+91 99999 11111" className="mt-1 w-full rounded-md border-gray-200 shadow-sm focus:ring-2 focus:ring-olive-green/40" />
-              </label>
-            </div>
-          </section>
-
-          <section className="section-card p-6">
-            <h2 className="text-xl font-semibold text-slate-900 mb-4">Shipping address</h2>
-            <div className="space-y-4">
-              <label className="block">
-                <span className="text-sm font-medium text-gray-700">Address</span>
-                <textarea required rows={3} value={form.shippingAddress} onChange={(e) => update("shippingAddress", e.target.value)} placeholder="Street, building, landmark…" className="mt-1 w-full rounded-md border-gray-200 shadow-sm focus:ring-2 focus:ring-olive-green/40" />
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <label className="block">
-                  <span className="text-sm font-medium text-gray-700">City</span>
-                  <input required maxLength={80} value={form.city} onChange={(e) => update("city", e.target.value)} className="mt-1 w-full rounded-md border-gray-200 shadow-sm focus:ring-2 focus:ring-olive-green/40" />
-                </label>
-                <label className="block">
-                  <span className="text-sm font-medium text-gray-700">Postal code</span>
-                  <input required inputMode="numeric" pattern="[1-9][0-9]{5}" maxLength={6} title="Enter a valid 6-digit PIN code" value={form.postalCode} onChange={(e) => update("postalCode", e.target.value)} className="mt-1 w-full rounded-md border-gray-200 shadow-sm focus:ring-2 focus:ring-olive-green/40" />
-                </label>
-              </div>
-              <label className="block">
-                <span className="text-sm font-medium text-gray-700">Notes for delivery (optional)</span>
-                <textarea rows={2} value={form.notes} onChange={(e) => update("notes", e.target.value)} placeholder="Buzzer code, gift message, preferred time…" className="mt-1 w-full rounded-md border-gray-200 shadow-sm focus:ring-2 focus:ring-olive-green/40" />
-              </label>
-            </div>
-          </section>
-
-          <fieldset className="section-card p-6 space-y-3">
-            <legend className="text-xl font-semibold text-slate-900 mb-1 px-1">Payment</legend>
-            {onlineEnabled ? (
-              <label className="flex items-start gap-3 p-4 rounded-md border border-olive-green/20 bg-olive-green/5">
-                <input type="radio" name="paymentMethod" checked={paymentMethod === "RAZORPAY"} onChange={() => update("paymentMethod", "RAZORPAY")} className="mt-1" />
-                <div>
-                  <span className="font-medium text-slate-900">Pay online (UPI, cards, net banking)</span>
-                  <p className="text-sm text-slate-700 mt-1">Secure payment through Razorpay. Your order is confirmed once payment succeeds.</p>
-                </div>
-              </label>
-            ) : (
-              <p className="text-sm text-slate-700">Online payment is temporarily unavailable.</p>
-            )}
-            <label className="flex items-start gap-3 p-4 rounded-md border border-olive-green/20">
-              <input type="radio" name="paymentMethod" checked={paymentMethod === "COD"} onChange={() => update("paymentMethod", "COD")} className="mt-1" />
-              <div>
-                <span className="font-medium text-slate-900">Cash on delivery</span>
-                <p className="text-sm text-slate-700 mt-1">Pay our courier when your bouquet arrives.</p>
-              </div>
-            </label>
-          </fieldset>
-
-          {error && (
-            <div className="px-4 py-3 rounded bg-red-50 text-red-700 text-sm" role="alert">{error}</div>
-          )}
-        </div>
-
-        <aside className="lg:col-span-1">
-          <div className="section-card p-6 sticky top-24">
-            <h2 className="text-xl font-semibold text-slate-900 mb-4">Order summary</h2>
-            <ul className="space-y-3 max-h-72 overflow-y-auto">
-              {items.map((it) => (
-                <li key={it.productId} className="flex gap-3">
-                  <div className="relative w-14 h-14 flex-shrink-0 rounded bg-slate-100 overflow-hidden">
-                    <Image src={productImage(it)} alt={it.name} fill sizes="56px" className="object-cover" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-slate-900 truncate">{it.name}</div>
-                    <div className="text-xs text-slate-600">Qty {it.quantity}</div>
-                  </div>
-                  <div className="text-sm font-semibold text-olive-green">{formatINR(priceOf(it) * it.quantity)}</div>
-                </li>
-              ))}
-            </ul>
-            {priceChanged && (
-              <div className="mt-4 px-3 py-2 rounded bg-amber-50 text-amber-800 text-xs" role="status">
-                Some prices were updated since you added these items. The total below reflects current pricing.
-              </div>
-            )}
-            <div className="mt-4 pt-4 border-t border-olive-green/10 space-y-2 text-sm">
-              <div className="flex justify-between"><span>Subtotal</span><span>{formatINR(liveSubtotal)}</span></div>
-              <div className="flex justify-between"><span>Shipping</span><span>{shipping === 0 ? "Free" : formatINR(shipping)}</span></div>
-              {liveGstTotal > 0 && (
-                <div className="flex justify-between"><span>GST</span><span>{formatINR(liveGstTotal)}</span></div>
-              )}
-              <div className="flex justify-between text-base font-semibold text-olive-green pt-2 border-t border-olive-green/10"><span>Total</span><span>{formatINR(total)}</span></div>
-            </div>
-            <button type="submit" disabled={submitting} className="mt-5 w-full bg-olive-green text-white px-6 py-3 rounded-full font-semibold shadow-md hover:shadow-lg disabled:opacity-50">
-              {submitting ? "Placing order…" : paymentMethod === "RAZORPAY" ? "Place order & pay" : "Place order"}
+        <div className="mt-8 grid grid-cols-1 gap-8 lg:mt-12 lg:grid-cols-12 lg:gap-x-16">
+          <aside aria-label="Order summary" className="lg:sticky lg:top-28 lg:col-span-5 lg:col-start-8 lg:row-start-1 lg:self-start">
+            <button
+              type="button"
+              aria-expanded={summaryOpen}
+              aria-controls="checkout-summary-panel"
+              onClick={() => setSummaryOpen((o) => !o)}
+              className="flex min-h-14 w-full items-center justify-between gap-4 border-y border-stone-light py-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss lg:hidden"
+            >
+              <span className="flex items-center gap-2 text-sm text-charcoal">
+                Order summary ({itemsLabel})
+                <Chevron open={summaryOpen} />
+              </span>
+              <span className="text-base text-charcoal">{formatINR(total)}</span>
             </button>
-          </div>
-        </aside>
-      </form>
+
+            <div id="checkout-summary-panel" className={`${summaryOpen ? "block" : "hidden"} pt-6 lg:block lg:bg-ivory-deep lg:p-8`}>
+              <h2 className="mb-6 hidden font-display text-2xl text-charcoal lg:block">Order summary</h2>
+              <ul className="space-y-5 lg:max-h-80 lg:overflow-y-auto">
+                {items.map((it) => (
+                  <li key={it.productId} className="flex gap-4">
+                    <div className="relative aspect-[4/5] w-16 shrink-0 overflow-hidden rounded-sm bg-ivory-deep lg:bg-ivory">
+                      <Image src={productImage(it)} alt="" fill sizes="64px" className="object-cover" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm text-charcoal">{it.name}</div>
+                      <div className="mt-1 text-sm text-stone-dark">Qty {it.quantity}</div>
+                    </div>
+                    <div className="text-sm text-charcoal">{formatINR(priceOf(it) * it.quantity)}</div>
+                  </li>
+                ))}
+              </ul>
+              {priceChanged && (
+                <p className="mt-6 border border-stone-light px-4 py-3 text-sm text-charcoal" role="status">
+                  Some prices were updated since you added these items. The total below reflects current pricing.
+                </p>
+              )}
+              <dl className="mt-6 space-y-3 border-t border-stone-light pt-6 text-sm text-charcoal">
+                <div className="flex justify-between gap-4">
+                  <dt>Subtotal</dt>
+                  <dd>{formatINR(liveSubtotal)}</dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt>Shipping</dt>
+                  <dd>{shipping === 0 ? "Free" : formatINR(shipping)}</dd>
+                </div>
+                {liveGstTotal > 0 && (
+                  <div className="flex justify-between gap-4">
+                    <dt>GST</dt>
+                    <dd>{formatINR(liveGstTotal)}</dd>
+                  </div>
+                )}
+                <div className="flex justify-between gap-4 border-t border-stone-light pt-4 text-base">
+                  <dt>Total</dt>
+                  <dd className="font-display text-2xl">{formatINR(total)}</dd>
+                </div>
+              </dl>
+            </div>
+          </aside>
+
+          <form onSubmit={handleSubmit} noValidate className="space-y-12 lg:col-span-7 lg:row-start-1">
+            <FormError
+              ref={summaryRef}
+              title={summaryItems.length > 0 ? "Please check the following" : undefined}
+              items={summaryItems}
+              onItemClick={focusField}
+            >
+              {summaryItems.length === 0 ? error : null}
+            </FormError>
+
+            <fieldset className="min-w-0 border-0 p-0">
+              <SectionLegend n={1}>Contact &amp; delivery</SectionLegend>
+              <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2">
+                <Field id={FIELD_IDS.customerName} label="Full name" error={fieldError("customerName")}>
+                  <Input
+                    autoComplete="name"
+                    value={form.customerName}
+                    onChange={(e) => update("customerName", e.target.value)}
+                    onBlur={blur("customerName")}
+                  />
+                </Field>
+                <Field id={FIELD_IDS.customerEmail} label="Email" error={fieldError("customerEmail")}>
+                  <Input
+                    type="email"
+                    autoComplete="email"
+                    value={form.customerEmail}
+                    onChange={(e) => update("customerEmail", e.target.value)}
+                    onBlur={blur("customerEmail")}
+                  />
+                </Field>
+                <Field id={FIELD_IDS.customerPhone} label="Phone" className="sm:col-span-2" error={fieldError("customerPhone")}>
+                  <Input
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    pattern={PHONE_PATTERN}
+                    title="Enter a valid 10-digit Indian mobile number"
+                    value={form.customerPhone}
+                    onChange={(e) => update("customerPhone", e.target.value)}
+                    onBlur={blur("customerPhone")}
+                    placeholder="+91 99999 11111"
+                  />
+                </Field>
+                <Field id={FIELD_IDS.shippingAddress} label="Address" className="sm:col-span-2" error={fieldError("shippingAddress")}>
+                  <Textarea
+                    rows={3}
+                    autoComplete="street-address"
+                    value={form.shippingAddress}
+                    onChange={(e) => update("shippingAddress", e.target.value)}
+                    onBlur={blur("shippingAddress")}
+                    placeholder="Street, building, landmark…"
+                  />
+                </Field>
+                <Field id={FIELD_IDS.city} label="City" error={fieldError("city")}>
+                  <Input
+                    maxLength={80}
+                    autoComplete="address-level2"
+                    value={form.city}
+                    onChange={(e) => update("city", e.target.value)}
+                    onBlur={blur("city")}
+                  />
+                </Field>
+                <Field id={FIELD_IDS.postalCode} label="PIN code" error={fieldError("postalCode")}>
+                  <Input
+                    inputMode="numeric"
+                    autoComplete="postal-code"
+                    pattern={PIN_PATTERN}
+                    maxLength={6}
+                    title="Enter a valid 6-digit PIN code"
+                    value={form.postalCode}
+                    onChange={(e) => update("postalCode", e.target.value)}
+                    onBlur={blur("postalCode")}
+                  />
+                </Field>
+                <Field id="checkout-notes" label="Notes for delivery" optional className="sm:col-span-2">
+                  <Textarea
+                    rows={2}
+                    value={form.notes}
+                    onChange={(e) => update("notes", e.target.value)}
+                    placeholder="Buzzer code, gift message, preferred time…"
+                  />
+                </Field>
+              </div>
+            </fieldset>
+
+            <fieldset className="min-w-0 space-y-3 border-0 border-t border-stone-light p-0 pt-12">
+              <SectionLegend n={2}>Payment</SectionLegend>
+              {onlineEnabled ? (
+                <RadioCard
+                  name="paymentMethod"
+                  checked={paymentMethod === "RAZORPAY"}
+                  onChange={() => update("paymentMethod", "RAZORPAY")}
+                  title="Pay online (UPI, cards, net banking)"
+                  description="Your order is confirmed once payment succeeds."
+                />
+              ) : (
+                <p className="text-sm text-stone-dark">Online payment is temporarily unavailable.</p>
+              )}
+              <RadioCard
+                name="paymentMethod"
+                checked={paymentMethod === "COD"}
+                onChange={() => update("paymentMethod", "COD")}
+                title="Cash on delivery"
+                description="Pay our courier when your bouquet arrives."
+              />
+            </fieldset>
+
+            <div>
+              <Button type="submit" size="lg" disabled={submitting} className="w-full">
+                {submitting ? "Placing order…" : paymentMethod === "RAZORPAY" ? "Place order & pay" : "Place order"}
+              </Button>
+              <ul className="mt-4 space-y-1 text-center text-sm text-stone-dark">
+                {paymentMethod === "RAZORPAY" && <li>Secure payment via Razorpay.</li>}
+                <li>We&apos;ll email your order confirmation.</li>
+              </ul>
+            </div>
+          </form>
+        </div>
+      </Container>
     </main>
   );
 }

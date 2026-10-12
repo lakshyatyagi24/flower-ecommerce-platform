@@ -216,6 +216,14 @@ describe('FormError', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Could not place order');
   });
 
+  it('onItemClick receives the field id and prevents hash navigation', () => {
+    const onItemClick = vi.fn();
+    render(<FormError items={[{ id: 'f-name', message: 'Enter your name' }]} onItemClick={onItemClick} />);
+    const notPrevented = fireEvent.click(screen.getByRole('link', { name: 'Enter your name' }));
+    expect(onItemClick).toHaveBeenCalledWith('f-name');
+    expect(notPrevented).toBe(false);
+  });
+
   it('renders nothing when there is nothing to say', () => {
     const { container } = render(<FormError items={[]} />);
     expect(container).toBeEmptyDOMElement();
