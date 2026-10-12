@@ -19,7 +19,13 @@ type Field = {
   placeholder?: string;
   hint?: string;
   rows?: number;
+  maxLength?: number;
 };
+
+// Values that look like leftover seed/placeholder text. Mirrors the storefront's isPlaceholderSetting, which
+// hides such values from customers; the admin should replace them before launch.
+const PLACEHOLDER_RE = /example\.com|please update|placeholder|lorem ipsum/i;
+const isPlaceholderValue = (v: string | undefined) => !!v && PLACEHOLDER_RE.test(v);
 type Section = {
   id: string;
   title: string;
@@ -50,6 +56,26 @@ const SECTIONS: Section[] = [
       { key: "social.facebook", label: "Facebook URL", type: "url", placeholder: "https://facebook.com/freshpetalsindia" },
       { key: "social.youtube", label: "YouTube URL", type: "url", placeholder: "https://youtube.com/@freshpetalsindia" },
       { key: "social.pinterest", label: "Pinterest URL", type: "url", placeholder: "https://pinterest.com/freshpetalsindia" },
+    ],
+  },
+  {
+    id: "announcement",
+    title: "Announcement bar",
+    description: "An optional one-line bar shown above the storefront header. Leave the text empty to hide it.",
+    fields: [
+      {
+        key: "homepage.announcement",
+        label: "Announcement text",
+        placeholder: "Short announcement shown above the header (leave empty to hide)",
+        maxLength: 140,
+        hint: "Up to 140 characters. Visitors can dismiss it for the rest of their visit.",
+      },
+      {
+        key: "homepage.announcementHref",
+        label: "Announcement link (optional)",
+        placeholder: "/products",
+        hint: "A page on this site, like /products or /occasions/wedding. External links are ignored. Leave empty for plain text.",
+      },
     ],
   },
   {
@@ -106,7 +132,7 @@ const SECTIONS: Section[] = [
     description: "Short summaries surfaced near checkout and on product pages.",
     fields: [
       { key: "policies.returnsSummary", label: "Returns / replacement", type: "textarea", rows: 3, placeholder: "We will replace or refund any flowers that arrive less than fresh." },
-      { key: "policies.deliverySummary", label: "Delivery promise", type: "textarea", rows: 3, placeholder: "Hand-delivered across Delhi NCR. Same-day for orders before 2 PM." },
+      { key: "policies.deliverySummary", label: "Delivery promise", type: "textarea", rows: 3, placeholder: "Describe how orders are delivered." },
     ],
   },
   {
@@ -203,6 +229,7 @@ export default function SettingsPage() {
                           id={field.key}
                           rows={field.rows ?? 3}
                           placeholder={field.placeholder}
+                          maxLength={field.maxLength}
                           value={settings[field.key] ?? ""}
                           onChange={(e) => set(field.key, e.target.value)}
                           className="mt-1 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -212,11 +239,17 @@ export default function SettingsPage() {
                           id={field.key}
                           type={field.type ?? "text"}
                           placeholder={field.placeholder}
+                          maxLength={field.maxLength}
                           value={settings[field.key] ?? ""}
                           onChange={(e) => set(field.key, e.target.value)}
                         />
                       )}
                       {field.hint && <p className="mt-1 text-xs text-muted-foreground">{field.hint}</p>}
+                      {isPlaceholderValue(settings[field.key]) && (
+                        <p role="alert" className="mt-1 text-xs font-medium text-amber-700">
+                          This looks like placeholder text — replace it before launch.
+                        </p>
+                      )}
                     </div>
                   );
                 })}
