@@ -7,6 +7,23 @@ import { ApiOrder, api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { formatINR } from "@/lib/cart-context";
 import { setTrackEmail } from "@/lib/track-order-session";
+import { payForOrder, type PayHandlers } from "@/lib/razorpay-flow";
+
+function paymentLabel(o: ApiOrder): string {
+  if (o.paymentStatus === "REFUNDED") return "Refunded";
+  if (o.paymentStatus === "PAID") return o.status === "CANCELLED" ? "Paid — refund due" : "Paid";
+  if (o.paymentMethod === "COD") return "Cash on delivery";
+  if (o.status === "CANCELLED") return "Payment not completed";
+  return "Payment pending";
+}
+
+function canPayNow(o: ApiOrder): boolean {
+  return (
+    o.paymentMethod === "RAZORPAY" &&
+    o.status === "PENDING" &&
+    (o.paymentStatus === "UNPAID" || o.paymentStatus === "FAILED")
+  );
+}
 
 export default function MyOrdersPage() {
   const { user, loading: authLoading } = useAuth();
@@ -14,6 +31,8 @@ export default function MyOrdersPage() {
   const [orders, setOrders] = useState<ApiOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tick, setTick] = useState(0);
+  const [payNotes, setPayNotes] = useState<Record<number, string>>({});
 
   useEffect(() => {
     if (authLoading) return;
@@ -37,7 +56,33 @@ export default function MyOrdersPage() {
     return () => {
       cancelled = true;
     };
-  }, [user, authLoading, router]);
+  }, [user, authLoading, router, tick]);
+
+  const setNote = (id: number, msg: string | null) =>
+    setPayNotes((n) => {
+      const next = { ...n };
+      if (msg) next[id] = msg;
+      else delete next[id];
+      return next;
+    });
+
+  const handlersFor = (id: number): PayHandlers => ({
+    onPaid: () => {
+      setNote(id, null);
+      setTick((t) => t + 1);
+    },
+    onRefundDue: () => {
+      setNote(id, null);
+      setTick((t) => t + 1);
+    },
+    onDismiss: () => setNote(id, "Payment not completed. Your order stays reserved for 30 minutes from when it was placed."),
+    onFailure: () => setNote(id, "Payment not completed. Your order stays reserved for 30 minutes from when it was placed."),
+    onVerifyError: (m) => {
+      setNote(id, m);
+      setTick((t) => t + 1);
+    },
+    onError: (m) => setNote(id, m),
+  });
 
   if (authLoading || (!user && !error)) {
     return (
@@ -77,6 +122,7 @@ export default function MyOrdersPage() {
                 <div className="text-right">
                   <div className="text-sm text-slate-600">Status</div>
                   <div className="font-semibold text-olive-green">{o.status}</div>
+                  <div className="text-sm text-slate-700 mt-1">{paymentLabel(o)}</div>
                 </div>
               </div>
               <ul className="mt-4 space-y-1 text-sm text-slate-700">
@@ -107,7 +153,24 @@ export default function MyOrdersPage() {
                     <span>{formatINR(o.total)}</span>
                   </div>
                 </div>
-                <div className="flex sm:justify-end sm:items-end">
+                <div className="flex flex-col gap-2 sm:items-end sm:justify-end">
+                  {canPayNow(o) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNote(o.id, null);
+                        void payForOrder(o.id, handlersFor(o.id));
+                      }}
+                      className="bg-olive-green text-white px-5 py-2 rounded-full font-semibold hover:opacity-95"
+                    >
+                      Pay now
+                    </button>
+                  )}
+                  {payNotes[o.id] && (
+                    <p className="text-sm text-amber-800 sm:text-right" role="status">
+                      {payNotes[o.id]}
+                    </p>
+                  )}
                   <Link
                     href={`/track-order/results?orderId=${o.id}`}
                     onClick={() => setTrackEmail(o.customerEmail || user?.email || "")}

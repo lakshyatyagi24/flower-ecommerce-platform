@@ -1,19 +1,24 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { api } from "@/lib/api";
+import { ApiError, api } from "@/lib/api";
+import { payForOrder, type PayHandlers } from "@/lib/razorpay-flow";
 import { useApi } from "@/lib/use-api";
 import { safeRedirect } from "@/lib/safe-redirect";
 import { formatINR } from "@/lib/cart-context";
 import ErrorState from "@/components/ui/ErrorState";
 
-function OrderSummary({ orderId }: { orderId: number }) {
-  const { data: order, error, loading, reload } = useApi(() => api.getMyOrder(orderId), [orderId]);
+const RESERVED_NOTE = "Your order is reserved for 30 minutes from when it was placed. After that it is cancelled automatically.";
 
-  if (loading) {
+function OrderSummary({ orderId, email }: { orderId: number; email: string }) {
+  const { data: order, error, loading, reload } = useApi(() => api.getMyOrder(orderId), [orderId]);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  if (loading && !order) {
     return <div className="mt-6 animate-pulse h-24 bg-slate-100 rounded" aria-busy="true" />;
   }
   if (error || !order) {
@@ -25,11 +30,130 @@ function OrderSummary({ orderId }: { orderId: number }) {
       />
     );
   }
-  return (
-    <div className="mt-6 text-left text-sm text-slate-700">
+
+  const online = order.paymentMethod === "RAZORPAY";
+  const unpaid = order.paymentStatus === "UNPAID" || order.paymentStatus === "FAILED";
+  const cancelled = order.status === "CANCELLED";
+  const paid = order.paymentStatus === "PAID";
+  const pending = online && order.status === "PENDING" && unpaid;
+
+  const handlers: PayHandlers = {
+    onPaid: () => reload(),
+    onRefundDue: () => reload(),
+    onDismiss: () => setNotice("Payment not completed. " + RESERVED_NOTE),
+    onFailure: () => setNotice("Payment not completed. " + RESERVED_NOTE),
+    onVerifyError: (m) => {
+      setNotice(m);
+      reload();
+    },
+    onError: (m) => setNotice(m),
+  };
+
+  const switchToCod = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await api.setOrderPaymentMethod(order.id, email);
+      setNotice(null);
+      reload();
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        setNotice("This order can no longer be switched.");
+        reload();
+      } else {
+        setNotice(err instanceof Error && err.message ? err.message : "Could not switch to cash on delivery");
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  let heading: string;
+  let body: React.ReactNode;
+  if (cancelled && paid) {
+    heading = "Order expired — refund due";
+    body = (
+      <div className="mt-2" role="status">
+        <p>
+          Your payment was received after the order expired. We will refund it — contact us if you don&apos;t hear from
+          us in 3 working days.
+        </p>
+        <p className="mt-2">
+          <Link href="/contact" className="underline underline-offset-4 text-olive-green">
+            Contact us
+          </Link>
+        </p>
+      </div>
+    );
+  } else if (cancelled) {
+    heading = "Order expired";
+    body = (
+      <div className="mt-2" role="status">
+        <p>This order expired because payment was not completed. Nothing was charged.</p>
+        <p className="mt-2">
+          <Link href="/products" className="underline underline-offset-4 text-olive-green">
+            Browse products
+          </Link>
+        </p>
+      </div>
+    );
+  } else if (pending) {
+    heading = "Payment pending";
+    body = (
+      <div className="mt-2">
+        <p>Your order #{order.id} is waiting for payment. {RESERVED_NOTE}</p>
+        <div className="mt-4 flex flex-col sm:flex-row gap-3">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              setNotice(null);
+              void payForOrder(order.id, handlers);
+            }}
+            className="bg-olive-green text-white px-6 py-3 rounded-full font-semibold disabled:opacity-50"
+          >
+            Pay now
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={switchToCod}
+            className="px-6 py-3 rounded-full font-semibold border border-olive-green text-olive-green disabled:opacity-50"
+          >
+            Switch to cash on delivery
+          </button>
+        </div>
+      </div>
+    );
+  } else if (online && paid) {
+    heading = "Payment received";
+    body = (
       <p className="mt-2">
         Your order #{order.id} has been confirmed. We&apos;ll be in touch shortly with delivery details.
       </p>
+    );
+  } else if (!online) {
+    heading = "Order placed — pay on delivery";
+    body = (
+      <p className="mt-2">
+        Your order #{order.id} has been confirmed. We&apos;ll be in touch shortly with
+        delivery details.
+      </p>
+    );
+  } else {
+    heading = "Order received";
+    body = <p className="mt-2">Your order #{order.id} is being processed.</p>;
+  }
+
+  return (
+    <div className="mt-6 text-left text-sm text-slate-700">
+      <h2 className="text-xl font-semibold text-slate-900">{heading}</h2>
+      {body}
+      {notice && (
+        <div className="mt-3 px-4 py-3 rounded bg-amber-50 text-amber-800" role="status">
+          {notice}
+        </div>
+      )}
       <ul className="mt-4 space-y-1">
         {order.items.map((it) => (
           <li key={it.id} className="flex justify-between gap-4">
@@ -70,9 +194,9 @@ function CheckoutSuccessView() {
     <main className="section-shell mt-12 mb-16 text-center">
       <div className="mx-auto max-w-xl section-card p-10">
         <div className="text-5xl mb-4">🌸</div>
-        <h1 className="text-3xl font-semibold text-slate-900">Thank you for your order!</h1>
+        <h1 className="text-3xl font-semibold text-slate-900">Your order</h1>
         {orderId ? (
-          <OrderSummary orderId={orderId} />
+          <OrderSummary orderId={orderId} email={user.email} />
         ) : (
           <ErrorState
             message="We couldn't find that order."
