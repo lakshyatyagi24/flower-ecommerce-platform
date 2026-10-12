@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import Button from "@/components/ui/Button";
 import type { PayController } from "@/lib/use-pay-for-order";
 
 /** Notice + Pay now / Switch to COD (with inline confirm) / Check status buttons. */
@@ -20,14 +21,16 @@ export default function PaymentActions({
   const { notice, showCheck, busy, confirming, switched } = pay;
   const noticeBox = notice && (
     <div
-      className="mt-4 px-4 py-3 rounded bg-amber-50 text-amber-800 text-sm"
+      className={`mt-6 border px-4 py-3 text-sm leading-relaxed text-charcoal ${
+        notice.kind === "alert" ? "border-danger" : "border-stone-light"
+      }`}
       role={notice.kind === "alert" ? "alert" : "status"}
     >
       {notice.text}
       {notice.link && (
         <>
           {" "}
-          <Link href={notice.link.href} className="font-semibold underline underline-offset-4">
+          <Link href={notice.link.href} className="underline underline-offset-4 hover:text-moss">
             {notice.link.label}
           </Link>
         </>
@@ -39,53 +42,33 @@ export default function PaymentActions({
   return (
     <div>
       {noticeBox}
-      <div className="mt-4 flex flex-col sm:flex-row gap-3">
+      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         {allowPay && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void pay.payNow(orderId)}
-            className="bg-olive-green text-white px-6 py-3 rounded-full font-semibold disabled:opacity-50"
-          >
+          <Button type="button" disabled={busy} onClick={() => void pay.payNow(orderId)} className="w-full sm:w-auto">
             Pay now
-          </button>
+          </Button>
         )}
         {allowSwitch && !confirming && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={pay.askSwitch}
-            className="px-6 py-3 rounded-full font-semibold border border-olive-green text-olive-green disabled:opacity-50"
-          >
+          <Button type="button" variant="outline" disabled={busy} onClick={pay.askSwitch} className="w-full sm:w-auto">
             Switch to cash on delivery
-          </button>
+          </Button>
         )}
         {showCheck && (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => void pay.checkStatus(orderId)}
-            className="px-6 py-3 rounded-full font-semibold underline underline-offset-4 disabled:opacity-50"
-          >
+          <Button type="button" variant="ghost" disabled={busy} onClick={() => void pay.checkStatus(orderId)}>
             Check status
-          </button>
+          </Button>
         )}
       </div>
       {allowSwitch && confirming && (
-        <div className="mt-4 px-4 py-3 rounded border border-olive-green/30 text-sm text-slate-800">
+        <div className="mt-6 border border-charcoal px-4 py-4 text-sm text-charcoal">
           <p>Switch to cash on delivery? Only do this if you have not paid.</p>
-          <div className="mt-3 flex gap-3">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void pay.confirmSwitch(orderId)}
-              className="bg-olive-green text-white px-4 py-2 rounded-full font-semibold disabled:opacity-50"
-            >
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Button type="button" disabled={busy} onClick={() => void pay.confirmSwitch(orderId)} className="w-full sm:w-auto">
               Yes, switch
-            </button>
-            <button type="button" onClick={pay.cancelSwitch} className="underline underline-offset-4">
+            </Button>
+            <Button type="button" variant="ghost" onClick={pay.cancelSwitch}>
               Keep online payment
-            </button>
+            </Button>
           </div>
         </div>
       )}

@@ -11,6 +11,14 @@ import { useApi } from "@/lib/use-api";
 import { safeRedirect } from "@/lib/safe-redirect";
 import { formatINR } from "@/lib/cart-context";
 import ErrorState from "@/components/ui/ErrorState";
+import Container from "@/components/ui/Container";
+import Button from "@/components/ui/Button";
+import Skeleton from "@/components/ui/Skeleton";
+import Image from "next/image";
+import { productImage } from "@/lib/product-image";
+import { paymentLine } from "@/lib/order-labels";
+
+const textLink = "underline underline-offset-4 decoration-stone hover:decoration-charcoal";
 
 const RESERVED_NOTE = "Your order is reserved for 30 minutes from when it was placed. After that it is cancelled automatically.";
 
@@ -24,7 +32,7 @@ function OrderSummary({ orderId }: { orderId: number }) {
   const payEnabled = paymentConfig?.enabled !== false;
 
   if (loading && !order) {
-    return <div className="mt-6 animate-pulse h-24 bg-slate-100 rounded" aria-busy="true" />;
+    return <Skeleton className="mt-8 h-40" />;
   }
   if (error || !order) {
     return (
@@ -47,13 +55,13 @@ function OrderSummary({ orderId }: { orderId: number }) {
   if (cancelled && paid) {
     heading = "Order expired — refund due";
     body = (
-      <div className="mt-2" role="status">
+      <div className="mt-3" role="status">
         <p>
           Your payment was received after the order expired. We will refund it — contact us if you don&apos;t hear from
           us in 3 working days.
         </p>
-        <p className="mt-2">
-          <Link href="/contact" className="underline underline-offset-4 text-olive-green">
+        <p className="mt-3">
+          <Link href="/contact" className={textLink}>
             Contact us
           </Link>
         </p>
@@ -62,10 +70,10 @@ function OrderSummary({ orderId }: { orderId: number }) {
   } else if (cancelled) {
     heading = expiredKindOf(order) === "unpaid" ? "Order expired" : "Order cancelled";
     body = (
-      <div className="mt-2" role="status">
+      <div className="mt-3" role="status">
         <p>{EXPIRED_COPY[expiredKindOf(order)]}</p>
-        <p className="mt-2">
-          <Link href="/products" className="underline underline-offset-4 text-olive-green">
+        <p className="mt-3">
+          <Link href="/products" className={textLink}>
             Browse products
           </Link>
         </p>
@@ -74,7 +82,7 @@ function OrderSummary({ orderId }: { orderId: number }) {
   } else if (pending) {
     heading = pay.switched ? "Refund due" : "Payment pending";
     body = (
-      <div className="mt-2">
+      <div className="mt-3">
         {!pay.switched && <p>Your order #{order.id} is waiting for payment. {RESERVED_NOTE}</p>}
         <PaymentActions pay={pay} orderId={order.id} allowPay={payEnabled} />
       </div>
@@ -82,39 +90,70 @@ function OrderSummary({ orderId }: { orderId: number }) {
   } else if (online && paid) {
     heading = "Payment received";
     body = (
-      <p className="mt-2">
+      <p className="mt-3">
         Your order #{order.id} has been confirmed. We&apos;ll be in touch shortly with delivery details.
       </p>
     );
   } else if (!online) {
     heading = "Order placed — pay on delivery";
     body = (
-      <p className="mt-2">
+      <p className="mt-3">
         Your order #{order.id} has been confirmed. We&apos;ll be in touch shortly with
         delivery details.
       </p>
     );
   } else {
     heading = "Order received";
-    body = <p className="mt-2">Your order #{order.id} is being processed.</p>;
+    body = <p className="mt-3">Your order #{order.id} is being processed.</p>;
   }
 
+  const hasAddress = Boolean(order.shippingAddress || order.city || order.postalCode);
+  const cityLine = [order.city, order.postalCode].filter(Boolean).join(order.city && order.postalCode ? ", " : "");
+
   return (
-    <div className="mt-6 text-left text-sm text-slate-700">
-      <h2 className="text-xl font-semibold text-slate-900">{heading}</h2>
+    <div className="mt-10 border-t border-stone-light pt-10 text-base leading-relaxed text-stone-dark">
+      <h2 className="font-display text-3xl text-charcoal md:text-4xl">{heading}</h2>
       {body}
-      <ul className="mt-4 space-y-1">
+
+      <dl className="mt-10 grid grid-cols-1 gap-8 border-t border-stone-light pt-8 text-sm sm:grid-cols-2">
+        <div>
+          <dt className="text-xs font-medium uppercase tracking-[0.16em] text-stone-dark">Order number</dt>
+          <dd className="mt-2 text-base text-charcoal">#{order.id}</dd>
+        </div>
+        <div>
+          <dt className="text-xs font-medium uppercase tracking-[0.16em] text-stone-dark">Payment</dt>
+          <dd className="mt-2 text-base text-charcoal">{paymentLine(order)}</dd>
+        </div>
+        {hasAddress && (
+          <div className="sm:col-span-2">
+            <dt className="text-xs font-medium uppercase tracking-[0.16em] text-stone-dark">Delivering to</dt>
+            <dd className="mt-2 text-base leading-relaxed text-charcoal">
+              {order.customerName && <span className="block">{order.customerName}</span>}
+              {order.shippingAddress && <span className="block whitespace-pre-line">{order.shippingAddress}</span>}
+              {cityLine && <span className="block">{cityLine}</span>}
+            </dd>
+          </div>
+        )}
+      </dl>
+
+      <ul className="mt-10 divide-y divide-stone-light border-y border-stone-light">
         {order.items.map((it) => (
-          <li key={it.id} className="flex justify-between gap-4">
-            <span>
+          <li key={it.id} className="flex items-center gap-4 py-4">
+            <div className="relative aspect-[4/5] w-12 shrink-0 overflow-hidden rounded-sm bg-ivory-deep">
+              <Image src={productImage(it.product)} alt="" fill sizes="48px" className="object-cover" />
+            </div>
+            <span className="min-w-0 flex-1 text-sm text-charcoal">
               {it.productName} × {it.quantity}
             </span>
+            {typeof it.unitPrice === "number" && (
+              <span className="text-sm text-charcoal">{formatINR(it.unitPrice * it.quantity)}</span>
+            )}
           </li>
         ))}
       </ul>
-      <div className="mt-4 pt-3 border-t border-olive-green/10 flex justify-between font-semibold text-slate-900">
-        <span>Total</span>
-        <span>{formatINR(order.total)}</span>
+      <div className="mt-6 flex items-baseline justify-between text-charcoal">
+        <span className="text-sm uppercase tracking-[0.12em]">Total</span>
+        <span className="font-display text-2xl">{formatINR(order.total)}</span>
       </div>
     </div>
   );
@@ -136,38 +175,53 @@ function CheckoutSuccessView() {
   }, [authLoading, user, orderId, router]);
 
   if (authLoading || !user) {
-    return <main className="section-shell mt-12 mb-16">Loading…</main>;
+    return (
+      <main>
+        <Container className="py-16" aria-busy="true">
+          <Skeleton className="h-10 w-1/3" />
+        </Container>
+      </main>
+    );
   }
 
   return (
-    <main className="section-shell mt-12 mb-16 text-center">
-      <div className="mx-auto max-w-xl section-card p-10">
-        <div className="text-5xl mb-4">🌸</div>
-        <h1 className="text-3xl font-semibold text-slate-900">Your order</h1>
-        {orderId ? (
-          <OrderSummary orderId={orderId} />
-        ) : (
-          <ErrorState
-            message="We couldn't find that order."
-            link={{ href: "/account/orders", label: "View my orders" }}
-          />
-        )}
-        <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
-          <Link href="/account/orders" className="bg-olive-green text-white px-6 py-3 rounded-full font-semibold hover:opacity-95">
-            View my orders
-          </Link>
-          <Link href="/products" className="text-olive-green font-semibold underline-offset-4 hover:underline self-center">
-            Continue shopping
-          </Link>
+    <main>
+      <Container className="py-12 lg:py-20">
+        <div className="mx-auto max-w-2xl">
+          <h1 className="type-h1">Your order</h1>
+          {orderId ? (
+            <OrderSummary orderId={orderId} />
+          ) : (
+            <ErrorState
+              message="We couldn't find that order."
+              link={{ href: "/account/orders", label: "View my orders" }}
+            />
+          )}
+          <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Button href="/account/orders" className="w-full sm:w-auto">
+              View my orders
+            </Button>
+            <Button href="/products" variant="ghost">
+              Continue shopping
+            </Button>
+          </div>
         </div>
-      </div>
+      </Container>
     </main>
   );
 }
 
 export default function CheckoutSuccessPage() {
   return (
-    <Suspense fallback={<main className="section-shell mt-12 mb-16">Loading…</main>}>
+    <Suspense
+      fallback={
+        <main>
+          <Container className="py-16" aria-busy="true">
+            <Skeleton className="h-10 w-1/3" />
+          </Container>
+        </main>
+      }
+    >
       <CheckoutSuccessView />
     </Suspense>
   );
