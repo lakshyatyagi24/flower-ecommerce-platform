@@ -12,7 +12,7 @@ import ProductGrid from "@/components/product/ProductGrid";
 import Stars from "@/components/product/Stars";
 import ProductReviews from "@/components/ProductReviews";
 import { getProduct, getSettings, listProducts } from "@/lib/server-api";
-import { absoluteUrl, breadcrumbJsonLd, metaDescription, productJsonLd } from "@/lib/seo";
+import { breadcrumbJsonLd, metaDescription, productJsonLd } from "@/lib/seo";
 import { leadText, splitDescription } from "@/lib/description";
 import { careCopy, uspsFromSettings } from "@/lib/product-helpers";
 import { productImage } from "@/lib/product-image";
@@ -42,13 +42,13 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     metaDescription(leadText(product.description)) ||
     `Order ${product.name} online from Fresh Petals India. Farm-fresh flowers, delivered fresh.`;
   const path = `/products/${product.slug}`;
-  const image = absoluteUrl(productImage(product));
   return {
     title,
     description,
     alternates: { canonical: path },
-    openGraph: { title, description, url: path, type: "website", images: [{ url: image, alt: product.name }] },
-    twitter: { card: "summary_large_image", title, description, images: [image] },
+    // og:image / twitter:image come from the file-based opengraph-image / twitter-image routes.
+    openGraph: { title, description, url: path, type: "website" },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 

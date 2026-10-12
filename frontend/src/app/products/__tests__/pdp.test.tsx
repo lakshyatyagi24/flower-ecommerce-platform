@@ -134,12 +134,14 @@ describe('product detail page', () => {
 describe('generateMetadata', () => {
   beforeEach(() => getProduct.mockReset().mockResolvedValue(product));
 
-  it('builds title, description, canonical, og image and twitter card', async () => {
+  it('builds title, description, canonical and twitter card (no explicit images)', async () => {
     const m = await generateMetadata({ params: { slug: 'red-rose' } });
     expect(m.title).toBe('Red Rose — Fresh Cut Flowers');
     expect(m.description).toBe('First paragraph.');
     expect(m.alternates?.canonical).toBe('/products/red-rose');
-    expect(JSON.stringify(m.openGraph)).toContain('https://freshpetalsindia.com/images/placeholder-bloom.jpg');
+    // Images come from the file-based opengraph-image/twitter-image routes, not explicit metadata.
+    expect((m.openGraph as { images?: unknown }).images).toBeUndefined();
+    expect((m.twitter as { images?: unknown }).images).toBeUndefined();
     expect((m.twitter as { card: string }).card).toBe('summary_large_image');
   });
 
