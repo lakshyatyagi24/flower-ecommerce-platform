@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "cross-env PORT=3000 next start",
     "lint": "next lint",
-    "test": "vitest"
+    "test": "vitest",
+    "lint:colours": "node scripts/check-colours.mjs"
   },
   "overrides": {
     "@types/react": "^18",
