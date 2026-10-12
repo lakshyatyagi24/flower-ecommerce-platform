@@ -74,6 +74,15 @@ describe('product detail page', () => {
     expect(container.textContent).toContain('order early in the day');
   });
 
+  it('skips label lines when choosing the lead paragraph and renders them as headings in Details', async () => {
+    getProduct.mockResolvedValue({ ...product, description: 'What you get\n\nA bunch of twelve fresh roses.\n\nSize it right\n\nFits a medium vase.' });
+    const { container } = render(await ProductPage({ params: { slug: 'red-rose' } }));
+    const lead = container.querySelector('h1')!.parentElement!.querySelector('p.mt-6')!;
+    expect(lead.textContent).toBe('A bunch of twelve fresh roses.');
+    expect(screen.getByRole('heading', { level: 3, name: 'What you get' })).toBeTruthy();
+    expect(screen.getByText('Fits a medium vase.')).toBeTruthy();
+  });
+
   it('shows Enquire for enquiry products', async () => {
     getProduct.mockResolvedValue({ ...product, saleMode: 'ENQUIRY' });
     render(await ProductPage({ params: { slug: 'red-rose' } }));
@@ -106,11 +115,11 @@ describe('generateMetadata', () => {
     expect((m.twitter as { card: string }).card).toBe('summary_large_image');
   });
 
-  it('is noindex for missing or inactive products', async () => {
+  it('404s (before streaming, so the HTTP status is a real 404) for missing or inactive products', async () => {
     getProduct.mockResolvedValue(null);
-    expect((await generateMetadata({ params: { slug: 'x' } })).robots).toEqual({ index: false });
+    await expect(generateMetadata({ params: { slug: 'x' } })).rejects.toThrow('NEXT_NOT_FOUND');
     getProduct.mockResolvedValue({ ...product, active: false });
-    expect((await generateMetadata({ params: { slug: 'x' } })).title).toBe('Product not found');
+    await expect(generateMetadata({ params: { slug: 'x' } })).rejects.toThrow('NEXT_NOT_FOUND');
   });
 
   it('uses a type-appropriate title suffix', async () => {

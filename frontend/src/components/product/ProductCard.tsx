@@ -6,8 +6,9 @@ import { productImage } from "@/lib/product-image";
 import type { ApiProduct } from "@/lib/api";
 
 // Hidden until hover/focus only on devices that can hover; always visible on touch.
-const H = "[@media(hover:hover)]";
-const REVEAL = `${H}:opacity-0 ${H}:group-hover:opacity-100 ${H}:group-focus-within:opacity-100`;
+// (Literal class names so Tailwind can detect them.)
+const REVEAL =
+  "[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:group-focus-within:opacity-100";
 
 export default function ProductCard({ product, priority = false }: { product: ApiProduct; priority?: boolean }) {
   const href = `/products/${product.slug}`;
@@ -28,7 +29,7 @@ export default function ProductCard({ product, priority = false }: { product: Ap
           />
         </div>
         <div className="mt-3 space-y-1">
-          <h3 className="font-sans text-sm font-normal leading-snug text-charcoal">{product.name}</h3>
+          <h3 className="font-sans! text-sm font-normal leading-snug text-charcoal">{product.name}</h3>
           <p className="flex flex-wrap items-baseline gap-x-3 text-sm">
             {isEnquiry ? <span className="text-stone-dark">On enquiry</span> : <Price amount={product.price} />}
             {outOfStock && <span className="text-xs uppercase tracking-[0.12em] text-stone-dark">Out of stock</span>}

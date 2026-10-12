@@ -30,7 +30,8 @@ const TITLE_SUFFIX: Record<string, string> = {
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const product = await getProduct(params.slug);
   if (!product || product.active === false) {
-    return { title: "Product not found", robots: { index: false } };
+    // Throwing here (before the shell streams) is what makes the HTTP status a real 404.
+    notFound();
   }
   const title = `${product.name} — ${TITLE_SUFFIX[product.productType ?? ""] ?? "Fresh Cut Flowers"}`;
   const description =
@@ -47,12 +48,19 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   };
 }
 
-function splitDescription(text: string | null): { lead: string; rest: string[] } {
-  const parts = (text ?? "")
-    .split(/\n\s*\n|\r?\n/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-  return { lead: parts[0] ?? "", rest: parts.slice(1) };
+type Block = { text: string; heading: boolean };
+
+// Catalogue copy often uses short label lines ("What you get", "Size it right") between paragraphs.
+// Those are headings, never the lead sentence.
+function splitDescription(text: string | null): { lead: string; rest: Block[] } {
+  const blocks: Block[] = (text ?? "")
+    .split(/\r?\n/)
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .map((t) => ({ text: t, heading: t.split(/\s+/).length <= 6 && !/[.!?]$/.test(t) }));
+  const leadIdx = blocks.findIndex((b) => !b.heading);
+  if (leadIdx === -1) return { lead: "", rest: blocks };
+  return { lead: blocks[leadIdx].text, rest: blocks.filter((_, i) => i !== leadIdx) };
 }
 
 function Stars({ value }: { value: number }) {
@@ -226,9 +234,15 @@ export default async function ProductPage({ params }: Params) {
 
             <div className="mt-2">
               <Accordion title="Details" open>
-                {rest.map((para, i) => (
-                  <p key={i}>{para}</p>
-                ))}
+                {rest.map((b, i) =>
+                  b.heading ? (
+                    <h3 key={i} className="pt-2 font-sans! text-[13px] font-medium uppercase tracking-[0.12em] text-charcoal">
+                      {b.text}
+                    </h3>
+                  ) : (
+                    <p key={i}>{b.text}</p>
+                  ),
+                )}
                 <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1">
                   {product.category && (
                     <>

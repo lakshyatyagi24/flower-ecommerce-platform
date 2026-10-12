@@ -9,6 +9,7 @@ import WhatsAppButton from "@/components/WhatsAppButton";
 import { AuthProvider } from "@/lib/auth-context";
 import { CartProvider } from "@/lib/cart-context";
 import { SettingsProvider } from "@/lib/settings-context";
+import { SITE } from "@/lib/seo";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -25,6 +26,7 @@ const cormorant = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE),
   title: {
     default: "Fresh Petals India — Cut Flowers, Plants & Corporate Floral Solutions",
     template: "%s · Fresh Petals India",
