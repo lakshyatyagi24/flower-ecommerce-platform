@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3, Package, ShoppingCart, Users, Loader2, MessageSquare } from "lucide-react";
+import { BarChart3, Package, ShoppingCart, Users, Loader2, MessageSquare, Clock, RotateCcw, AlertTriangle } from "lucide-react";
 import { adminApi, ApiError } from "@/lib/api";
 import { useToast } from "@/components/ui/toast";
 
@@ -12,6 +13,9 @@ interface Stats {
   customerCount: number;
   revenue: number;
   openEnquiries?: number;
+  unpaidOnline?: number;
+  refundsDue?: number;
+  mismatches?: number;
   recentOrders: { id: number; customerName: string | null; total: number; status: string; createdAt: string }[];
 }
 
@@ -21,6 +25,38 @@ function formatINR(amount: number): string {
   } catch {
     return `₹${amount.toFixed(0)}`;
   }
+}
+
+function PaymentCard({
+  title,
+  count,
+  href,
+  icon,
+  hint,
+  urgent,
+}: {
+  title: string;
+  count: number;
+  href: string;
+  icon: React.ReactNode;
+  hint: string;
+  urgent?: boolean;
+}) {
+  const emphasised = !!urgent && count > 0;
+  return (
+    <Link href={href} className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      <Card className={emphasised ? "border-destructive bg-destructive/10" : undefined}>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">{title}</CardTitle>
+          <span className={emphasised ? "text-destructive" : undefined}>{icon}</span>
+        </CardHeader>
+        <CardContent>
+          <div className={emphasised ? "text-2xl font-bold text-destructive" : "text-2xl font-bold"}>{count}</div>
+          <p className="text-xs text-muted-foreground">{hint}</p>
+        </CardContent>
+      </Card>
+    </Link>
+  );
 }
 
 export default function Dashboard() {
@@ -114,6 +150,32 @@ export default function Dashboard() {
             <p className="text-xs text-muted-foreground">Registered accounts</p>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <PaymentCard
+          title="Awaiting payment"
+          count={stats?.unpaidOnline ?? 0}
+          href="/orders?attention=awaiting"
+          icon={<Clock className="h-4 w-4 text-muted-foreground" />}
+          hint="Online orders not paid yet"
+        />
+        <PaymentCard
+          title="Refunds owed"
+          count={stats?.refundsDue ?? 0}
+          href="/orders?attention=refund"
+          icon={<RotateCcw className="h-4 w-4" />}
+          hint="Paid, then cancelled — refund in Razorpay"
+          urgent
+        />
+        <PaymentCard
+          title="Check payments"
+          count={stats?.mismatches ?? 0}
+          href="/orders?attention=mismatch"
+          icon={<AlertTriangle className="h-4 w-4" />}
+          hint="Captured payment needs manual review"
+          urgent
+        />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
