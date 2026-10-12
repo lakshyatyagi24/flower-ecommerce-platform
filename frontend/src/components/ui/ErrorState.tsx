@@ -18,7 +18,7 @@ export default function ErrorState({
         </button>
       )}
       {link && (
-        <Link href={link.href} className="mt-4 inline-block underline underline-offset-4">
+        <Link href={link.href} className={`mt-4 inline-block underline underline-offset-4 ${onRetry ? "ml-6" : ""}`}>
           {link.label}
         </Link>
       )}
