@@ -1,125 +1,97 @@
-"use client";
-import React from "react";
 import Link from "next/link";
-import Logo from "./Logo";
-import { api } from "@/lib/api";
-import { useApi } from "@/lib/use-api";
-import { shownCategories } from "@/lib/categories";
-import {
-  useSettings,
-  whatsappLink,
-  instagramLink,
-  telLink,
-  mailtoLink,
-} from "@/lib/settings-context";
+import Container from "@/components/ui/Container";
+import FooterContact from "@/components/chrome/FooterContact";
+import { OCCASIONS } from "@/lib/occasions";
 
-const Footer: React.FC = () => {
-  const settings = useSettings();
-  // Shop links come from the API so empty categories are not advertised; until it answers (or if it fails) one generic link shows.
-  const { data: apiCategories } = useApi(() => api.listCategories(), []);
-  const shopCategories = apiCategories ? shownCategories(apiCategories).slice(0, 6) : [];
-  const phoneHref = telLink(settings.phone);
-  const emailHref = mailtoLink(settings.email);
-  const waHref = whatsappLink(settings.whatsapp || settings.phone);
-  const igHref = instagramLink(settings.instagram);
-  const fbHref = settings.social.facebook || null;
-  const ytHref = settings.social.youtube || null;
-  const ptHref = settings.social.pinterest || null;
-  const hasContact = !!(phoneHref || emailHref || settings.address);
+// Server component: every link list is static markup, so it is in the server HTML (R15). Only the
+// contact details (settings-driven) are a client island.
+const linkClass =
+  "inline-block py-1.5 text-[15px] text-charcoal transition-colors duration-200 hover:text-moss focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss";
+const headingClass = "font-sans text-xs font-medium uppercase tracking-[0.16em] text-stone-dark";
 
+const HELP = [
+  { href: "/track-order", label: "Track order" },
+  { href: "/faq", label: "FAQ" },
+  { href: "/contact", label: "Contact us" },
+  { href: "/refund-policy", label: "Refund policy" },
+];
+const COMPANY = [
+  { href: "/about", label: "About" },
+  { href: "/privacy", label: "Privacy policy" },
+  { href: "/terms", label: "Terms of service" },
+];
+
+function Column({ title, className = "", children }: { title: string; className?: string; children: React.ReactNode }) {
   return (
-    <footer className="bg-gradient-to-b from-[#f9f5ef] to-[#f2e6d9] border-t border-olive-green/10 text-sm text-gray-700 mt-16">
-      <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
-        <div className="flex flex-col lg:flex-row gap-10 lg:gap-16">
-          <div className="flex-1">
-            <Logo width={150} height={42} />
-            <p className="mt-4 text-gray-700 max-w-md leading-relaxed">
-              Farm-fresh cut flowers sourced daily from the mandi. Bulk supply for corporates, custom bouquets and arrangements on enquiry.
-            </p>
+    <div className={className}>
+      <h2 className={headingClass}>{title}</h2>
+      {children}
+    </div>
+  );
+}
 
-            {hasContact && (
-              <div className="mt-6 p-4 bg-white/70 border border-olive-green/10 rounded-2xl shadow-sm max-w-md">
-                <p className="text-xs font-semibold tracking-[0.16em] uppercase text-olive-green">Customer care</p>
-                {phoneHref && (
-                  <a href={phoneHref} className="mt-2 block text-base font-semibold text-olive-green hover:underline">
-                    {settings.phone}
-                  </a>
-                )}
-                {emailHref && (
-                  <a href={emailHref} className="text-sm text-gray-600 hover:text-olive-green">
-                    {settings.email}
-                  </a>
-                )}
-                {settings.address && (
-                  <p className="mt-3 text-xs uppercase tracking-[0.18em] text-gray-500">{settings.address}</p>
-                )}
-                {settings.delivery.businessHours && (
-                  <p className="mt-2 text-xs text-gray-500">Hours: {settings.delivery.businessHours}</p>
-                )}
-              </div>
-            )}
-          </div>
+export default function Footer() {
+  const year = new Date().getFullYear();
+  return (
+    <footer className="mt-24 border-t border-stone-light bg-ivory">
+      <Container className="py-16 md:py-20">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-12 lg:grid-cols-4 lg:gap-x-10">
+          <Column title="Shop" className="col-span-2 lg:col-span-1">
+            <ul className="mt-5 columns-2 gap-x-6 lg:columns-1">
+              <li>
+                <Link href="/products" className={linkClass}>
+                  All flowers
+                </Link>
+              </li>
+              {OCCASIONS.map((o) => (
+                <li key={o.slug}>
+                  <Link href={`/occasions/${o.slug}`} className={linkClass}>
+                    {o.name}
+                  </Link>
+                </li>
+              ))}
+              <li>
+                <Link href="/corporate" className={linkClass}>
+                  Corporate
+                </Link>
+              </li>
+            </ul>
+          </Column>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-8 flex-none min-w-[300px]">
-            <div>
-              <h4 className="font-semibold mb-3 text-olive-green uppercase tracking-wide text-xs">Shop</h4>
-              <ul className="space-y-2">
-                {shopCategories.length === 0 && (
-                  <li><Link href="/products" className="text-gray-700 hover:text-olive-green">All flowers</Link></li>
-                )}
-                {shopCategories.map((c) => (
-                  <li key={c.id}><Link href={`/collections/${encodeURIComponent(c.slug)}`} className="text-gray-700 hover:text-olive-green">{c.name}</Link></li>
-                ))}
-                <li><Link href="/corporate" className="text-gray-700 hover:text-olive-green">Corporate enquiries</Link></li>
-              </ul>
-            </div>
+          <Column title="Help">
+            <ul className="mt-5">
+              {HELP.map((l) => (
+                <li key={l.href}>
+                  <Link href={l.href} className={linkClass}>
+                    {l.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </Column>
 
-            <div>
-              <h4 className="font-semibold mb-3 text-olive-green uppercase tracking-wide text-xs">Support</h4>
-              <ul className="space-y-2">
-                <li><Link href="/faq" className="text-gray-700 hover:text-olive-green">FAQ</Link></li>
-                <li><Link href="/contact" className="text-gray-700 hover:text-olive-green">Contact us</Link></li>
-                <li><Link href="/track-order" className="text-gray-700 hover:text-olive-green">Track order</Link></li>
-              </ul>
-            </div>
+          <Column title="Company">
+            <ul className="mt-5">
+              {COMPANY.map((l) => (
+                <li key={l.href}>
+                  <Link href={l.href} className={linkClass}>
+                    {l.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </Column>
 
-            <div>
-              <h4 className="font-semibold mb-3 text-olive-green uppercase tracking-wide text-xs">Connect</h4>
-              <ul className="space-y-2">
-                {igHref && (
-                  <li><a href={igHref} className="text-gray-700 hover:text-olive-green" target="_blank" rel="noreferrer">Instagram</a></li>
-                )}
-                {fbHref && (
-                  <li><a href={fbHref} className="text-gray-700 hover:text-olive-green" target="_blank" rel="noreferrer">Facebook</a></li>
-                )}
-                {ytHref && (
-                  <li><a href={ytHref} className="text-gray-700 hover:text-olive-green" target="_blank" rel="noreferrer">YouTube</a></li>
-                )}
-                {ptHref && (
-                  <li><a href={ptHref} className="text-gray-700 hover:text-olive-green" target="_blank" rel="noreferrer">Pinterest</a></li>
-                )}
-                {waHref && (
-                  <li><a href={waHref} className="text-gray-700 hover:text-olive-green" target="_blank" rel="noreferrer">WhatsApp</a></li>
-                )}
-                <li><Link href="/about" className="text-gray-700 hover:text-olive-green">Our story</Link></li>
-              </ul>
-            </div>
-          </div>
+          <Column title="Contact" className="col-span-2 lg:col-span-1">
+            <FooterContact />
+          </Column>
         </div>
 
-        <div className="mt-10 border-t border-olive-green/10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-gray-600 text-sm">&copy; {new Date().getFullYear()} {settings.name} — Crafted with care.</p>
-          <div className="flex items-center gap-4 text-gray-600">
-            <Link href="/privacy" className="hover:text-olive-green">Privacy</Link>
-            <span className="hidden sm:inline">•</span>
-            <Link href="/terms" className="hover:text-olive-green">Terms</Link>
-            <span className="hidden sm:inline">•</span>
-            <Link href="/refund-policy" className="hover:text-olive-green">Refunds</Link>
-          </div>
+        <div className="mt-16 flex flex-col gap-2 border-t border-stone-light pt-6 text-[13px] text-stone-dark sm:flex-row sm:items-center sm:justify-between">
+          <p>© {year} Fresh Petals India</p>
+          <p className="font-display text-lg text-charcoal">Fresh Petals</p>
         </div>
-      </div>
+      </Container>
     </footer>
   );
-};
-
-export default Footer;
+}
