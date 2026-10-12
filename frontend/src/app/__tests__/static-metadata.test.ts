@@ -34,6 +34,8 @@ describe('static route metadata', () => {
       expect(m.description, path).toBeTruthy();
       expect(m.description.length, `${path} description`).toBeLessThanOrEqual(155);
       expect(m.alternates?.canonical, path).toBe(path);
+      expect(m.openGraph?.url, `${path} og url`).toBe(path);
+      expect(m.openGraph?.description, `${path} og description`).toBeTruthy();
       expect(titles.has(title), `dup title ${title}`).toBe(false);
       expect(descs.has(m.description), `dup desc ${path}`).toBe(false);
       titles.add(title);

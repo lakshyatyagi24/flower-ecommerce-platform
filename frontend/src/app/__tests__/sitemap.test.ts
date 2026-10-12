@@ -57,6 +57,25 @@ describe('sitemap', () => {
     expect(listProducts).toHaveBeenCalledTimes(50);
   });
 
+  it('skips (with a warning) slugs that are not URL/XML safe, e.g. containing & or <', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    listProducts.mockResolvedValue(page([prod('ok-slug'), prod('rose&lily'), prod('a<b'), prod('UPPER'), prod('sp ace')], 1, 1));
+    const urls = (await sitemap()).map((e) => e.url);
+    expect(urls).toContain('https://freshpetalsindia.com/products/ok-slug');
+    expect(urls.some((u) => /[&<> ]/.test(u))).toBe(false);
+    expect(urls.filter((u) => u.includes('/products/'))).toHaveLength(1);
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('warns when the 50-page cap is hit', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    listProducts.mockImplementation(async (a: { page: number }) => page([prod(`s${a.page}`.replace(/\d/g, 'x'))], a.page, 9999));
+    await sitemap();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('50'));
+    warn.mockRestore();
+  });
+
   it('de-duplicates URLs', async () => {
     listProducts
       .mockResolvedValueOnce(page([prod('dup'), prod('dup')], 1, 2))

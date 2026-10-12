@@ -4,6 +4,7 @@ export const metadata: Metadata = {
   title: "Order Confirmation",
   description: "Confirmation and payment status for your Fresh Petals India order.",
   alternates: { canonical: "/checkout/success" },
+  openGraph: { title: "Order Confirmation", description: "Confirmation and payment status for your Fresh Petals India order.", url: "/checkout/success", type: "website" },
   robots: { index: false, follow: false },
 };
 

@@ -139,10 +139,18 @@ describe('generateMetadata', () => {
     expect(m.title).toBe('Red Rose — Fresh Cut Flowers');
     expect(m.description).toBe('First paragraph.');
     expect(m.alternates?.canonical).toBe('/products/red-rose');
-    // Images come from the file-based opengraph-image/twitter-image routes, not explicit metadata.
+    // Placeholder-only product: images come from the file-based opengraph-image/twitter-image routes.
     expect((m.openGraph as { images?: unknown }).images).toBeUndefined();
     expect((m.twitter as { images?: unknown }).images).toBeUndefined();
     expect((m.twitter as { card: string }).card).toBe('summary_large_image');
+  });
+
+  it('uses an explicit Cloudinary JPEG 1200x630 for og and twitter when the product has a real photo', async () => {
+    getProduct.mockResolvedValue({ ...product, image: 'https://res.cloudinary.com/demo/image/upload/v1/rose.jpg' });
+    const m = await generateMetadata({ params: { slug: 'red-rose' } });
+    const url = 'https://res.cloudinary.com/demo/image/upload/c_fill,w_1200,h_630,g_auto,f_jpg,q_auto/v1/rose.jpg';
+    expect((m.openGraph as any).images).toEqual([{ url, width: 1200, height: 630, alt: 'Red Rose' }]);
+    expect((m.twitter as any).images).toEqual([url]);
   });
 
   it('404s (before streaming, so the HTTP status is a real 404) for missing or inactive products', async () => {

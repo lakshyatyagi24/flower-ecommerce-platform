@@ -1,66 +1,48 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
-import { cloudinaryOgPhotoUrl, fetchOgPhoto, clampProductName, ogPrice, nameFontSize } from '../og';
+import { describe, it, expect } from 'vitest';
+import { ogPhotoUrl, sanitizeOgText, clampProductName, ogPrice, nameFontSize } from '../og';
 
-afterEach(() => {
-  vi.unstubAllGlobals();
-});
-
-const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0]);
-const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
-const resp = (body: Uint8Array, init: ResponseInit = {}) => new Response(body as unknown as BodyInit, { status: 200, ...init });
-const URL1 = 'https://res.cloudinary.com/d/image/upload/a.jpg';
-
-describe('cloudinaryOgPhotoUrl', () => {
-  it('only accepts https res.cloudinary.com and injects a crop transform', () => {
-    expect(cloudinaryOgPhotoUrl('https://res.cloudinary.com/demo/image/upload/v1/a.jpg')).toBe(
-      'https://res.cloudinary.com/demo/image/upload/f_jpg,c_fill,w_600,h_630/v1/a.jpg',
+describe('ogPhotoUrl', () => {
+  const T = 'c_fill,w_1200,h_630,g_auto,f_jpg,q_auto';
+  it('inserts the crop/JPEG transformation right after /upload/', () => {
+    expect(ogPhotoUrl('https://res.cloudinary.com/demo/image/upload/v1/a.jpg')).toBe(
+      `https://res.cloudinary.com/demo/image/upload/${T}/v1/a.jpg`,
+    );
+    expect(ogPhotoUrl('https://res.cloudinary.com/demo/image/upload/sample.jpg')).toBe(
+      `https://res.cloudinary.com/demo/image/upload/${T}/sample.jpg`,
     );
   });
-  it('rejects placeholders, local paths and other hosts', () => {
-    expect(cloudinaryOgPhotoUrl('/images/placeholder-bloom.jpg')).toBeNull();
-    expect(cloudinaryOgPhotoUrl('https://evil.example/a.jpg')).toBeNull();
-    expect(cloudinaryOgPhotoUrl('http://res.cloudinary.com/a.jpg')).toBeNull();
-    expect(cloudinaryOgPhotoUrl('https://res.cloudinary.com.evil.test/a.jpg')).toBeNull();
-    expect(cloudinaryOgPhotoUrl(null)).toBeNull();
+  it('keeps existing transformations after ours and preserves the query string', () => {
+    expect(ogPhotoUrl('https://res.cloudinary.com/demo/image/upload/w_200/v1/a.jpg?_a=B')).toBe(
+      `https://res.cloudinary.com/demo/image/upload/${T}/w_200/v1/a.jpg?_a=B`,
+    );
+  });
+  it('rejects placeholders, local paths, other hosts, http and non-upload paths', () => {
+    expect(ogPhotoUrl('/images/placeholder-bloom.jpg')).toBeNull();
+    expect(ogPhotoUrl('https://evil.example/image/upload/a.jpg')).toBeNull();
+    expect(ogPhotoUrl('http://res.cloudinary.com/demo/image/upload/a.jpg')).toBeNull();
+    expect(ogPhotoUrl('https://res.cloudinary.com.evil.com/demo/image/upload/a.jpg')).toBeNull();
+    expect(ogPhotoUrl('https://res.cloudinary.com/demo/image/fetch/https://x.test/a.jpg')).toBeNull();
+    expect(ogPhotoUrl('https://res.cloudinary.com/demo/video/upload/a.mp4')).toBeNull();
+    expect(ogPhotoUrl('https://user:pw@res.cloudinary.com/demo/image/upload/a.jpg')).toBeNull();
+    expect(ogPhotoUrl('')).toBeNull();
+    expect(ogPhotoUrl(null)).toBeNull();
+    expect(ogPhotoUrl(undefined)).toBeNull();
+    expect(ogPhotoUrl('not a url')).toBeNull();
   });
 });
 
-describe('fetchOgPhoto', () => {
-  it('returns a data URI for a jpeg/png response', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(resp(JPEG)));
-    expect(await fetchOgPhoto(URL1)).toMatch(/^data:image\/jpeg;base64,/);
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(resp(PNG)));
-    expect(await fetchOgPhoto(URL1)).toMatch(/^data:image\/png;base64,/);
-  });
-  it('returns null for non-Cloudinary input without fetching', async () => {
-    const f = vi.fn();
-    vi.stubGlobal('fetch', f);
-    expect(await fetchOgPhoto('/images/placeholder-bloom.jpg')).toBeNull();
-    expect(f).not.toHaveBeenCalled();
-  });
-  it('returns null on HTTP error, network error, unsupported bytes and oversize', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(resp(JPEG, { status: 404 })));
-    expect(await fetchOgPhoto(URL1)).toBeNull();
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('boom')));
-    expect(await fetchOgPhoto(URL1)).toBeNull();
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(resp(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]))));
-    expect(await fetchOgPhoto(URL1)).toBeNull();
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(resp(JPEG, { headers: { 'content-length': String(10 * 1024 * 1024) } })));
-    expect(await fetchOgPhoto(URL1)).toBeNull();
-    const big = new Uint8Array(3 * 1024 * 1024);
-    big.set(JPEG);
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(resp(big)));
-    expect(await fetchOgPhoto(URL1)).toBeNull();
-  });
-  it('passes an abort signal (timeout)', async () => {
-    const f = vi.fn().mockResolvedValue(resp(JPEG));
-    vi.stubGlobal('fetch', f);
-    await fetchOgPhoto(URL1);
-    expect(f.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal);
+describe('sanitizeOgText', () => {
+  it('drops characters outside the bundled font (emoji, Devanagari) and collapses whitespace', () => {
+    expect(sanitizeOgText('Rose \u{1F339}  Bouquet')).toBe('Rose Bouquet');
+    expect(sanitizeOgText('गुलाब Rose')).toBe('Rose');
+    expect(sanitizeOgText('Café — ₹499')).toBe('Café — ₹499');
   });
 });
 
 describe('clampProductName / ogPrice', () => {
+  it('strips unsupported glyphs from names', () => {
+    expect(clampProductName('Rose \u{1F339} Bouquet')).toBe('Rose Bouquet');
+  });
   it('leaves short names, truncates very long ones with an ellipsis', () => {
     expect(clampProductName('Red Rose')).toBe('Red Rose');
     const long = 'Premium Long Stem Imported Red Roses Luxury Gift Bouquet With Seasonal Fillers And Greens Extra Large';
@@ -85,7 +67,7 @@ describe('nameFontSize', () => {
   });
   it('shrinks so one very long word still fits the column, never below 36', () => {
     expect(nameFontSize('Chrysanthemums')).toBeLessThan(96);
-    expect(nameFontSize("Chrysanthemums") * 14 * 0.58).toBeLessThanOrEqual(468);
+    expect(nameFontSize('Chrysanthemums') * 14 * 0.58).toBeLessThanOrEqual(468);
     expect(nameFontSize('A'.repeat(60))).toBe(36);
   });
 });

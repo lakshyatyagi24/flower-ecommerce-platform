@@ -16,6 +16,7 @@ import { breadcrumbJsonLd, metaDescription, productJsonLd } from "@/lib/seo";
 import { leadText, splitDescription } from "@/lib/description";
 import { careCopy, uspsFromSettings } from "@/lib/product-helpers";
 import { productImage } from "@/lib/product-image";
+import { ogPhotoUrl } from "@/lib/og";
 import type { ApiProduct } from "@/lib/api";
 
 // R1: never prerender at build time (the API is not reachable during `next build`).
@@ -42,13 +43,21 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     metaDescription(leadText(product.description)) ||
     `Order ${product.name} online from Fresh Petals India. Farm-fresh flowers, delivered fresh.`;
   const path = `/products/${product.slug}`;
+  // Real photo: explicit 1200x630 Cloudinary JPEG (small enough for WhatsApp/Facebook).
+  // No real photo: no explicit images, so the file-based generated text card is used.
+  const photo = ogPhotoUrl(product.image);
   return {
     title,
     description,
     alternates: { canonical: path },
-    // og:image / twitter:image come from the file-based opengraph-image / twitter-image routes.
-    openGraph: { title, description, url: path, type: "website" },
-    twitter: { card: "summary_large_image", title, description },
+    openGraph: {
+      title,
+      description,
+      url: path,
+      type: "website",
+      ...(photo ? { images: [{ url: photo, width: 1200, height: 630, alt: product.name }] } : {}),
+    },
+    twitter: { card: "summary_large_image", title, description, ...(photo ? { images: [photo] } : {}) },
   };
 }
 

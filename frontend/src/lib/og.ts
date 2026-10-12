@@ -4,16 +4,16 @@ import { formatINR } from './format';
 export const OG_SIZE = { width: 1200, height: 630 } as const;
 export const OG_CONTENT_TYPE = 'image/png';
 
-const PHOTO_TIMEOUT_MS = 2500;
-const PHOTO_MAX_BYTES = 2 * 1024 * 1024;
 const NAME_MAX = 80;
+const PHOTO_TRANSFORM = 'c_fill,w_1200,h_630,g_auto,f_jpg,q_auto';
 
 /**
- * Cloudinary delivery URL for the left half of the card (600x630, cropped, forced to JPEG
- * because satori cannot decode webp/avif). Returns null for anything that is not an https
- * res.cloudinary.com URL, so nothing else is ever fetched server-side.
+ * Social-preview photo for a product that has a REAL Cloudinary image: a 1200x630 JPEG served by
+ * Cloudinary itself (small, so WhatsApp/Facebook accept it). Returns null for anything that is not
+ * an https res.cloudinary.com image/upload URL (placeholders, other hosts, fetch/remote URLs...).
+ * The result is only ever used as a URL in metadata or a redirect; this server never fetches it.
  */
-export function cloudinaryOgPhotoUrl(src: string | null | undefined): string | null {
+export function ogPhotoUrl(src: string | null | undefined): string | null {
   if (!src) return null;
   let u: URL;
   try {
@@ -21,42 +21,28 @@ export function cloudinaryOgPhotoUrl(src: string | null | undefined): string | n
   } catch {
     return null;
   }
-  if (u.protocol !== 'https:' || u.hostname !== 'res.cloudinary.com') return null;
-  const marker = '/upload/';
-  const i = u.pathname.indexOf(marker);
-  if (i === -1) return u.toString();
-  u.pathname = `${u.pathname.slice(0, i + marker.length)}f_jpg,c_fill,w_600,h_630/${u.pathname.slice(i + marker.length)}`;
+  if (u.protocol !== 'https:' || u.hostname !== 'res.cloudinary.com' || u.username || u.password || u.port) return null;
+  const m = u.pathname.match(/^(\/[^/]+\/image\/upload\/)(.+)$/);
+  if (!m) return null;
+  u.pathname = `${m[1]}${PHOTO_TRANSFORM}/${m[2]}`;
   return u.toString();
 }
 
-function sniff(bytes: Uint8Array): 'image/jpeg' | 'image/png' | null {
-  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg';
-  if (bytes.length >= 4 && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47) return 'image/png';
-  return null;
-}
-
-/** Fetches the product photo as a data URI, or null on ANY problem (host, timeout, size, type). */
-export async function fetchOgPhoto(src: string | null | undefined): Promise<string | null> {
-  const url = cloudinaryOgPhotoUrl(src);
-  if (!url) return null;
-  try {
-    const res = await fetch(url, { signal: AbortSignal.timeout(PHOTO_TIMEOUT_MS) });
-    if (!res.ok) return null;
-    const declared = Number(res.headers.get('content-length'));
-    if (Number.isFinite(declared) && declared > PHOTO_MAX_BYTES) return null;
-    const buf = new Uint8Array(await res.arrayBuffer());
-    if (buf.byteLength > PHOTO_MAX_BYTES) return null;
-    const mime = sniff(buf);
-    if (!mime) return null;
-    return `data:${mime};base64,${Buffer.from(buf).toString('base64')}`;
-  } catch {
-    return null;
-  }
+/**
+ * The bundled font covers Basic Latin, Latin-1, a few typographic marks and the rupee sign.
+ * Anything else (emoji, Devanagari...) would make @vercel/og fetch fallback fonts from Google/jsDelivr
+ * at request time, so it is removed up front.
+ */
+export function sanitizeOgText(text: string): string {
+  return text
+    .replace(/[^ -~ -ÿ–—‘-”…₹]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 /** Keeps very long names from overflowing the card; cuts on a word boundary with an ellipsis. */
 export function clampProductName(name: string): string {
-  const clean = name.replace(/\s+/g, ' ').trim();
+  const clean = sanitizeOgText(name);
   if (clean.length <= NAME_MAX) return clean;
   const room = clean.slice(0, NAME_MAX - 1);
   const sp = room.lastIndexOf(' ');

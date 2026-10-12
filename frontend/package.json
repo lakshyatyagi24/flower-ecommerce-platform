@@ -8,7 +8,9 @@
     "start": "cross-env PORT=3000 next start",
     "lint": "next lint",
     "test": "vitest",
-    "lint:colours": "node scripts/check-colours.mjs"
+    "lint:colours": "node scripts/check-colours.mjs",
+    "patch:og": "node scripts/patch-og-windows.mjs",
+    "render:og": "node scripts/render-og-default.mjs"
   },
   "overrides": {
     "@types/react": "^18",

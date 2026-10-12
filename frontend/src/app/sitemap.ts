@@ -23,6 +23,9 @@ export function limitEntries<T>(entries: T[]): T[] {
   return entries.slice(0, MAX_URLS);
 }
 
+// Same shape the backend now enforces with slugify(); anything else could break the XML or the URL.
+const SAFE_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
 function validDate(v: unknown): Date | undefined {
   if (typeof v !== 'string' && !(v instanceof Date)) return undefined;
   const d = new Date(v);
@@ -47,13 +50,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     pages = res.pages;
     for (const p of res.items) {
       if (p.active === false) continue;
-      const url = absoluteUrl(`/products/${p.slug}`);
+      if (!SAFE_SLUG.test(p.slug)) {
+        console.warn(`sitemap: skipping product with unsafe slug ${JSON.stringify(p.slug)}`);
+        continue;
+      }
+      const url = absoluteUrl(`/products/${encodeURIComponent(p.slug)}`);
       if (entries.has(url)) continue;
       const lastModified = validDate((p as { updatedAt?: unknown }).updatedAt);
       entries.set(url, lastModified ? { url, lastModified } : { url });
     }
     page += 1;
   } while (page <= pages && page <= MAX_PAGES);
+  if (page <= pages) {
+    console.warn(`sitemap: stopped at the ${MAX_PAGES}-page cap; ${pages} pages exist, later products are not listed`);
+  }
 
   return limitEntries([...entries.values()]);
 }

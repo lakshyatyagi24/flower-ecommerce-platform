@@ -27,7 +27,7 @@ export function BrandCard(): ReactElement {
           border: `2px solid ${BRAND.stoneLight}`,
         }}
       >
-        <div style={{ fontSize: 168, lineHeight: 1, color: BRAND.charcoal, letterSpacing: -2, display: 'flex' }}>Fresh Petals</div>
+        <div style={{ fontSize: 124, lineHeight: 1, color: BRAND.charcoal, letterSpacing: -1, display: 'flex' }}>Fresh Petals India</div>
         <div style={{ width: 96, height: 2, background: BRAND.stone, marginTop: 44, marginBottom: 40, display: 'flex' }} />
         <div style={{ fontSize: 44, color: BRAND.stoneDark, letterSpacing: 6, textTransform: 'uppercase', display: 'flex' }}>
           Farm-fresh flowers, delivered
@@ -37,30 +37,25 @@ export function BrandCard(): ReactElement {
   );
 }
 
-export function ProductCard({ name, price, photo }: { name: string; price: string | null; photo: string | null }): ReactElement {
+export function ProductCard({ name, price }: { name: string; price: string | null }): ReactElement {
   return (
     <div style={{ width: OG_SIZE.width, height: OG_SIZE.height, background: BRAND.ivory, display: 'flex', fontFamily: OG_FONT_FAMILY }}>
       <div style={{ width: 600, height: OG_SIZE.height, display: 'flex', background: BRAND.ivoryDeep, alignItems: 'center', justifyContent: 'center' }}>
-        {photo ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={photo} width={600} height={OG_SIZE.height} alt="" style={{ width: 600, height: OG_SIZE.height, objectFit: 'cover' }} />
-        ) : (
-          <div
-            style={{
-              width: 544,
-              height: 574,
-              border: `2px solid ${BRAND.stoneLight}`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 76,
-              color: BRAND.stoneDark,
-              letterSpacing: -1,
-            }}
-          >
-            Fresh Petals
-          </div>
-        )}
+        <div
+          style={{
+            width: 544,
+            height: 574,
+            border: `2px solid ${BRAND.stoneLight}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 60,
+            color: BRAND.stoneDark,
+            letterSpacing: -1,
+          }}
+        >
+          Fresh Petals India
+        </div>
       </div>
       <div
         style={{
