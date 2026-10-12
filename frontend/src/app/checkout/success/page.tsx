@@ -19,6 +19,9 @@ function OrderSummary({ orderId }: { orderId: number }) {
   // Every resolution (paid / refund due / switched to COD / expired) clears the
   // cart and a matching pending key inside the hook; we just reload the order.
   const pay = usePayForOrder({ orderId, onResolved: () => reload() });
+  // Hide "Pay now" when online payments are off. Unknown (loading/failed) keeps it: the order already exists.
+  const { data: paymentConfig } = useApi(() => api.getPaymentConfig(), []);
+  const payEnabled = paymentConfig?.enabled !== false;
 
   if (loading && !order) {
     return <div className="mt-6 animate-pulse h-24 bg-slate-100 rounded" aria-busy="true" />;
@@ -69,11 +72,11 @@ function OrderSummary({ orderId }: { orderId: number }) {
       </div>
     );
   } else if (pending) {
-    heading = "Payment pending";
+    heading = pay.switched ? "Refund due" : "Payment pending";
     body = (
       <div className="mt-2">
-        <p>Your order #{order.id} is waiting for payment. {RESERVED_NOTE}</p>
-        <PaymentActions pay={pay} orderId={order.id} />
+        {!pay.switched && <p>Your order #{order.id} is waiting for payment. {RESERVED_NOTE}</p>}
+        <PaymentActions pay={pay} orderId={order.id} allowPay={payEnabled} />
       </div>
     );
   } else if (online && paid) {

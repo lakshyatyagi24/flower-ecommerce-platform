@@ -24,12 +24,13 @@ vi.mock('@/lib/api', () => {
       this.status = s
     }
   }
-  return { ApiError, api: { getMyOrder: vi.fn(), setOrderPaymentMethod: vi.fn() } }
+  return { ApiError, api: { getMyOrder: vi.fn(), setOrderPaymentMethod: vi.fn(), getPaymentConfig: vi.fn() } }
 })
 vi.mock('@/lib/razorpay-flow', () => ({ payForOrder: vi.fn() }))
 
 const getMyOrder = api.getMyOrder as unknown as ReturnType<typeof vi.fn>
 const setMethod = api.setOrderPaymentMethod as unknown as ReturnType<typeof vi.fn>
+const getPaymentConfig = api.getPaymentConfig as unknown as ReturnType<typeof vi.fn>
 const pay = payForOrder as unknown as ReturnType<typeof vi.fn>
 
 const base = {
@@ -43,6 +44,7 @@ beforeEach(() => {
   getMyOrder.mockReset()
   setMethod.mockReset()
   pay.mockReset()
+  getPaymentConfig.mockReset().mockResolvedValue({ enabled: true })
 })
 
 describe('Checkout success page states', () => {
@@ -59,6 +61,25 @@ describe('Checkout success page states', () => {
     render(<CheckoutSuccessPage />)
     await screen.findByText(/payment received/i)
     expect(screen.queryByRole('button', { name: /pay now/i })).toBeNull()
+  })
+
+  it('online payments disabled: Pay now is hidden but Switch to cash on delivery stays', async () => {
+    getPaymentConfig.mockResolvedValue({ enabled: false })
+    getMyOrder.mockResolvedValue(base)
+    render(<CheckoutSuccessPage />)
+    await screen.findByText('Payment pending')
+    await waitFor(() => expect(getPaymentConfig).toHaveBeenCalled())
+    await waitFor(() => expect(screen.queryByRole('button', { name: /pay now/i })).toBeNull())
+    expect(screen.getByRole('button', { name: /switch to cash on delivery/i })).toBeInTheDocument()
+  })
+
+  it('a failed config request keeps Pay now (the order already exists)', async () => {
+    getPaymentConfig.mockRejectedValue(new Error('down'))
+    getMyOrder.mockResolvedValue(base)
+    render(<CheckoutSuccessPage />)
+    await screen.findByText('Payment pending')
+    await waitFor(() => expect(getPaymentConfig).toHaveBeenCalled())
+    expect(screen.getByRole('button', { name: /pay now/i })).toBeInTheDocument()
   })
 
   it('RAZORPAY + PENDING + UNPAID: payment pending with Pay now and Switch to COD', async () => {

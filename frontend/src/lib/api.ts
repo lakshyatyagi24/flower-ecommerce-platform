@@ -293,6 +293,7 @@ export const api = {
     apiFetch<ApiOrder>(`/orders/track/${id}?email=${encodeURIComponent(email)}`),
 
   // Payments (Razorpay)
+  getPaymentConfig: () => apiFetch<{ enabled: boolean }>('/payments/razorpay/config'),
   createRazorpayOrder: (orderId: number, email?: string) =>
     apiFetch<{
       keyId: string;
@@ -308,7 +309,9 @@ export const api = {
     razorpayPaymentId: string;
     signature: string;
   }) =>
-    apiFetch<{ ok: true; status: 'PAID' | 'CANCELLED' }>('/payments/razorpay/verify', {
+    // PAID: paid online. CANCELLED: paid after the order was cancelled. COD: paid after the order had
+    // already been switched to cash on delivery. The last two both mean a refund is due.
+    apiFetch<{ ok: true; status: 'PAID' | 'CANCELLED' | 'COD' }>('/payments/razorpay/verify', {
       method: 'POST',
       body,
       auth: true,

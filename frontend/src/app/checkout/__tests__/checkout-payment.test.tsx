@@ -32,6 +32,7 @@ vi.mock('@/lib/api', () => {
     ApiError,
     api: {
       getSettings: vi.fn(),
+      getPaymentConfig: vi.fn(),
       getProductBySlug: vi.fn(),
       createOrder: vi.fn(),
       getMyOrder: vi.fn(),
@@ -43,6 +44,7 @@ vi.mock('@/lib/razorpay-flow', () => ({ payForOrder: vi.fn() }))
 
 const fn = (f: unknown) => f as ReturnType<typeof vi.fn>
 const getSettings = fn(api.getSettings)
+const getPaymentConfig = fn(api.getPaymentConfig)
 const getProductBySlug = fn(api.getProductBySlug)
 const createOrder = fn(api.createOrder)
 const getMyOrder = fn(api.getMyOrder)
@@ -65,6 +67,7 @@ beforeEach(() => {
   setMethod.mockReset()
   pay.mockReset()
   getSettings.mockReset().mockResolvedValue({ 'shipping.flatRate': '50' })
+  getPaymentConfig.mockReset().mockResolvedValue({ enabled: true })
   getProductBySlug.mockReset().mockResolvedValue({ id: 1, price: 100, gstRate: 0 })
 })
 
@@ -130,12 +133,27 @@ describe('Checkout payment method', () => {
     expect(router.push).toHaveBeenCalledWith(SUCCESS)
   })
 
-  it('onRefundDue also clears and navigates to success', async () => {
+  it('onRefundDue("expired") also clears and navigates to success', async () => {
     const { handlers } = await placeOnlineOrder()
-    act(() => handlers.onRefundDue())
+    act(() => handlers.onRefundDue('expired'))
     expect(cart.clear).toHaveBeenCalled()
     expect(window.sessionStorage.getItem(KEY)).toBeNull()
     expect(router.push).toHaveBeenCalledWith(SUCCESS)
+  })
+
+  it('onRefundDue("switched"): clears cart + pending key, shows the refund notice with a My Orders link, does NOT navigate', async () => {
+    const { handlers } = await placeOnlineOrder()
+    act(() => handlers.onRefundDue('switched'))
+    expect(cart.clear).toHaveBeenCalled()
+    expect(window.sessionStorage.getItem(KEY)).toBeNull()
+    expect(router.push).not.toHaveBeenCalled()
+    expect(screen.getByRole('status').textContent).toMatch(
+      /We received your online payment, but this order had already been switched to cash on delivery\. We will refund your payment within 3-5 working days/,
+    )
+    expect(screen.getByRole('link', { name: /my orders/i }).getAttribute('href')).toBe('/account/orders')
+    // the order is COD now: no way to pay again or switch
+    expect(screen.queryByRole('button', { name: /pay now/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /switch to cash on delivery/i })).toBeNull()
   })
 
   it('dismiss shows the pending panel; Pay now re-invokes payForOrder', async () => {
@@ -271,6 +289,46 @@ describe('Checkout payment method', () => {
   })
 })
 
+describe('Checkout online payments switch', () => {
+  it('disabled: no online radio, COD is the default, note shown, createOrder sent with COD', async () => {
+    getPaymentConfig.mockResolvedValue({ enabled: false })
+    createOrder.mockResolvedValue({ ...baseOrder, paymentMethod: 'COD' })
+    const { container } = render(<CheckoutPage />)
+    await waitFor(() => expect(container.querySelector('form')).not.toBeNull())
+    expect(screen.queryByRole('radio', { name: /pay online/i })).toBeNull()
+    expect((screen.getByRole('radio', { name: /cash on delivery/i }) as HTMLInputElement).checked).toBe(true)
+    expect(screen.getByText('Online payment is temporarily unavailable.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^place order$/i })).toBeInTheDocument()
+    await fillAndSubmit(container)
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith(SUCCESS))
+    expect(createOrder.mock.calls[0][0].paymentMethod).toBe('COD')
+    expect(pay).not.toHaveBeenCalled()
+  })
+
+  it('config request failure behaves like disabled (COD default, no online radio)', async () => {
+    getPaymentConfig.mockRejectedValue(new ApiError('down', 500, null))
+    const { container } = render(<CheckoutPage />)
+    await waitFor(() => expect(container.querySelector('form')).not.toBeNull())
+    expect(screen.queryByRole('radio', { name: /pay online/i })).toBeNull()
+    expect((screen.getByRole('radio', { name: /cash on delivery/i }) as HTMLInputElement).checked).toBe(true)
+  })
+
+  it('while the config is loading the skeleton is shown, not the form', async () => {
+    getPaymentConfig.mockReturnValue(new Promise(() => {}))
+    const { container } = render(<CheckoutPage />)
+    await waitFor(() => expect(getPaymentConfig).toHaveBeenCalled())
+    expect(container.querySelector('form')).toBeNull()
+    expect(container.querySelector('[aria-busy="true"]')).not.toBeNull()
+  })
+
+  it('enabled: online radio present and the default (existing behaviour), no unavailable note', async () => {
+    const { container } = render(<CheckoutPage />)
+    await waitFor(() => expect(container.querySelector('form')).not.toBeNull())
+    expect((screen.getByRole('radio', { name: /pay online/i }) as HTMLInputElement).checked).toBe(true)
+    expect(screen.queryByText(/Online payment is temporarily unavailable\./)).toBeNull()
+  })
+})
+
 describe('Checkout restores a pending order', () => {
   it('a fresh pending order in sessionStorage restores the panel instead of the form', async () => {
     window.sessionStorage.setItem(KEY, JSON.stringify({ id: 42, createdAt: Date.now() - 60_000 }))
@@ -319,6 +377,15 @@ describe('Checkout restores a pending order', () => {
     render(<CheckoutPage />)
     await waitFor(() => expect(router.push).toHaveBeenCalledWith(SUCCESS))
     expect(cart.clear).toHaveBeenCalled()
+    expect(window.sessionStorage.getItem(KEY)).toBeNull()
+  })
+
+  it('a restored COD+CANCELLED order shows the expired panel instead of sticking on the skeleton', async () => {
+    window.sessionStorage.setItem(KEY, JSON.stringify({ id: 42, createdAt: Date.now() }))
+    getMyOrder.mockResolvedValue({ ...baseOrder, paymentMethod: 'COD', status: 'CANCELLED' })
+    const { container } = render(<CheckoutPage />)
+    await screen.findByText(/this order was cancelled/i)
+    expect(container.querySelector('[aria-busy="true"]')).toBeNull()
     expect(window.sessionStorage.getItem(KEY)).toBeNull()
   })
 

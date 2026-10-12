@@ -66,8 +66,19 @@ describe('payForOrder', () => {
     await payForOrder(7, h)
     instances[0].options.handler(PAY)
     await flush()
-    expect(h.onRefundDue).toHaveBeenCalled()
+    expect(h.onRefundDue).toHaveBeenCalledWith('expired')
     expect(h.onPaid).not.toHaveBeenCalled()
+  })
+
+  it('maps COD (captured after the order was switched to cash on delivery) to onRefundDue("switched")', async () => {
+    verify.mockResolvedValue({ ok: true, status: 'COD' })
+    const h = handlers()
+    await payForOrder(7, h)
+    instances[0].options.handler(PAY)
+    await flush()
+    expect(h.onRefundDue).toHaveBeenCalledWith('switched')
+    expect(h.onPaid).not.toHaveBeenCalled()
+    expect(h.onVerifyError).not.toHaveBeenCalled()
   })
 
   it('maps verify rejection to onVerifyError with guidance copy', async () => {

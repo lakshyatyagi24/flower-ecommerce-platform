@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import type { PayController } from "@/lib/use-pay-for-order";
 
 /** Notice + Pay now / Switch to COD (with inline confirm) / Check status buttons. */
@@ -8,31 +9,47 @@ export default function PaymentActions({
   pay,
   orderId,
   allowSwitch = true,
+  allowPay = true,
 }: {
   pay: PayController;
   orderId: number;
   allowSwitch?: boolean;
+  /** False when online payments are switched off: the order can only be switched to cash on delivery. */
+  allowPay?: boolean;
 }) {
-  const { notice, showCheck, busy, confirming } = pay;
+  const { notice, showCheck, busy, confirming, switched } = pay;
+  const noticeBox = notice && (
+    <div
+      className="mt-4 px-4 py-3 rounded bg-amber-50 text-amber-800 text-sm"
+      role={notice.kind === "alert" ? "alert" : "status"}
+    >
+      {notice.text}
+      {notice.link && (
+        <>
+          {" "}
+          <Link href={notice.link.href} className="font-semibold underline underline-offset-4">
+            {notice.link.label}
+          </Link>
+        </>
+      )}
+    </div>
+  );
+  // Paid on an order that was already switched to COD: only the refund notice remains.
+  if (switched) return <div>{noticeBox}</div>;
   return (
     <div>
-      {notice && (
-        <div
-          className="mt-4 px-4 py-3 rounded bg-amber-50 text-amber-800 text-sm"
-          role={notice.kind === "alert" ? "alert" : "status"}
-        >
-          {notice.text}
-        </div>
-      )}
+      {noticeBox}
       <div className="mt-4 flex flex-col sm:flex-row gap-3">
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => void pay.payNow(orderId)}
-          className="bg-olive-green text-white px-6 py-3 rounded-full font-semibold disabled:opacity-50"
-        >
-          Pay now
-        </button>
+        {allowPay && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void pay.payNow(orderId)}
+            className="bg-olive-green text-white px-6 py-3 rounded-full font-semibold disabled:opacity-50"
+          >
+            Pay now
+          </button>
+        )}
         {allowSwitch && !confirming && (
           <button
             type="button"

@@ -31,6 +31,7 @@ vi.mock('@/lib/api', () => {
     ApiError,
     api: {
       getSettings: vi.fn().mockRejectedValue(new Error('settings down')),
+      getPaymentConfig: vi.fn().mockResolvedValue({ enabled: true }),
       getProductBySlug: vi.fn().mockResolvedValue({ id: 1, price: 100, gstRate: 0 }),
       createOrder: vi.fn(),
     },

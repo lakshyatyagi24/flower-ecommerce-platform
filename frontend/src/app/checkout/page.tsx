@@ -51,6 +51,8 @@ export default function CheckoutPage() {
       if (kind === "expired") {
         setPendingId(null);
         setExpired(expiredKind ?? "unpaid");
+        // The restore effect may be the caller: do not leave the skeleton up.
+        setRestoring(false);
       } else {
         router.push(`/checkout/success?orderId=${id}`);
       }
@@ -130,6 +132,12 @@ export default function CheckoutPage() {
     reload: reloadSettings,
   } = useApi(() => api.getSettings(), []);
   const settings = settingsData ?? {};
+
+  // Online payments need Razorpay keys on the server. If they are off (or the config cannot be read),
+  // default to cash on delivery and hide the online option so no unpayable order is ever created.
+  const { data: paymentConfig, loading: configLoading } = useApi(() => api.getPaymentConfig(), []);
+  const onlineEnabled = paymentConfig?.enabled === true;
+  const paymentMethod: "COD" | "RAZORPAY" = onlineEnabled ? form.paymentMethod : "COD";
 
   // Re-fetch live prices whenever the set of products in the cart changes.
   const productKey = items.map((i) => i.productId).sort((a, b) => a - b).join(",");
@@ -223,10 +231,14 @@ export default function CheckoutPage() {
     return (
       <main className="section-shell mt-12 mb-16">
         <div className="section-card p-8 max-w-xl mx-auto">
-          <h1 className="text-2xl font-semibold text-slate-900">Payment pending</h1>
-          <p className="mt-2 text-slate-700">
-            Your order #{pendingId} has been created and is waiting for payment. It stays reserved for 30 minutes.
-          </p>
+          <h1 className="text-2xl font-semibold text-slate-900">
+            {pay.switched ? "Refund due" : "Payment pending"}
+          </h1>
+          {!pay.switched && (
+            <p className="mt-2 text-slate-700">
+              Your order #{pendingId} has been created and is waiting for payment. It stays reserved for 30 minutes.
+            </p>
+          )}
           <PaymentActions pay={pay} orderId={pendingId} />
         </div>
       </main>
@@ -270,7 +282,7 @@ export default function CheckoutPage() {
     );
   }
 
-  if (count > 0 && (settingsLoading || pricesLoading || !settingsData || !pricing)) {
+  if (count > 0 && (settingsLoading || pricesLoading || configLoading || !settingsData || !pricing)) {
     return (
       <main className="section-shell mt-12 mb-16">
         <div className="animate-pulse space-y-4 max-w-3xl" aria-busy="true">
@@ -307,9 +319,9 @@ export default function CheckoutPage() {
         city: form.city.trim(),
         postalCode: form.postalCode.trim(),
         notes: form.notes.trim() || undefined,
-        paymentMethod: form.paymentMethod,
+        paymentMethod,
       });
-      if (form.paymentMethod === "COD") {
+      if (paymentMethod === "COD") {
         goToSuccess(order.id);
       } else {
         // Keep the cart until payment is confirmed. Remember the order so a
@@ -379,15 +391,19 @@ export default function CheckoutPage() {
 
           <fieldset className="section-card p-6 space-y-3">
             <legend className="text-xl font-semibold text-slate-900 mb-1 px-1">Payment</legend>
-            <label className="flex items-start gap-3 p-4 rounded-md border border-olive-green/20 bg-olive-green/5">
-              <input type="radio" name="paymentMethod" checked={form.paymentMethod === "RAZORPAY"} onChange={() => update("paymentMethod", "RAZORPAY")} className="mt-1" />
-              <div>
-                <span className="font-medium text-slate-900">Pay online (UPI, cards, net banking)</span>
-                <p className="text-sm text-slate-700 mt-1">Secure payment through Razorpay. Your order is confirmed once payment succeeds.</p>
-              </div>
-            </label>
+            {onlineEnabled ? (
+              <label className="flex items-start gap-3 p-4 rounded-md border border-olive-green/20 bg-olive-green/5">
+                <input type="radio" name="paymentMethod" checked={paymentMethod === "RAZORPAY"} onChange={() => update("paymentMethod", "RAZORPAY")} className="mt-1" />
+                <div>
+                  <span className="font-medium text-slate-900">Pay online (UPI, cards, net banking)</span>
+                  <p className="text-sm text-slate-700 mt-1">Secure payment through Razorpay. Your order is confirmed once payment succeeds.</p>
+                </div>
+              </label>
+            ) : (
+              <p className="text-sm text-slate-700">Online payment is temporarily unavailable.</p>
+            )}
             <label className="flex items-start gap-3 p-4 rounded-md border border-olive-green/20">
-              <input type="radio" name="paymentMethod" checked={form.paymentMethod === "COD"} onChange={() => update("paymentMethod", "COD")} className="mt-1" />
+              <input type="radio" name="paymentMethod" checked={paymentMethod === "COD"} onChange={() => update("paymentMethod", "COD")} className="mt-1" />
               <div>
                 <span className="font-medium text-slate-900">Cash on delivery</span>
                 <p className="text-sm text-slate-700 mt-1">Pay our courier when your bouquet arrives.</p>
@@ -431,7 +447,7 @@ export default function CheckoutPage() {
               <div className="flex justify-between text-base font-semibold text-olive-green pt-2 border-t border-olive-green/10"><span>Total</span><span>{formatINR(total)}</span></div>
             </div>
             <button type="submit" disabled={submitting} className="mt-5 w-full bg-olive-green text-white px-6 py-3 rounded-full font-semibold shadow-md hover:shadow-lg disabled:opacity-50">
-              {submitting ? "Placing order…" : form.paymentMethod === "RAZORPAY" ? "Place order & pay" : "Place order"}
+              {submitting ? "Placing order…" : paymentMethod === "RAZORPAY" ? "Place order & pay" : "Place order"}
             </button>
           </div>
         </aside>

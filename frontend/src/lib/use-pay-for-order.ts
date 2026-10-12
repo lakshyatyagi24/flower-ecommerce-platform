@@ -9,7 +9,10 @@ import { payForOrder, type PayHandlers } from "@/lib/razorpay-flow";
 
 export type ResolveKind = "paid" | "refund" | "cod" | "expired";
 export type ExpiredKind = "unpaid" | "refunded" | "cancelled";
-export type Notice = { text: string; kind: "alert" | "status" };
+export type Notice = { text: string; kind: "alert" | "status"; link?: { href: string; label: string } };
+
+export const SWITCHED_REFUND_COPY =
+  "We received your online payment, but this order had already been switched to cash on delivery. We will refund your payment within 3-5 working days — contact us if you don't hear from us.";
 
 export const reservedMessage = (id: number) =>
   `If you completed the payment in your UPI or banking app, wait a minute and press Check status before switching. Your order #${id} is reserved for 30 minutes.`;
@@ -45,6 +48,8 @@ export function usePayForOrder({ orderId, onResolved }: UsePayForOrderOptions) {
   const [showCheck, setShowCheck] = useState(false);
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  // The customer paid online on an order that was already switched to COD: a refund is due.
+  const [switched, setSwitched] = useState(false);
   const cb = useRef(onResolved);
   cb.current = onResolved;
   const idOf = (id?: number) => (id ?? orderId) as number;
@@ -78,7 +83,20 @@ export function usePayForOrder({ orderId, onResolved }: UsePayForOrderOptions) {
 
   const handlers = (id: number): PayHandlers => ({
     onPaid: () => resolve(id, "paid"),
-    onRefundDue: () => resolve(id, "refund"),
+    onRefundDue: (kind) => {
+      if (kind === "switched") {
+        // The COD order exists, so the cart and pending key are done with. Do NOT navigate to a success
+        // page that says "pay on delivery": keep the page and explain the refund inline.
+        clear();
+        resolveOrderLocally(id);
+        setConfirming(false);
+        setShowCheck(false);
+        setSwitched(true);
+        setNotice({ text: SWITCHED_REFUND_COPY, kind: "status", link: { href: "/account/orders", label: "My Orders" } });
+        return;
+      }
+      resolve(id, "refund");
+    },
     onDismiss: () => {
       setNotice({ text: reservedMessage(id), kind: "status" });
       setShowCheck(true);
@@ -157,6 +175,7 @@ export function usePayForOrder({ orderId, onResolved }: UsePayForOrderOptions) {
     setShowCheck,
     busy,
     confirming,
+    switched,
     askSwitch: () => setConfirming(true),
     cancelSwitch: () => setConfirming(false),
     payNow,

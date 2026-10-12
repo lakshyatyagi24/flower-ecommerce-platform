@@ -3,7 +3,8 @@ import { openCheckout } from '@/lib/razorpay';
 
 export type PayHandlers = {
   onPaid(): void;
-  onRefundDue(): void;
+  /** 'expired': paid after the order was cancelled. 'switched': paid after it was switched to cash on delivery. */
+  onRefundDue(kind: 'expired' | 'switched'): void;
   onDismiss(): void;
   onFailure(msg: string): void;
   onVerifyError(msg: string): void;
@@ -56,7 +57,7 @@ export async function payForOrder(orderId: number, h: PayHandlers): Promise<void
             });
             release();
             if (res.status === 'PAID') h.onPaid();
-            else h.onRefundDue();
+            else h.onRefundDue(res.status === 'COD' ? 'switched' : 'expired');
           } catch {
             release();
             h.onVerifyError(VERIFY_ERROR_COPY);
