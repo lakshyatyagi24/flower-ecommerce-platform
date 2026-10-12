@@ -14,13 +14,12 @@ type Props = { searchParams?: RawSearchParams };
 const load = (searchParams: RawSearchParams) => loadCatalogue(searchParams, { redirectToLanding: true });
 
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
-  const { params, result, activeCategory } = await load(searchParams);
+  const { params, result } = await load(searchParams);
   const pageSuffix = params.page > 1 ? ` — Page ${params.page}` : "";
-  const title = `${activeCategory ? `Fresh Cut Flowers Online — ${activeCategory.name}` : "Fresh Cut Flowers Online"}${pageSuffix}`;
+  const title = `Fresh Cut Flowers Online${pageSuffix}`;
   const description =
     metaDescription(
-      activeCategory?.description ||
-        "Shop farm-fresh cut flowers, bouquets and plants from Fresh Petals India. Hand-selected stems, delivered fresh.",
+      "Shop farm-fresh cut flowers, bouquets and plants from Fresh Petals India. Hand-selected stems, delivered fresh.",
       155 - pageSuffix.length,
     ) + pageSuffix;
   // Canonical keeps the filters that change the product set (category, tag, page) and drops sort/search.
@@ -36,8 +35,8 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
 }
 
 export default async function ProductsPage({ searchParams }: Props) {
-  const { params, result, categories, activeCategory } = await load(searchParams);
-  const heading = params.q ? `Results for “${params.q}”` : activeCategory ? activeCategory.name : "Fresh cut flowers";
+  const { params, result, categories } = await load(searchParams);
+  const heading = params.q ? `Results for “${params.q}”` : "Fresh cut flowers";
   return (
     <CatalogueView
       basePath="/products"
@@ -47,9 +46,7 @@ export default async function ProductsPage({ searchParams }: Props) {
       activeCategorySlug={params.category}
       eyebrow={params.q ? "Search" : "The collection"}
       heading={heading}
-      intro={
-        activeCategory?.description || "Hand-selected stems, bouquets and plants, cut fresh and delivered to your door."
-      }
+      intro="Hand-selected stems, bouquets and plants, cut fresh and delivered to your door."
       filtered={Boolean(params.category || params.tag || params.q)}
     />
   );

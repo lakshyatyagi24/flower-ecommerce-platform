@@ -30,6 +30,7 @@ const cats = [
   { id: 1, name: 'Cut Flowers', slug: 'cut-flowers', active: true, description: 'Choose cut flowers by the bunch, in many colours.', children: [{ id: 5, name: 'Roses', slug: 'roses', active: true }] },
   { id: 2, name: 'Plants', slug: 'plants', active: true, description: null },
   { id: 3, name: 'Hidden', slug: 'hidden', active: false },
+  { id: 4, name: 'Hampers', slug: 'hampers', active: true, defaultSaleMode: 'ENQUIRY', productCount: 0 },
 ];
 const props = (slug: string, searchParams: Record<string, string> = {}) => ({ params: { slug }, searchParams });
 
@@ -43,11 +44,39 @@ describe('collection page', () => {
     expect(dynamic).toBe('force-dynamic');
   });
 
-  it('404s for an unknown, inactive or wrongly-cased slug, in both page and metadata', async () => {
-    for (const slug of ['nope', 'hidden', 'Plants']) {
+  it('404s for an unknown or inactive slug, in both page and metadata', async () => {
+    for (const slug of ['nope', 'hidden', 'NOPE']) {
       await expect(CollectionPage(props(slug))).rejects.toThrow('NEXT_NOT_FOUND');
       await expect(generateMetadata(props(slug))).rejects.toThrow('NEXT_NOT_FOUND');
     }
+  });
+
+  it('308s an upper-case slug to the lower-case collection when it exists (keeping sort/page), without fetching products', async () => {
+    await expect(CollectionPage(props('Plants', { sort: 'popular', page: '2' }))).rejects.toThrow('NEXT_REDIRECT:/collections/plants?sort=popular&page=2');
+    await expect(generateMetadata(props('Cut-Flowers'))).rejects.toThrow('NEXT_REDIRECT:/collections/cut-flowers');
+    expect(listProducts).not.toHaveBeenCalled();
+  });
+
+  it('404s an unknown slug without fetching products', async () => {
+    await expect(CollectionPage(props('nope'))).rejects.toThrow('NEXT_NOT_FOUND');
+    expect(listProducts).not.toHaveBeenCalled();
+  });
+
+  it('a search with no results offers Clear filters back to the collection, not /products', async () => {
+    listProducts.mockResolvedValue({ items: [], total: 0, page: 1, pages: 0, take: 24 });
+    render(await CollectionPage(props('plants', { q: 'zzz' })));
+    expect(screen.getByText('No flowers match')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Clear filters' }).getAttribute('href')).toBe('/collections/plants');
+  });
+
+  it('an empty category stays reachable (200, noindex) but is not linked from other pages', async () => {
+    listProducts.mockResolvedValue({ items: [], total: 0, page: 1, pages: 0, take: 24 });
+    render(await CollectionPage(props('hampers')));
+    expect(screen.getByText('New stems coming soon')).toBeTruthy();
+    expect((await generateMetadata(props('hampers'))).robots).toEqual({ index: false, follow: true });
+    listProducts.mockResolvedValue({ items: [mk(1, 'Red Rose')], total: 1, page: 1, pages: 1, take: 24 });
+    const { container } = render(await CollectionPage(props('plants')));
+    expect([...container.querySelectorAll('a')].some((a) => a.getAttribute('href') === '/collections/hampers')).toBe(false);
   });
 
   it('finds nested categories', async () => {
@@ -119,11 +148,15 @@ describe('collection metadata', () => {
 
   it('title is short and brand-free (the layout template adds the brand), description from the intro, canonical is the collection', async () => {
     const m = await generateMetadata(props('cut-flowers', { sort: 'popular' }));
-    expect(m.title).toBe('Cut Flowers — Buy Online');
+    expect(m.title).toBe('Cut Flowers — Buy Fresh Flowers Online');
     expect((m.title as string).length + ' · Fresh Petals India'.length).toBeLessThanOrEqual(60);
     expect(m.description).toBe('Choose cut flowers by the bunch, in many colours.');
     expect(m.alternates?.canonical).toBe('/collections/cut-flowers');
     expect(m.robots).toBeUndefined();
+  });
+
+  it('enquiry-only categories say Enquire, not Buy', async () => {
+    expect((await generateMetadata(props('hampers'))).title).toBe('Hampers — Enquire Online');
   });
 
   it('uses the neutral fallback for the description when the category has none, and caps at 155 chars', async () => {
@@ -136,7 +169,7 @@ describe('collection metadata', () => {
     listProducts.mockResolvedValue({ items: [mk(1, 'Red Rose')], total: 60, page: 3, pages: 3, take: 24 });
     const m = await generateMetadata(props('plants', { page: '3' }));
     expect(m.alternates?.canonical).toBe('/collections/plants?page=3');
-    expect(m.title).toBe('Plants — Buy Online — Page 3');
+    expect(m.title).toBe('Plants — Buy Fresh Flowers Online — Page 3');
     expect(m.description).toMatch(/ — Page 3$/);
     expect((m.description as string).length).toBeLessThanOrEqual(155);
   });

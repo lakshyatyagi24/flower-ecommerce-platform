@@ -2,6 +2,9 @@
 import React from "react";
 import Link from "next/link";
 import Logo from "./Logo";
+import { api } from "@/lib/api";
+import { useApi } from "@/lib/use-api";
+import { shownCategories } from "@/lib/categories";
 import {
   useSettings,
   whatsappLink,
@@ -12,6 +15,9 @@ import {
 
 const Footer: React.FC = () => {
   const settings = useSettings();
+  // Shop links come from the API so empty categories are not advertised; until it answers (or if it fails) one generic link shows.
+  const { data: apiCategories } = useApi(() => api.listCategories(), []);
+  const shopCategories = apiCategories ? shownCategories(apiCategories).slice(0, 6) : [];
   const phoneHref = telLink(settings.phone);
   const emailHref = mailtoLink(settings.email);
   const waHref = whatsappLink(settings.whatsapp || settings.phone);
@@ -58,10 +64,13 @@ const Footer: React.FC = () => {
             <div>
               <h4 className="font-semibold mb-3 text-olive-green uppercase tracking-wide text-xs">Shop</h4>
               <ul className="space-y-2">
-                <li><Link href="/collections/cut-flowers" className="text-gray-700 hover:text-olive-green">Cut flowers</Link></li>
-                <li><Link href="/collections/plants" className="text-gray-700 hover:text-olive-green">Plants</Link></li>
-                <li><Link href="/corporate" className="text-gray-700 hover:text-olive-green">Corporate bouquets</Link></li>
-                <li><Link href="/collections/arrangements" className="text-gray-700 hover:text-olive-green">Arrangements</Link></li>
+                {shopCategories.length === 0 && (
+                  <li><Link href="/products" className="text-gray-700 hover:text-olive-green">All flowers</Link></li>
+                )}
+                {shopCategories.map((c) => (
+                  <li key={c.id}><Link href={`/collections/${encodeURIComponent(c.slug)}`} className="text-gray-700 hover:text-olive-green">{c.name}</Link></li>
+                ))}
+                <li><Link href="/corporate" className="text-gray-700 hover:text-olive-green">Corporate enquiries</Link></li>
               </ul>
             </div>
 

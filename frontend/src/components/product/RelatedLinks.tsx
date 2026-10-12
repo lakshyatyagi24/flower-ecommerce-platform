@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { OCCASIONS } from "@/lib/occasions";
 import type { ApiCategory } from "@/lib/api";
+import { shownCategories } from "@/lib/categories";
 
 const link =
   "inline-block border-b border-transparent py-1 text-sm text-charcoal transition-colors hover:border-charcoal " +
@@ -15,11 +16,11 @@ export default function RelatedLinks({
   currentCollection,
   currentOccasion,
 }: {
-  collections?: Pick<ApiCategory, "id" | "name" | "slug">[];
+  collections?: Pick<ApiCategory, "id" | "name" | "slug" | "active" | "productCount">[];
   currentCollection?: string;
   currentOccasion?: string;
 }) {
-  const others = collections.filter((c) => c.slug !== currentCollection);
+  const others = shownCategories(collections).filter((c) => c.slug !== currentCollection);
   const occasions = OCCASIONS.filter((o) => o.slug !== currentOccasion);
   return (
     <aside aria-label="Explore more" className="mt-20 grid gap-10 border-t border-stone-light pt-12 md:grid-cols-2 md:gap-16">

@@ -98,9 +98,23 @@ describe('products listing page', () => {
     await expect(ProductsPage({ searchParams: { category: 'child' } })).rejects.toThrow('NEXT_REDIRECT:/collections/child');
   });
 
-  it('does not redirect to an inactive category (its collection page would 404)', async () => {
-    render(await ProductsPage({ searchParams: { category: 'hidden' } }));
-    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Hidden');
+  it('404s an inactive category (no redirect to a collection that would 404)', async () => {
+    await expect(ProductsPage({ searchParams: { category: 'hidden' } })).rejects.toThrow('NEXT_NOT_FOUND');
+  });
+
+  it('redirects legacy URLs before fetching products (works during a products outage)', async () => {
+    listProducts.mockRejectedValue(new Error('API down'));
+    await expect(ProductsPage({ searchParams: { category: 'plants' } })).rejects.toThrow('NEXT_REDIRECT:/collections/plants');
+    await expect(ProductsPage({ searchParams: { tag: 'wedding' } })).rejects.toThrow('NEXT_REDIRECT:/occasions/wedding');
+    await expect(ProductsPage({ searchParams: { category: 'nope' } })).rejects.toThrow('NEXT_NOT_FOUND');
+    expect(listProducts).not.toHaveBeenCalled();
+  });
+
+  it('hides categories known to be empty from the chip bar', async () => {
+    listCategories.mockResolvedValue([{ ...cats[0], productCount: 4 }, { ...cats[1], productCount: 0 }]);
+    render(await ProductsPage({ searchParams: {} }));
+    const nav = screen.getByRole('navigation', { name: 'Categories' });
+    expect([...nav.querySelectorAll('a')].map((a) => a.textContent)).toEqual(['All', 'Roses']);
   });
 
   it('permanently redirects a known occasion tag to its occasion page, keeping sort and page', async () => {

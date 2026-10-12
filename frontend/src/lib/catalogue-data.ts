@@ -4,6 +4,7 @@ import type { ApiCategory } from './api';
 import { listCategories, listProducts, type ProductPage } from './server-api';
 import { PAGE_SIZE, listHref, parseListParams, type ListParams, type RawSearchParams } from './list-params';
 import { occasionForTag } from './occasions';
+import { shownCategories } from './categories';
 import { metaDescription } from './seo';
 
 export function flattenCategories(list: ApiCategory[]): ApiCategory[] {
@@ -44,36 +45,53 @@ export function landingRedirectTarget(params: ListParams, knownCategory?: ApiCat
  */
 export async function loadCatalogue(
   searchParams: RawSearchParams,
-  opts: { fixed?: Fixed; strict?: boolean; redirectToLanding?: boolean } = {},
+  opts: {
+    fixed?: Fixed;
+    strict?: boolean;
+    redirectToLanding?: boolean;
+    /** Landing pages: builds the canonical path for a (lower-cased) category slug, enabling the /collections/Plants redirect. */
+    canonicalBasePath?: (slug: string) => string;
+  } = {},
 ): Promise<CatalogueData> {
   const parsed = parseListParams(searchParams);
   // `params` is what links are built from. On a landing page the path already says category/tag, so
   // they are stripped (links stay /collections/roses?page=2); the API call below still gets them.
   const params: ListParams = opts.fixed ? { ...parsed, category: undefined, tag: undefined } : parsed;
   const query = opts.fixed ? { category: opts.fixed.category, tag: opts.fixed.tag } : { category: parsed.category, tag: parsed.tag };
-  const [result, categories] = await Promise.all([
-    listProducts({
-      category: query.category,
-      tag: query.tag,
-      sort: params.sort,
-      q: params.q,
-      page: params.page,
-      take: PAGE_SIZE,
-    }),
-    opts.strict ? listCategories() : listCategories().catch(() => [] as ApiCategory[]),
-  ]);
+
+  // Categories first: legacy URLs must redirect (and unknown slugs 404) without costing a products query,
+  // and still work while the products endpoint is down.
+  const categories = await (opts.strict ? listCategories() : listCategories().catch(() => [] as ApiCategory[]));
   const all = flattenCategories(categories);
+  const live = (c?: ApiCategory) => (c && c.active !== false ? c : undefined);
+
+  if (query.category && opts.canonicalBasePath && query.category !== query.category.toLowerCase()) {
+    const lower = query.category.toLowerCase();
+    if (live(all.find((c) => c.slug === lower))) permanentRedirect(listHref(params, {}, opts.canonicalBasePath(lower)));
+    notFound();
+  }
+
   const activeCategory = query.category ? all.find((c) => c.slug === query.category) : undefined;
   if (opts.redirectToLanding) {
-    const target = landingRedirectTarget(params, activeCategory && activeCategory.active !== false ? activeCategory : undefined);
+    const target = landingRedirectTarget(params, live(activeCategory));
     if (target) permanentRedirect(target);
   }
   if (query.category) {
-    const known = opts.strict ? activeCategory && activeCategory.active !== false : categories.length === 0 || activeCategory;
+    // When the category list is unavailable (non-strict) we cannot tell, so we do not 404.
+    const known = opts.strict ? live(activeCategory) : categories.length === 0 || live(activeCategory);
     if (!known) notFound();
   }
+
+  const result = await listProducts({
+    category: query.category,
+    tag: query.tag,
+    sort: params.sort,
+    q: params.q,
+    page: params.page,
+    take: PAGE_SIZE,
+  });
   if (result.total > 0 && params.page > result.pages) notFound();
-  return { params, result, categories: categories.filter((c) => c.active !== false && !c.parentId), activeCategory };
+  return { params, result, categories: shownCategories(categories.filter((c) => !c.parentId)), activeCategory };
 }
 
 /** Metadata shared by the collection and occasion landing pages. */

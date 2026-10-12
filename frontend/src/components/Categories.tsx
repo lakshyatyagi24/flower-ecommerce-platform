@@ -4,6 +4,7 @@ import Link from "next/link";
 import MegaMenu from "./MegaMenu";
 import { api } from "../lib/api";
 import { useApi } from "../lib/use-api";
+import { shownCategories } from "../lib/categories";
 
 type Submenu = {
   title: string;
@@ -55,7 +56,7 @@ const Categories: React.FC<CategoriesProps> = ({ categories = defaultCategories,
   const remoteCategories = useMemo<Category[] | null>(
     () =>
       apiCategories
-        ? apiCategories.map((c) => ({
+        ? shownCategories(apiCategories).map((c) => ({
             name: c.name,
             slug: c.slug,
             submenus:

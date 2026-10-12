@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { listCategories, listProducts } from '@/lib/server-api';
-import { flattenCategories } from '@/lib/catalogue-data';
+import { flattenActive } from '@/lib/categories';
 import { OCCASIONS } from '@/lib/occasions';
 import { absoluteUrl } from '@/lib/seo';
 
@@ -68,10 +68,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   // Landing pages with at least one product (R4: empty ones are noindex and must not be listed).
-  // One cheap `take: 1` call each; any failure throws so the sitemap 5xxs instead of going partial.
-  const categories = flattenCategories(await listCategories()).filter((c) => c.active !== false && SAFE_SLUG.test(c.slug));
+  // Collections use the categories endpoint's `productCount` (one call; falls back to a `take: 1` probe if an
+  // older backend does not send it); occasions need one probe each. Any failure throws, so the sitemap 5xxs
+  // instead of going partial. Children of inactive parents are skipped.
+  const categories = flattenActive(await listCategories()).filter((c) => SAFE_SLUG.test(c.slug));
   const counts = await Promise.all([
-    ...categories.map(async (c) => ({ path: `/collections/${c.slug}`, total: (await listProducts({ category: c.slug, take: 1 })).total })),
+    ...categories.map(async (c) => ({
+      path: `/collections/${c.slug}`,
+      total: c.productCount ?? (await listProducts({ category: c.slug, take: 1 })).total,
+    })),
     ...OCCASIONS.map(async (o) => ({ path: `/occasions/${o.slug}`, total: (await listProducts({ tag: o.tag, take: 1 })).total })),
   ]);
   for (const { path, total } of counts) {

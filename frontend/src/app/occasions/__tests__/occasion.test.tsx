@@ -50,6 +50,26 @@ describe('occasion page', () => {
     expect(listProducts).not.toHaveBeenCalled();
   });
 
+  it('308s an upper-case occasion slug to the lower-case page, 404s unknown ones', async () => {
+    await expect(OccasionPage(props('Birthday', { sort: 'popular' }))).rejects.toThrow('NEXT_REDIRECT:/occasions/birthday?sort=popular');
+    await expect(generateMetadata(props('GET-WELL-SOON'))).rejects.toThrow('NEXT_REDIRECT:/occasions/get-well-soon');
+    await expect(OccasionPage(props('Christmas'))).rejects.toThrow('NEXT_NOT_FOUND');
+  });
+
+  it('a search with no results offers Clear filters back to the occasion page', async () => {
+    listProducts.mockResolvedValue({ items: [], total: 0, page: 1, pages: 0, take: 24 });
+    render(await OccasionPage(props('birthday', { q: 'zzz' })));
+    expect(screen.getByRole('link', { name: 'Clear filters' }).getAttribute('href')).toBe('/occasions/birthday');
+  });
+
+  it('does not link empty collections', async () => {
+    listCategories.mockResolvedValue([{ ...cats[0], productCount: 3 }, { ...cats[1], productCount: 0 }]);
+    render(await OccasionPage(props('birthday')));
+    const hrefs = screen.getAllByRole('link').map((a) => a.getAttribute('href'));
+    expect(hrefs).toContain('/collections/cut-flowers');
+    expect(hrefs).not.toContain('/collections/plants');
+  });
+
   it('filters by the occasion tag and ignores tag/category in the query string', async () => {
     await OccasionPage(props('birthday', { tag: 'wedding', category: 'plants', sort: 'popular' }));
     expect(listProducts).toHaveBeenCalledWith({ category: undefined, tag: 'birthday', sort: 'popular', q: undefined, page: 1, take: 24 });

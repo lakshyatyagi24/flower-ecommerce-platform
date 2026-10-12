@@ -125,6 +125,28 @@ describe('ExpandableIntro (inside CatalogueView)', () => {
   });
 });
 
+describe('empty categories are not advertised', () => {
+  const mixed = [
+    { id: 1, name: 'Roses', slug: 'roses', productCount: 3 },
+    { id: 2, name: 'Plants', slug: 'plants', productCount: 0 },
+    { id: 3, name: 'Legacy', slug: 'legacy' }, // older backend: unknown count stays visible
+  ];
+
+  it('CatalogueView chips skip productCount === 0', () => {
+    render(<CatalogueView basePath="/products" params={{ page: 1 }} result={result([mk(1, 'Red Rose')])} categories={mixed} eyebrow="e" heading="h" intro="i" />);
+    const nav = screen.getByRole('navigation', { name: 'Categories' });
+    expect([...nav.querySelectorAll('a')].map((a) => a.textContent)).toEqual(['All', 'Roses', 'Legacy']);
+  });
+
+  it('RelatedLinks skips productCount === 0', () => {
+    render(<RelatedLinks collections={mixed} />);
+    const hrefs = screen.getAllByRole('link').map((a) => a.getAttribute('href'));
+    expect(hrefs).toContain('/collections/roses');
+    expect(hrefs).toContain('/collections/legacy');
+    expect(hrefs).not.toContain('/collections/plants');
+  });
+});
+
 describe('RelatedLinks', () => {
   it('links other collections and occasions, leaving out the current one', () => {
     render(<RelatedLinks collections={cats} currentCollection="roses" />);

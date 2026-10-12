@@ -131,6 +131,8 @@ export type ApiCategory = {
   defaultGstRate?: number;
   sortOrder?: number;
   active?: boolean;
+  /** Number of ACTIVE products in this category (own products, not children). Undefined from older backends. */
+  productCount?: number;
   children?: ApiCategory[];
 };
 

@@ -11,6 +11,7 @@ import ListingBusy from "@/components/product/ListingBusy";
 import ExpandableIntro from "@/components/product/ExpandableIntro";
 import { breadcrumbJsonLd, itemListJsonLd } from "@/lib/seo";
 import { listHref, type ListParams } from "@/lib/list-params";
+import { shownCategories } from "@/lib/categories";
 import type { ApiCategory } from "@/lib/api";
 import type { ProductPage } from "@/lib/server-api";
 
@@ -47,6 +48,7 @@ const chip = (active: boolean) =>
 export default function CatalogueView(props: CatalogueViewProps) {
   const { basePath, params, result, eyebrow, heading, intro, categories, activeCategorySlug, breadcrumb, related } = props;
   const { items, total, page, pages } = result;
+  const chips = categories ? shownCategories(categories) : undefined; // empty categories are not advertised
   const href = (overrides: Partial<ListParams> = {}) => listHref(params, overrides, basePath);
   const empty = props.empty ?? {
     title: "No flowers match",
@@ -95,7 +97,7 @@ export default function CatalogueView(props: CatalogueViewProps) {
           </header>
 
           <div className="flex flex-col gap-4 border-y border-stone-light py-3 md:flex-row md:items-center md:justify-between">
-            {categories ? (
+            {chips ? (
               <nav aria-label="Categories" className="-mx-5 overflow-x-auto overflow-y-hidden px-5 md:mx-0 md:px-0">
                 <ul className="flex items-center gap-7">
                   <li>
@@ -107,7 +109,7 @@ export default function CatalogueView(props: CatalogueViewProps) {
                       All
                     </Link>
                   </li>
-                  {categories.map((c) => (
+                  {chips.map((c) => (
                     <li key={c.id}>
                       <Link
                         href={`/collections/${encodeURIComponent(c.slug)}${params.sort ? `?sort=${params.sort}` : ""}`}

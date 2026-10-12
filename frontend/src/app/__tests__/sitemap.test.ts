@@ -20,6 +20,7 @@ const page = (items: unknown[], pageNo: number, pages: number) => ({ items, tota
 
 beforeEach(() => {
   listProductsRaw.mockReset();
+  listProducts.mockClear();
   listCategories.mockReset().mockResolvedValue([]);
   landingTotals = {};
 });
@@ -119,6 +120,30 @@ describe('sitemap', () => {
     expect(urls.filter((u) => u.includes('/occasions/'))).toHaveLength(1);
     expect(listProducts).toHaveBeenCalledWith({ category: 'roses', take: 1 });
     expect(listProducts).toHaveBeenCalledWith({ tag: 'birthday', take: 1 });
+  });
+
+  it('uses productCount for collections (no per-category probe) and probes only occasions', async () => {
+    listProductsRaw.mockResolvedValue(page([prod('p')], 1, 1));
+    listCategories.mockResolvedValue([
+      { id: 1, name: 'Roses', slug: 'roses', active: true, productCount: 4 },
+      { id: 2, name: 'Plants', slug: 'plants', active: true, productCount: 0 },
+    ]);
+    const urls = (await sitemap()).map((e) => e.url);
+    expect(urls).toContain('https://freshpetalsindia.com/collections/roses');
+    expect(urls).not.toContain('https://freshpetalsindia.com/collections/plants');
+    expect(listProducts).not.toHaveBeenCalledWith({ category: 'roses', take: 1 });
+    expect(listProducts).toHaveBeenCalledWith({ tag: 'birthday', take: 1 });
+  });
+
+  it('skips children of inactive parent categories', async () => {
+    listProductsRaw.mockResolvedValue(page([prod('p')], 1, 1));
+    listCategories.mockResolvedValue([
+      { id: 1, name: 'Off', slug: 'off', active: false, productCount: 5, children: [{ id: 2, name: 'Kid', slug: 'kid', active: true, productCount: 5 }] },
+      { id: 3, name: 'On', slug: 'on', active: true, productCount: 5, children: [{ id: 4, name: 'Kid2', slug: 'kid2', active: true, productCount: 2 }] },
+    ]);
+    const urls = (await sitemap()).map((e) => e.url);
+    expect(urls).not.toContain('https://freshpetalsindia.com/collections/kid');
+    expect(urls).toContain('https://freshpetalsindia.com/collections/kid2');
   });
 
   it('throws when a landing-page probe or the category list fails (no partial sitemap)', async () => {
