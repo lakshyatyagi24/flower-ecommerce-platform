@@ -180,7 +180,12 @@ export type AdminOrder = {
   gst?: number;
   total: number;
   status: 'PENDING' | 'PAID' | 'SHIPPED' | 'COMPLETED' | 'CANCELLED';
-  paymentMethod: string;
+  paymentMethod: 'COD' | 'RAZORPAY' | string;
+  paymentStatus: 'UNPAID' | 'PAID' | 'FAILED' | 'REFUNDED';
+  razorpayOrderId?: string | null;
+  razorpayPaymentId?: string | null;
+  paidAt?: string | null;
+  refundNote?: string | null;
   customerName: string | null;
   customerEmail: string | null;
   customerPhone: string | null;
@@ -212,6 +217,8 @@ export type AdminOrderPatch = {
   city?: string | null;
   postalCode?: string | null;
   customerPhone?: string | null;
+  paymentStatus?: 'REFUNDED';
+  refundNote?: string | null;
 };
 
 export type AdminCustomer = {
@@ -302,9 +309,21 @@ export const adminApi = {
     apiFetch<{ success: true } | AdminProduct>(`/products/${id}`, { method: 'DELETE' }),
 
   // Orders
-  listOrders: (params: { status?: string; take?: number; skip?: number } = {}) => {
+  listOrders: (
+    params: {
+      status?: string;
+      paymentStatus?: string;
+      paymentMethod?: string;
+      attention?: string;
+      take?: number;
+      skip?: number;
+    } = {},
+  ) => {
     const qs = new URLSearchParams();
     if (params.status) qs.set('status', params.status);
+    if (params.paymentStatus) qs.set('paymentStatus', params.paymentStatus);
+    if (params.paymentMethod) qs.set('paymentMethod', params.paymentMethod);
+    if (params.attention) qs.set('attention', params.attention);
     if (params.take !== undefined) qs.set('take', String(params.take));
     if (params.skip !== undefined) qs.set('skip', String(params.skip));
     const suffix = qs.toString();
@@ -324,6 +343,9 @@ export const adminApi = {
       customerCount: number;
       revenue: number;
       openEnquiries: number;
+      unpaidOnline?: number;
+      refundsDue?: number;
+      mismatches?: number;
       recentOrders: { id: number; customerName: string | null; total: number; status: string; createdAt: string }[];
     }>('/orders/stats'),
 
