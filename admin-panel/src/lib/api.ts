@@ -142,6 +142,7 @@ export type AdminProduct = {
   gstRate?: number;
   unit?: string;
   minOrderQty?: number;
+  tags?: string[];
   categoryId: number | null;
   category?: { id: number; name: string; slug: string; productType?: AdminProductType; defaultSaleMode?: AdminSaleMode } | null;
 };

@@ -56,6 +56,7 @@ interface ProductForm {
   gstRate: string;
   unit: string;
   minOrderQty: string;
+  tags: string;
 }
 
 const emptyForm: ProductForm = {
@@ -73,7 +74,26 @@ const emptyForm: ProductForm = {
   gstRate: "0",
   unit: "piece",
   minOrderQty: "1",
+  tags: "",
 };
+
+const TAG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const TAG_MAX_LEN = 40;
+const TAG_MAX_COUNT = 20;
+const OCCASION_TAGS = ["birthday", "anniversary", "wedding", "corporate", "sympathy", "congratulations", "get-well-soon", "just-because"];
+
+// Mirrors the backend rule: trim, lowercase, de-duplicate; each tag a lowercase slug (max 40), max 20 tags.
+function parseTags(text: string): { tags: string[]; error: string | null } {
+  const tags: string[] = [];
+  for (const part of text.split(",")) {
+    const t = part.trim().toLowerCase();
+    if (t && !tags.includes(t)) tags.push(t);
+  }
+  const bad = tags.filter((t) => t.length > TAG_MAX_LEN || !TAG_RE.test(t));
+  if (bad.length) return { tags, error: `Tags must be lowercase letters, numbers and hyphens (max ${TAG_MAX_LEN} chars): ${bad.join(", ")}` };
+  if (tags.length > TAG_MAX_COUNT) return { tags, error: `At most ${TAG_MAX_COUNT} tags per product (${tags.length} entered)` };
+  return { tags, error: null };
+}
 
 function slugify(input: string): string {
   return input.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
@@ -147,6 +167,7 @@ export default function ProductsPage() {
       gstRate: (p.gstRate ?? 0).toString(),
       unit: p.unit ?? "piece",
       minOrderQty: (p.minOrderQty ?? 1).toString(),
+      tags: (p.tags ?? []).join(", "),
     });
     setIsDialogOpen(true);
   };
@@ -190,6 +211,8 @@ export default function ProductsPage() {
       if (isNaN(gstNum) || gstNum < 0) {
         throw new Error("Please enter a valid GST rate (0 or positive).");
       }
+      const parsedTags = parseTags(form.tags);
+      if (parsedTags.error) throw new Error(parsedTags.error);
       const minOrderNum = parseInt(form.minOrderQty || "1", 10);
       const stockNum = parseInt(form.stock || "0", 10);
       const payload = {
@@ -208,6 +231,7 @@ export default function ProductsPage() {
         gstRate: gstNum,
         unit: form.unit,
         minOrderQty: isNaN(minOrderNum) || minOrderNum < 1 ? 1 : minOrderNum,
+        tags: parsedTags.tags,
       };
       if (editing) {
         await adminApi.updateProduct(editing.id, payload);
@@ -334,6 +358,52 @@ export default function ProductsPage() {
                   <Label htmlFor="minOrderQty">Min. order qty</Label>
                   <Input id="minOrderQty" type="number" min="1" value={form.minOrderQty} onChange={(e) => setForm({ ...form, minOrderQty: e.target.value })} />
                 </div>
+              </div>
+              <div>
+                <Label htmlFor="tags">Tags</Label>
+                <Input
+                  id="tags"
+                  placeholder="birthday, anniversary, roses"
+                  value={form.tags}
+                  onChange={(e) => setForm({ ...form, tags: e.target.value })}
+                  aria-invalid={parseTags(form.tags).error ? true : undefined}
+                />
+                {(() => {
+                  const parsed = parseTags(form.tags);
+                  return (
+                    <>
+                      {parsed.error ? <p className="text-xs text-red-600 mt-1">{parsed.error}</p> : null}
+                      {parsed.tags.length > 0 ? (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {parsed.tags.map((t) => (
+                            <span
+                              key={t}
+                              className={`px-2 py-0.5 rounded-full text-xs ${TAG_RE.test(t) && t.length <= TAG_MAX_LEN ? "bg-slate-100 text-slate-700" : "bg-red-100 text-red-700"}`}
+                            >
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                      <div className="flex flex-wrap items-center gap-1 mt-2 text-xs text-muted-foreground">
+                        <span>Occasions:</span>
+                        {OCCASION_TAGS.map((t) => (
+                          <button
+                            key={t}
+                            type="button"
+                            disabled={parsed.tags.includes(t)}
+                            onClick={() =>
+                              setForm((f) => ({ ...f, tags: f.tags.trim() ? `${f.tags.trim().replace(/,\s*$/, "")}, ${t}` : t }))
+                            }
+                            className="px-2 py-0.5 rounded-full border hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                          >
+                            + {t}
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
               <div>
                 <Label htmlFor="categoryId">Category</Label>
