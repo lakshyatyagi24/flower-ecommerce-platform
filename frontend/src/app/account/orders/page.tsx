@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ApiOrder, api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
@@ -9,22 +8,11 @@ import { formatINR } from "@/lib/cart-context";
 import { setTrackEmail } from "@/lib/track-order-session";
 import { usePayForOrder } from "@/lib/use-pay-for-order";
 import PaymentActions from "@/components/PaymentActions";
-
-function paymentLabel(o: ApiOrder): string {
-  if (o.paymentStatus === "REFUNDED") return "Refunded";
-  if (o.paymentStatus === "PAID") return o.status === "CANCELLED" ? "Paid — refund due" : "Paid";
-  if (o.paymentMethod === "COD") return "Cash on delivery";
-  if (o.status === "CANCELLED") return "Payment not completed";
-  return "Payment pending";
-}
-
-function canPayNow(o: ApiOrder): boolean {
-  return (
-    o.paymentMethod === "RAZORPAY" &&
-    o.status === "PENDING" &&
-    (o.paymentStatus === "UNPAID" || o.paymentStatus === "FAILED")
-  );
-}
+import { canPayNow, paymentLabel } from "@/lib/order-labels";
+import Container from "@/components/ui/Container";
+import Button from "@/components/ui/Button";
+import Skeleton from "@/components/ui/Skeleton";
+import ErrorState from "@/components/ui/ErrorState";
 
 // Pay now (and Check status after a problem) for one order. Resolving the order
 // clears the cart / pending key inside the hook, then we refresh the list.
@@ -49,6 +37,7 @@ export default function MyOrdersPage() {
     }
     let cancelled = false;
     setLoading(true);
+    setError(null);
     api
       .listMyOrders()
       .then((items) => {
@@ -67,88 +56,105 @@ export default function MyOrdersPage() {
 
   if (authLoading || (!user && !error)) {
     return (
-      <main className="section-shell mt-12 mb-16">
-        <div className="animate-pulse h-12 bg-slate-200 rounded w-1/3" />
+      <main>
+        <Container className="py-12 lg:py-16" aria-busy="true">
+          <Skeleton className="h-10 w-1/3" />
+        </Container>
       </main>
     );
   }
 
   return (
-    <main className="section-shell mt-12 mb-16">
-      <h1 className="text-3xl md:text-4xl font-semibold text-slate-900 mb-6">My orders</h1>
+    <main>
+      <Container className="py-12 lg:py-16">
+        <h1 className="type-h1">My orders</h1>
 
-      {loading && <div className="text-slate-700">Loading…</div>}
-      {error && <div className="text-red-600">{error}</div>}
+        {loading && (
+          <div className="mt-10 space-y-6" aria-busy="true">
+            <Skeleton className="h-28" />
+            <Skeleton className="h-28" />
+          </div>
+        )}
+        {error && <ErrorState message={error} onRetry={() => setTick((t) => t + 1)} />}
 
-      {!loading && orders.length === 0 && !error && (
-        <div className="section-card p-8 text-center">
-          <p className="text-slate-700">You don&apos;t have any orders yet.</p>
-          <Link href="/products" className="mt-4 inline-block bg-olive-green text-white px-6 py-3 rounded-full font-semibold hover:opacity-95">
-            Start shopping
-          </Link>
-        </div>
-      )}
+        {!loading && orders.length === 0 && !error && (
+          <div className="mt-12 border-y border-stone-light py-16 text-center">
+            <p className="font-display text-2xl text-charcoal">You don&apos;t have any orders yet.</p>
+            <div className="mt-8">
+              <Button href="/products">Start shopping</Button>
+            </div>
+          </div>
+        )}
 
-      {orders.length > 0 && (
-        <div className="space-y-4">
-          {orders.map((o) => (
-            <article key={o.id} className="section-card p-6">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                <div>
-                  <h2 className="text-lg font-semibold text-slate-900">Order #{o.id}</h2>
-                  <p className="text-sm text-slate-600">
-                    Placed {new Date(o.createdAt).toLocaleString()}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm text-slate-600">Status</div>
-                  <div className="font-semibold text-olive-green">{o.status}</div>
-                  <div className="text-sm text-slate-700 mt-1">{paymentLabel(o)}</div>
-                </div>
-              </div>
-              <ul className="mt-4 space-y-1 text-sm text-slate-700">
-                {o.items.map((it) => (
-                  <li key={it.id}>
-                    {it.quantity} × {it.productName} — {formatINR(it.unitPrice * it.quantity)}
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-4 border-t border-olive-green/10 pt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="text-sm text-slate-700 space-y-1">
-                  <div className="flex justify-between sm:justify-start sm:gap-3">
-                    <span className="text-slate-500">Subtotal</span>
-                    <span>{formatINR(o.subtotal)}</span>
-                  </div>
-                  <div className="flex justify-between sm:justify-start sm:gap-3">
-                    <span className="text-slate-500">Shipping</span>
-                    <span>{o.shipping === 0 ? "Free" : formatINR(o.shipping)}</span>
-                  </div>
-                  {o.gst && o.gst > 0 ? (
-                    <div className="flex justify-between sm:justify-start sm:gap-3">
-                      <span className="text-slate-500">GST</span>
-                      <span>{formatINR(o.gst)}</span>
+        {orders.length > 0 && (
+          <div className="mt-10 border-t border-stone-light">
+            {orders.map((o) => {
+              const units = o.items.reduce((n, it) => n + it.quantity, 0);
+              return (
+                <article key={o.id} className="border-b border-stone-light py-8">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <h2 className="font-display text-2xl text-charcoal">Order #{o.id}</h2>
+                      <p className="mt-1 text-sm text-stone-dark">
+                        {new Date(o.createdAt).toLocaleDateString(undefined, { dateStyle: "medium" })} · {units} {units === 1 ? "item" : "items"}
+                      </p>
                     </div>
-                  ) : null}
-                  <div className="flex justify-between sm:justify-start sm:gap-3 font-semibold text-olive-green">
-                    <span>Total</span>
-                    <span>{formatINR(o.total)}</span>
+                    <div className="md:text-right">
+                      <p className="text-xs font-medium tracking-[0.16em] text-charcoal">{o.status}</p>
+                      <p className="mt-1 text-sm text-stone-dark">{paymentLabel(o)}</p>
+                    </div>
                   </div>
-                </div>
-                <div className="flex flex-col gap-2 sm:items-end sm:justify-end">
-                  {canPayNow(o) && <OrderPayment order={o} onResolved={() => setTick((t) => t + 1)} />}
-                  <Link
-                    href={`/track-order/results?orderId=${o.id}`}
-                    onClick={() => setTrackEmail(o.customerEmail || user?.email || "")}
-                    className="text-olive-green underline-offset-4 hover:underline"
-                  >
-                    View details →
-                  </Link>
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
-      )}
+
+                  <ul className="mt-6 space-y-2 text-sm text-charcoal">
+                    {o.items.map((it) => (
+                      <li key={it.id} className="flex justify-between gap-4">
+                        <span>
+                          {it.quantity} × {it.productName}
+                        </span>
+                        <span>{formatINR(it.unitPrice * it.quantity)}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <dl className="mt-6 space-y-2 border-t border-stone-light pt-4 text-sm text-stone-dark">
+                    <div className="flex justify-between gap-4">
+                      <dt>Subtotal</dt>
+                      <dd className="text-charcoal">{formatINR(o.subtotal)}</dd>
+                    </div>
+                    <div className="flex justify-between gap-4">
+                      <dt>Shipping</dt>
+                      <dd className="text-charcoal">{o.shipping === 0 ? "Free" : formatINR(o.shipping)}</dd>
+                    </div>
+                    {o.gst && o.gst > 0 ? (
+                      <div className="flex justify-between gap-4">
+                        <dt>GST</dt>
+                        <dd className="text-charcoal">{formatINR(o.gst)}</dd>
+                      </div>
+                    ) : null}
+                    <div className="flex justify-between gap-4 pt-2 text-base text-charcoal">
+                      <dt>Total</dt>
+                      <dd className="font-display text-xl">{formatINR(o.total)}</dd>
+                    </div>
+                  </dl>
+
+                  <div className="mt-2">
+                    {canPayNow(o) && <OrderPayment order={o} onResolved={() => setTick((t) => t + 1)} />}
+                    <div className="mt-2">
+                      <Button
+                        variant="ghost"
+                        href={`/track-order/results?orderId=${o.id}`}
+                        onClick={() => setTrackEmail(o.customerEmail || user?.email || "")}
+                      >
+                        View details
+                      </Button>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </Container>
     </main>
   );
 }

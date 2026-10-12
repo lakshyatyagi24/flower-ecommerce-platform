@@ -5,6 +5,11 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
 import { isValidResetToken } from "@/lib/reset-token";
+import AuthLayout from "@/components/account/AuthLayout";
+import Button from "@/components/ui/Button";
+import Field from "@/components/ui/Field";
+import { PasswordInput } from "@/components/ui/Input";
+import { textLink } from "@/components/ui/form-styles";
 
 const INVALID_MESSAGE = "This link is invalid or has expired.";
 
@@ -17,7 +22,6 @@ function ResetForm() {
 
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [expired, setExpired] = useState(false);
@@ -56,31 +60,28 @@ function ResetForm() {
     }
   };
 
-  const box = "mt-5 px-3 py-2 rounded text-sm";
+  const box = "mb-6 border px-4 py-3 text-sm leading-relaxed";
 
   let body: React.ReactNode;
   if (done) {
     body = (
       <>
         <div role="alert" aria-live="polite" ref={msgRef} tabIndex={-1} className="outline-none">
-          <p className={`${box} bg-green-50 text-green-700`}>Your password has been updated.</p>
+          <p className={`${box} border-moss text-charcoal`}>Your password has been updated.</p>
         </div>
-        <Link
-          href="/account/login"
-          className="mt-6 w-full inline-flex items-center justify-center rounded-full bg-olive-green text-white px-6 py-3 text-sm font-semibold shadow-md hover:shadow-lg transition"
-        >
+        <Button href="/account/login" size="lg" className="w-full">
           Go to sign in
-        </Link>
+        </Button>
       </>
     );
   } else if (invalid) {
     body = (
       <>
         <div role="alert" aria-live="polite" ref={msgRef} tabIndex={-1} className="outline-none">
-          <p className={`${box} bg-red-50 text-red-700`}>{INVALID_MESSAGE}</p>
+          <p className={`${box} border-danger text-danger`}>{INVALID_MESSAGE}</p>
         </div>
-        <p className="mt-6 text-sm text-slate-700">
-          <Link href="/account/forgot-password" className="text-olive-green font-semibold hover:underline">
+        <p className="text-center text-sm">
+          <Link href="/account/forgot-password" className={`text-charcoal ${textLink}`}>
             Request a new reset link
           </Link>
         </p>
@@ -90,78 +91,54 @@ function ResetForm() {
     body = (
       <>
         <div role="alert" aria-live="polite" ref={msgRef} tabIndex={-1} className="outline-none">
-          {error && <p className={`${box} bg-red-50 text-red-700`}>{error}</p>}
+          {error && <p className={`${box} border-danger text-danger`}>{error}</p>}
         </div>
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          <div>
-            <label htmlFor="reset-password" className="block text-sm font-medium text-gray-700">
-              New password
-            </label>
-            <div className="mt-1 relative">
-              <input
-                id="reset-password"
-                type={showPassword ? "text" : "password"}
-                required
-                minLength={8}
-                maxLength={128}
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-md border-gray-200 shadow-sm pr-16 focus:ring-2 focus:ring-olive-green/40"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((s) => !s)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-olive-green/80 px-2 py-1"
-                aria-label={showPassword ? "Hide password" : "Show password"}
-              >
-                {showPassword ? "Hide" : "Show"}
-              </button>
-            </div>
-          </div>
-          <div>
-            <label htmlFor="reset-confirm" className="block text-sm font-medium text-gray-700">
-              Confirm new password
-            </label>
-            <input
-              id="reset-confirm"
-              type={showPassword ? "text" : "password"}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <Field label="New password" hint="8 to 128 characters.">
+            <PasswordInput
+              required
+              minLength={8}
+              maxLength={128}
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </Field>
+          <Field label="Confirm new password">
+            <PasswordInput
               required
               minLength={8}
               maxLength={128}
               autoComplete="new-password"
               value={confirm}
               onChange={(e) => setConfirm(e.target.value)}
-              className="mt-1 w-full rounded-md border-gray-200 shadow-sm focus:ring-2 focus:ring-olive-green/40"
             />
-          </div>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-olive-green text-white px-6 py-3 text-sm font-semibold shadow-md hover:shadow-lg disabled:opacity-50 transition"
-          >
+          </Field>
+          <Button type="submit" size="lg" disabled={submitting} className="w-full">
             {submitting ? "Updating…" : "Update password"}
-          </button>
+          </Button>
         </form>
       </>
     );
   }
 
   return (
-    <div className="section-card p-8 sm:p-10 max-w-lg mx-auto">
-      <p className="pill mb-3">Account</p>
-      <h1 className="text-3xl md:text-4xl font-semibold text-slate-900">Choose a new password</h1>
+    <AuthLayout title="Choose a new password">
       {body}
-    </div>
+    </AuthLayout>
   );
 }
 
 export default function ResetPasswordView() {
   return (
-    <main className="section-shell mt-12 mb-16">
-      <Suspense fallback={<p>Loading…</p>}>
-        <ResetForm />
-      </Suspense>
-    </main>
+    <Suspense
+      fallback={
+        <main>
+          <div className="mx-auto w-full max-w-[420px] px-5 py-20" aria-busy="true" />
+        </main>
+      }
+    >
+      <ResetForm />
+    </Suspense>
   );
 }

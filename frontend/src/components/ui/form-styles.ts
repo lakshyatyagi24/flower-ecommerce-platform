@@ -8,3 +8,6 @@ export const controlBase =
 export const controlBorder = (invalid: boolean) => (invalid ? 'border-danger hover:border-danger' : 'border-stone-light');
 
 export const focusRing = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss';
+
+/** Quiet inline text link: underlined, darkens on hover. */
+export const textLink = 'underline underline-offset-4 decoration-stone transition-colors duration-200 hover:decoration-charcoal hover:text-moss ' + focusRing;

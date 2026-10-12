@@ -51,14 +51,14 @@ describe('ResetPasswordView', () => {
     search = q;
     render(<ResetPasswordView />);
     expect(screen.getByText(INVALID)).toBeInTheDocument();
-    expect(screen.queryByLabelText('New password')).toBeNull();
+    expect(screen.queryByLabelText(/^New password/)).toBeNull();
     expect(screen.getByRole('link', { name: /request a new reset link/i })).toHaveAttribute('href', '/account/forgot-password');
   });
 
   async function fill(pw: string, confirm: string) {
     const user = userEvent.setup();
-    await user.type(screen.getByLabelText('New password'), pw);
-    await user.type(screen.getByLabelText('Confirm new password'), confirm);
+    await user.type(screen.getByLabelText(/^New password/), pw);
+    await user.type(screen.getByLabelText(/^Confirm new password/), confirm);
     await user.click(screen.getByRole('button', { name: 'Update password' }));
   }
 
@@ -87,7 +87,7 @@ describe('ResetPasswordView', () => {
     render(<ResetPasswordView />);
     await fill('password-one', 'password-one');
     expect(await screen.findByText(INVALID)).toBeInTheDocument();
-    expect(screen.queryByLabelText('New password')).toBeNull();
+    expect(screen.queryByLabelText(/^New password/)).toBeNull();
   });
 });
 
@@ -98,7 +98,7 @@ describe('ForgotPasswordView', () => {
     vi.mocked(api.forgotPassword).mockResolvedValue({ ok: true });
     render(<ForgotPasswordView />);
     const user = userEvent.setup();
-    await user.type(screen.getByLabelText('Email'), 'a@b.co');
+    await user.type(screen.getByLabelText(/^Email/), 'a@b.co');
     await user.click(screen.getByRole('button', { name: /send reset link/i }));
     expect(
       await screen.findByText('If an account exists for that email, a reset link is on its way.'),
@@ -110,7 +110,7 @@ describe('ForgotPasswordView', () => {
     vi.mocked(api.forgotPassword).mockRejectedValue(new ApiError('Too Many Requests', 429, null));
     render(<ForgotPasswordView />);
     const user = userEvent.setup();
-    await user.type(screen.getByLabelText('Email'), 'a@b.co');
+    await user.type(screen.getByLabelText(/^Email/), 'a@b.co');
     await user.click(screen.getByRole('button', { name: /send reset link/i }));
     await waitFor(() =>
       expect(screen.getByText('Too many requests. Please wait a minute and try again.')).toBeInTheDocument(),
