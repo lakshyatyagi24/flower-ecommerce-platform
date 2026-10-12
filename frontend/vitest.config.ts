@@ -4,7 +4,12 @@ import path from 'node:path'
 export default defineConfig({
   esbuild: { jsx: 'automatic' },
   css: { postcss: { plugins: [] } },
-  resolve: { alias: { '@': path.resolve(__dirname, 'src') } },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, 'src'),
+      'server-only': path.resolve(__dirname, 'vitest.server-only-stub.ts'),
+    },
+  },
   test: {
     environment: 'jsdom',
     globals: true,

@@ -159,6 +159,18 @@ export type ApiProduct = {
   } | null;
   averageRating?: number;
   reviewCount?: number;
+  tags?: string[];
+};
+
+export type ProductSort = 'newest' | 'price_asc' | 'price_desc' | 'popular';
+
+export type ApiProductList = {
+  items: ApiProduct[];
+  total: number;
+  take?: number;
+  skip?: number;
+  page?: number;
+  pages?: number;
 };
 
 export type ApiEnquiry = {
@@ -256,16 +268,27 @@ export const api = {
 
   // Catalog
   listCategories: () => apiFetch<ApiCategory[]>('/categories'),
-  listProducts: (params: { category?: string; q?: string; featured?: boolean; take?: number } = {}) => {
+  listProducts: (
+    params: {
+      category?: string;
+      tag?: string;
+      sort?: ProductSort;
+      q?: string;
+      featured?: boolean;
+      page?: number;
+      take?: number;
+    } = {},
+  ) => {
     const qs = new URLSearchParams();
     if (params.category) qs.set('category', params.category);
+    if (params.tag) qs.set('tag', params.tag);
+    if (params.sort) qs.set('sort', params.sort);
     if (params.q) qs.set('q', params.q);
     if (params.featured !== undefined) qs.set('featured', String(params.featured));
+    if (params.page !== undefined) qs.set('page', String(params.page));
     if (params.take !== undefined) qs.set('take', String(params.take));
     const suffix = qs.toString();
-    return apiFetch<{ items: ApiProduct[]; total: number }>(
-      `/products${suffix ? `?${suffix}` : ''}`,
-    );
+    return apiFetch<ApiProductList>(`/products${suffix ? `?${suffix}` : ''}`);
   },
   getProductBySlug: (slug: string) => apiFetch<ApiProduct>(`/products/slug/${encodeURIComponent(slug)}`),
 
