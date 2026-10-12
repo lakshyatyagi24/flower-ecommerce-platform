@@ -88,3 +88,39 @@ export function itemListJsonLd(products: ApiProduct[]): JsonObject {
     })),
   };
 }
+
+export function organizationJsonLd(): JsonObject {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: 'Fresh Petals India',
+    url: SITE,
+    logo: absoluteUrl('/logo.png'),
+  };
+}
+
+export function websiteJsonLd(): JsonObject {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Fresh Petals India',
+    url: SITE,
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: `${SITE}/products?q={search_term_string}`,
+      'query-input': 'required name=search_term_string',
+    },
+  };
+}
+
+export function faqJsonLd(items: { q: string; a: string }[]): JsonObject {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: items.map((it) => ({
+      '@type': 'Question',
+      name: it.q,
+      acceptedAnswer: { '@type': 'Answer', text: it.a },
+    })),
+  };
+}

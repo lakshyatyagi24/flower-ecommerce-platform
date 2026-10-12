@@ -107,3 +107,30 @@ describe('metaDescription', () => {
     expect(metaDescription(null)).toBe('');
   });
 });
+
+import { organizationJsonLd, websiteJsonLd, faqJsonLd } from '../seo';
+
+describe('organizationJsonLd / websiteJsonLd / faqJsonLd', () => {
+  it('Organization has name, url and an absolute logo', () => {
+    const j = organizationJsonLd() as any;
+    expect(j['@context']).toBe('https://schema.org');
+    expect(j['@type']).toBe('Organization');
+    expect(j.name).toBe('Fresh Petals India');
+    expect(j.url).toBe(SITE);
+    expect(j.logo).toBe(`${SITE}/logo.png`);
+  });
+  it('WebSite exposes a SearchAction targeting /products?q=', () => {
+    const j = websiteJsonLd() as any;
+    expect(j['@type']).toBe('WebSite');
+    expect(j.url).toBe(SITE);
+    expect(j.potentialAction['@type']).toBe('SearchAction');
+    expect(j.potentialAction.target).toBe(`${SITE}/products?q={search_term_string}`);
+    expect(j.potentialAction['query-input']).toBe('required name=search_term_string');
+  });
+  it('FAQPage maps questions to Question/Answer', () => {
+    const j = faqJsonLd([{ q: 'Q1?', a: 'A1.' }, { q: 'Q2?', a: 'A2.' }]) as any;
+    expect(j['@type']).toBe('FAQPage');
+    expect(j.mainEntity).toHaveLength(2);
+    expect(j.mainEntity[0]).toEqual({ '@type': 'Question', name: 'Q1?', acceptedAnswer: { '@type': 'Answer', text: 'A1.' } });
+  });
+});

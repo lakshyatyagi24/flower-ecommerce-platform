@@ -9,7 +9,8 @@ import WhatsAppButton from "@/components/WhatsAppButton";
 import { AuthProvider } from "@/lib/auth-context";
 import { CartProvider } from "@/lib/cart-context";
 import { SettingsProvider } from "@/lib/settings-context";
-import { SITE } from "@/lib/seo";
+import JsonLd from "@/components/JsonLd";
+import { SITE, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -66,6 +67,8 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${cormorant.variable}`}>
       <body className="antialiased">
+        <JsonLd data={organizationJsonLd()} />
+        <JsonLd data={websiteJsonLd()} />
         <SettingsProvider>
           <AuthProvider>
             <CartProvider>
