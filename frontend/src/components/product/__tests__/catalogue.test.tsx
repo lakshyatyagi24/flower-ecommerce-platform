@@ -42,6 +42,17 @@ describe('ProductCard', () => {
     expect(screen.queryByRole('button')).toBeNull();
   });
 
+  it('treats stock below the minimum order as out of stock (no quick add)', () => {
+    render(<ProductCard product={{ ...product, stock: 3, minOrderQty: 5 }} />);
+    expect(screen.getByText(/out of stock/i)).toBeTruthy();
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+
+  it('does not scale on hover when reduced motion is requested', () => {
+    const { container } = render(<ProductCard product={product} />);
+    expect(container.querySelector('img')!.className).toContain('motion-reduce:group-hover:scale-100');
+  });
+
   it('shows Enquire (a link to the PDP) for enquiry products, never a button', () => {
     render(<ProductCard product={{ ...product, saleMode: 'ENQUIRY', stock: 0 }} />);
     expect(screen.queryByRole('button')).toBeNull();
@@ -93,5 +104,41 @@ describe('SortSelect', () => {
     search = '';
     render(<SortSelect value="popular" />);
     expect((screen.getByLabelText(/sort/i) as HTMLSelectElement).value).toBe('popular');
+  });
+});
+
+describe('ListingBusy', () => {
+  async function setup() {
+    const { default: ListingBusy } = await import('../ListingBusy');
+    search = '';
+    const utils = render(
+      <ListingBusy>
+        <a href="/products?category=roses" onClick={(e) => e.preventDefault()}>Roses</a>
+        <a href="/products/red-rose" onClick={(e) => e.preventDefault()}>Product</a>
+        <select aria-label="s" defaultValue="a"><option value="a">a</option><option value="b">b</option></select>
+        <div data-grid />
+      </ListingBusy>,
+    );
+    return { root: utils.container.firstChild as HTMLElement, ...utils };
+  }
+
+  it('marks the listing busy while a filter navigation is in flight', async () => {
+    const { root } = await setup();
+    expect(root.getAttribute('aria-busy')).toBe('false');
+    fireEvent.click(screen.getByText('Roses'));
+    expect(root.getAttribute('aria-busy')).toBe('true');
+  });
+
+  it('ignores product links and modified clicks', async () => {
+    const { root } = await setup();
+    fireEvent.click(screen.getByText('Product'));
+    fireEvent.click(screen.getByText('Roses'), { metaKey: true });
+    expect(root.getAttribute('aria-busy')).toBe('false');
+  });
+
+  it('is busy while the sort select changes', async () => {
+    const { root } = await setup();
+    fireEvent.change(screen.getByLabelText('s'), { target: { value: 'b' } });
+    expect(root.getAttribute('aria-busy')).toBe('true');
   });
 });

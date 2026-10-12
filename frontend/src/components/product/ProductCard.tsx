@@ -3,6 +3,7 @@ import Link from "next/link";
 import Price from "@/components/ui/Price";
 import QuickAdd from "./QuickAdd";
 import { productImage } from "@/lib/product-image";
+import { availability } from "@/lib/product-helpers";
 import type { ApiProduct } from "@/lib/api";
 
 // Hidden until hover/focus only on devices that can hover; always visible on touch.
@@ -10,10 +11,14 @@ import type { ApiProduct } from "@/lib/api";
 const REVEAL =
   "[@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:group-focus-within:opacity-100";
 
-export default function ProductCard({ product, priority = false }: { product: ApiProduct; priority?: boolean }) {
+type Props = { product: ApiProduct; priority?: boolean; headingLevel?: 2 | 3 };
+
+export default function ProductCard({ product, priority = false, headingLevel = 2 }: Props) {
+  const Heading = headingLevel === 3 ? "h3" : "h2";
   const href = `/products/${product.slug}`;
-  const isEnquiry = product.saleMode === "ENQUIRY";
-  const outOfStock = !isEnquiry && product.stock <= 0;
+  const status = availability(product);
+  const isEnquiry = status === "enquiry";
+  const outOfStock = status === "out-of-stock";
 
   return (
     <article className="group relative">
@@ -25,11 +30,11 @@ export default function ProductCard({ product, priority = false }: { product: Ap
             fill
             sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
             priority={priority}
-            className="object-cover transition-transform duration-[600ms] ease-out group-hover:scale-[1.02]"
+            className="object-cover transition-transform duration-[600ms] ease-out group-hover:scale-[1.02] motion-reduce:group-hover:scale-100"
           />
         </div>
         <div className="mt-3 space-y-1">
-          <h3 className="font-sans! text-sm font-normal leading-snug text-charcoal">{product.name}</h3>
+          <Heading className="font-sans! text-sm font-normal leading-snug text-charcoal">{product.name}</Heading>
           <p className="flex flex-wrap items-baseline gap-x-3 text-sm">
             {isEnquiry ? <span className="text-stone-dark">On enquiry</span> : <Price amount={product.price} />}
             {outOfStock && <span className="text-xs uppercase tracking-[0.12em] text-stone-dark">Out of stock</span>}

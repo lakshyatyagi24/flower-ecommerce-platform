@@ -6,11 +6,15 @@ import Container from "@/components/ui/Container";
 import Eyebrow from "@/components/ui/Eyebrow";
 import Price from "@/components/ui/Price";
 import JsonLd from "@/components/JsonLd";
+import Accordion from "@/components/product/Accordion";
 import ProductBuyBox from "@/components/product/ProductBuyBox";
 import ProductGrid from "@/components/product/ProductGrid";
+import Stars from "@/components/product/Stars";
 import ProductReviews from "@/components/ProductReviews";
 import { getProduct, getSettings, listProducts } from "@/lib/server-api";
 import { absoluteUrl, breadcrumbJsonLd, metaDescription, productJsonLd } from "@/lib/seo";
+import { leadText, splitDescription } from "@/lib/description";
+import { careCopy, uspsFromSettings } from "@/lib/product-helpers";
 import { productImage } from "@/lib/product-image";
 import type { ApiProduct } from "@/lib/api";
 
@@ -35,7 +39,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   }
   const title = `${product.name} — ${TITLE_SUFFIX[product.productType ?? ""] ?? "Fresh Cut Flowers"}`;
   const description =
-    metaDescription(product.description) ||
+    metaDescription(leadText(product.description)) ||
     `Order ${product.name} online from Fresh Petals India. Farm-fresh flowers, delivered fresh.`;
   const path = `/products/${product.slug}`;
   const image = absoluteUrl(productImage(product));
@@ -46,48 +50,6 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     openGraph: { title, description, url: path, type: "website", images: [{ url: image, alt: product.name }] },
     twitter: { card: "summary_large_image", title, description, images: [image] },
   };
-}
-
-type Block = { text: string; heading: boolean };
-
-// Catalogue copy often uses short label lines ("What you get", "Size it right") between paragraphs.
-// Those are headings, never the lead sentence.
-function splitDescription(text: string | null): { lead: string; rest: Block[] } {
-  const blocks: Block[] = (text ?? "")
-    .split(/\r?\n/)
-    .map((t) => t.trim())
-    .filter(Boolean)
-    .map((t) => ({ text: t, heading: t.split(/\s+/).length <= 6 && !/[.!?]$/.test(t) }));
-  const leadIdx = blocks.findIndex((b) => !b.heading);
-  if (leadIdx === -1) return { lead: "", rest: blocks };
-  return { lead: blocks[leadIdx].text, rest: blocks.filter((_, i) => i !== leadIdx) };
-}
-
-function Stars({ value }: { value: number }) {
-  const full = Math.round(value);
-  return (
-    <span className="inline-flex gap-0.5" aria-hidden="true">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <svg key={i} viewBox="0 0 20 20" className="h-3.5 w-3.5 text-charcoal" fill={i < full ? "currentColor" : "none"} stroke="currentColor" strokeWidth="1.2">
-          <path d="M10 1.8l2.5 5.3 5.7.7-4.2 4 1.1 5.7L10 14.7 4.9 17.5 6 11.8 1.8 7.8l5.7-.7z" />
-        </svg>
-      ))}
-    </span>
-  );
-}
-
-function Accordion({ title, children, open = false }: { title: string; children: React.ReactNode; open?: boolean }) {
-  return (
-    <details open={open} className="group border-b border-stone-light">
-      <summary className="flex min-h-[56px] cursor-pointer list-none items-center justify-between text-[13px] font-medium uppercase tracking-[0.12em] text-charcoal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss [&::-webkit-details-marker]:hidden">
-        {title}
-        <span aria-hidden="true" className="text-lg font-normal text-stone transition-transform group-open:rotate-45">
-          +
-        </span>
-      </summary>
-      <div className="space-y-3 pb-6 text-sm leading-relaxed text-stone-dark">{children}</div>
-    </details>
-  );
 }
 
 async function safeRelated(product: ApiProduct): Promise<ApiProduct[]> {
@@ -118,9 +80,12 @@ export default async function ProductPage({ params }: Params) {
   const unit = product.unit && product.unit !== "piece" ? `/ ${product.unit}` : undefined;
   const minOrderQty = product.minOrderQty && product.minOrderQty > 0 ? product.minOrderQty : 1;
   const { lead, rest } = splitDescription(product.description);
-  const cutoff = settings["delivery.cutoffTime"]?.trim();
+  const usps = uspsFromSettings(settings);
+  const deliverySummary = settings["policies.deliverySummary"]?.trim();
+  const returnsSummary = settings["policies.returnsSummary"]?.trim();
   const reviewCount = product.reviewCount ?? 0;
   const rating = product.averageRating ?? 0;
+  const productLd = productJsonLd(product);
 
   const crumbs = [
     { name: "Home", path: "/" },
@@ -130,7 +95,7 @@ export default async function ProductPage({ params }: Params) {
 
   return (
     <main className="pb-24">
-      <JsonLd data={productJsonLd(product)} />
+      {productLd && <JsonLd data={productLd} />}
       <JsonLd data={breadcrumbJsonLd(crumbs)} />
 
       <Container>
@@ -203,42 +168,25 @@ export default async function ProductPage({ params }: Params) {
             {lead && <p className="mt-6 text-base leading-relaxed text-stone-dark">{lead}</p>}
 
             <div className="mt-8 border-t border-stone-light pt-8">
-              <ProductBuyBox
-                product={{
-                  id: product.id,
-                  slug: product.slug,
-                  name: product.name,
-                  price: product.price,
-                  image: product.image,
-                  stock: product.stock,
-                  saleMode: product.saleMode,
-                  gstRate: product.gstRate,
-                  minOrderQty: product.minOrderQty,
-                  unit: product.unit,
-                }}
-              />
+              <ProductBuyBox product={product} />
             </div>
 
             <ul className="mt-8 divide-y divide-stone-light border-y border-stone-light text-sm">
-              <li className="py-4">
-                <span className="text-charcoal">Freshness guarantee</span>
-                <span className="text-stone-dark"> — cut fresh and packed to arrive in bloom.</span>
-              </li>
-              <li className="py-4">
-                <span className="text-charcoal">Same-day delivery</span>
-                <span className="text-stone-dark">
-                  {cutoff ? ` — order before ${cutoff}.` : " — order early in the day for same-day delivery."}
-                </span>
-              </li>
+              {usps.map((u) => (
+                <li key={u.title} className="py-4">
+                  <span className="text-charcoal">{u.title}</span>
+                  {u.body && <span className="text-stone-dark"> — {u.body}</span>}
+                </li>
+              ))}
             </ul>
 
             <div className="mt-2">
               <Accordion title="Details" open>
                 {rest.map((b, i) =>
                   b.heading ? (
-                    <h3 key={i} className="pt-2 font-sans! text-[13px] font-medium uppercase tracking-[0.12em] text-charcoal">
+                    <p key={i} className="pt-2 text-[13px] font-medium uppercase tracking-[0.12em] text-charcoal">
                       {b.text}
-                    </h3>
+                    </p>
                   ) : (
                     <p key={i}>{b.text}</p>
                   ),
@@ -261,21 +209,19 @@ export default async function ProductPage({ params }: Params) {
                 </dl>
               </Accordion>
               <Accordion title="Care">
-                <p>Trim the stems at an angle and place them in clean, cool water as soon as they arrive.</p>
-                <p>Change the water every two days and keep the stems away from direct sun, heat and ripening fruit.</p>
+                {careCopy(product.productType).map((t) => (
+                  <p key={t}>{t}</p>
+                ))}
               </Accordion>
               <Accordion title="Delivery & returns">
+                {deliverySummary && <p>{deliverySummary}</p>}
+                {returnsSummary && <p>{returnsSummary}</p>}
                 <p>
-                  {cutoff
-                    ? `Orders placed before ${cutoff} are eligible for same-day delivery where available.`
-                    : "Orders placed early in the day are eligible for same-day delivery where available."}
-                </p>
-                <p>
-                  Flowers are perishable. If your order arrives damaged, tell us within 24 hours with a photo and we will make it right.{" "}
+                  Flowers are perishable.{" "}
                   <Link href="/refund-policy" className="text-charcoal underline underline-offset-4">
                     Read our refund policy
-                  </Link>
-                  .
+                  </Link>{" "}
+                  for what to do if your order arrives damaged.
                 </p>
               </Accordion>
             </div>
@@ -291,7 +237,7 @@ export default async function ProductPage({ params }: Params) {
             <h2 id="related-heading" className="type-h2 mb-10 text-charcoal">
               You may also love
             </h2>
-            <ProductGrid products={related} />
+            <ProductGrid products={related} headingLevel={3} />
           </section>
         )}
       </Container>

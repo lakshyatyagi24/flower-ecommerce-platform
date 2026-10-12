@@ -40,15 +40,18 @@ describe('product detail page', () => {
       items: [product, { ...product, id: 2, slug: 'pink-rose', name: 'Pink Rose' }],
       total: 2, page: 1, pages: 1, take: 5,
     });
-    getSettings.mockReset().mockResolvedValue({ 'delivery.cutoffTime': '2 PM' });
+    getSettings.mockReset().mockResolvedValue({ 'trust.usp1Title': 'Freshness guarantee', 'trust.usp1Body': 'Cut to order.', 'policies.deliverySummary': 'We deliver 9 to 6.' });
   });
 
-  it('renders the h1, price with unit, breadcrumbs, cutoff text and related products without the current one', async () => {
+  it('renders the h1, price with unit, breadcrumbs, admin-managed reassurance points and related products without the current one', async () => {
     const { container } = render(await ProductPage({ params: { slug: 'red-rose' } }));
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Red Rose');
     expect(container.textContent).toContain('₹499');
     expect(container.textContent).toContain('/ stem');
-    expect(container.textContent).toContain('order before 2 PM');
+    expect(container.textContent).toContain('Freshness guarantee');
+    expect(container.textContent).toContain('Cut to order.');
+    expect(container.textContent).toContain('We deliver 9 to 6.');
+    expect(container.textContent).not.toMatch(/same-day/i);
     expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toBeTruthy();
     expect(screen.getByRole('button', { name: /add to bag/i })).toBeTruthy();
     expect(screen.getByRole('link', { name: /pink rose/i }).getAttribute('href')).toBe('/products/pink-rose');
@@ -71,7 +74,8 @@ describe('product detail page', () => {
     listProducts.mockRejectedValue(new Error('down'));
     const { container } = render(await ProductPage({ params: { slug: 'red-rose' } }));
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Red Rose');
-    expect(container.textContent).toContain('order early in the day');
+    expect(container.textContent).toContain('Hand-tied by our florists');
+    expect(container.textContent).not.toMatch(/same-day/i);
   });
 
   it('skips label lines when choosing the lead paragraph and renders them as headings in Details', async () => {
@@ -79,8 +83,32 @@ describe('product detail page', () => {
     const { container } = render(await ProductPage({ params: { slug: 'red-rose' } }));
     const lead = container.querySelector('h1')!.parentElement!.querySelector('p.mt-6')!;
     expect(lead.textContent).toBe('A bunch of twelve fresh roses.');
-    expect(screen.getByRole('heading', { level: 3, name: 'What you get' })).toBeTruthy();
+    expect(screen.getByText('What you get').tagName).toBe('P');
+    // no heading level jumps: h1, then h2s only
+    expect([...container.querySelectorAll('h1,h2,h3,h4')].map((h) => h.tagName)).not.toContain('H4');
     expect(screen.getByText('Fits a medium vase.')).toBeTruthy();
+  });
+
+  it('omits the Product JSON-LD for unrated enquiry products but keeps the breadcrumb', async () => {
+    getProduct.mockResolvedValue({ ...product, saleMode: 'ENQUIRY', reviewCount: 0 });
+    const { container } = render(await ProductPage({ params: { slug: 'red-rose' } }));
+    const types = ld(container).map((d) => d['@type']);
+    expect(types).toEqual(['BreadcrumbList']);
+    expect(container.textContent).toContain('Price on enquiry');
+  });
+
+  it('keeps a priceless Product block for rated enquiry products', async () => {
+    getProduct.mockResolvedValue({ ...product, saleMode: 'ENQUIRY' });
+    const { container } = render(await ProductPage({ params: { slug: 'red-rose' } }));
+    const p = ld(container).find((d) => d['@type'] === 'Product');
+    expect(p.offers).toBeUndefined();
+    expect(p.aggregateRating.reviewCount).toBe(2);
+  });
+
+  it('uses care copy for the product type', async () => {
+    getProduct.mockResolvedValue({ ...product, productType: 'PLANT' });
+    const { container } = render(await ProductPage({ params: { slug: 'red-rose' } }));
+    expect(container.textContent).toMatch(/indirect light/i);
   });
 
   it('shows Enquire for enquiry products', async () => {
@@ -109,7 +137,7 @@ describe('generateMetadata', () => {
   it('builds title, description, canonical, og image and twitter card', async () => {
     const m = await generateMetadata({ params: { slug: 'red-rose' } });
     expect(m.title).toBe('Red Rose — Fresh Cut Flowers');
-    expect(m.description).toBe('First paragraph. Second paragraph.');
+    expect(m.description).toBe('First paragraph.');
     expect(m.alternates?.canonical).toBe('/products/red-rose');
     expect(JSON.stringify(m.openGraph)).toContain('https://freshpetalsindia.com/images/placeholder-bloom.jpg');
     expect((m.twitter as { card: string }).card).toBe('summary_large_image');
@@ -120,6 +148,14 @@ describe('generateMetadata', () => {
     await expect(generateMetadata({ params: { slug: 'x' } })).rejects.toThrow('NEXT_NOT_FOUND');
     getProduct.mockResolvedValue({ ...product, active: false });
     await expect(generateMetadata({ params: { slug: 'x' } })).rejects.toThrow('NEXT_NOT_FOUND');
+  });
+
+  it('uses the clean lead paragraph (not seed label lines) for description, og and twitter', async () => {
+    getProduct.mockResolvedValue({ ...product, description: 'What you get\n\nTwelve fresh roses.\n\nSize it right\n\nFits a vase.' });
+    const m = await generateMetadata({ params: { slug: 'x' } });
+    expect(m.description).toBe('Twelve fresh roses.');
+    expect(m.openGraph?.description).toBe('Twelve fresh roses.');
+    expect(m.twitter?.description).toBe('Twelve fresh roses.');
   });
 
   it('uses a type-appropriate title suffix', async () => {

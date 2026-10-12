@@ -19,16 +19,27 @@ const qty = () => screen.getByTestId('qty').textContent;
 describe('ProductBuyBox', () => {
   beforeEach(() => add.mockReset());
 
-  it('starts at the minimum order quantity and steps by it', () => {
+  it('starts at the minimum order quantity, steps by 1 and cannot go below it', () => {
     render(<ProductBuyBox product={{ ...product, minOrderQty: 5 }} />);
     expect(qty()).toBe('5');
-    expect(screen.getByText(/sold in bunches of 5/i)).toBeTruthy();
+    expect(screen.getByText(/minimum order: 5 stem/i)).toBeTruthy();
+    expect(screen.queryByText(/bunches/i)).toBeNull();
+    const dec = screen.getByRole('button', { name: /decrease quantity/i }) as HTMLButtonElement;
+    expect(dec.disabled).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: /increase quantity/i }));
-    expect(qty()).toBe('10');
-    fireEvent.click(screen.getByRole('button', { name: /decrease quantity/i }));
-    fireEvent.click(screen.getByRole('button', { name: /decrease quantity/i }));
+    expect(qty()).toBe('6');
+    fireEvent.click(screen.getByRole('button', { name: /increase quantity/i }));
+    expect(qty()).toBe('7');
+    fireEvent.click(dec);
+    fireEvent.click(dec);
+    fireEvent.click(dec);
     expect(qty()).toBe('5');
-    expect((screen.getByRole('button', { name: /decrease quantity/i }) as HTMLButtonElement).disabled).toBe(true);
+    expect(dec.disabled).toBe(true);
+  });
+
+  it('shows no minimum note when the minimum is 1', () => {
+    render(<ProductBuyBox product={product} />);
+    expect(screen.queryByText(/minimum order/i)).toBeNull();
   });
 
   it('never exceeds stock and says how many are left when low', () => {
@@ -42,13 +53,20 @@ describe('ProductBuyBox', () => {
     expect(inc.disabled).toBe(true);
   });
 
-  it('keeps the quantity a multiple of the bunch size within stock', () => {
-    render(<ProductBuyBox product={{ ...product, minOrderQty: 4, stock: 10 }} />);
+  it('caps at stock when a minimum is set', () => {
+    render(<ProductBuyBox product={{ ...product, minOrderQty: 4, stock: 6 }} />);
     const inc = screen.getByRole('button', { name: /increase quantity/i }) as HTMLButtonElement;
     fireEvent.click(inc);
     fireEvent.click(inc);
-    expect(qty()).toBe('8');
+    fireEvent.click(inc);
+    expect(qty()).toBe('6');
     expect(inc.disabled).toBe(true);
+  });
+
+  it('treats stock below the minimum order as out of stock', () => {
+    render(<ProductBuyBox product={{ ...product, minOrderQty: 5, stock: 3 }} />);
+    expect((screen.getByRole('button', { name: /out of stock/i }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByRole('button', { name: /add to bag/i })).toBeNull();
   });
 
   it('does not show "only N left" for well-stocked items', () => {

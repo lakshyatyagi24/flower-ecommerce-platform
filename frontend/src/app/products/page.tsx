@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import Link from "next/link";
 import Container from "@/components/ui/Container";
 import Eyebrow from "@/components/ui/Eyebrow";
@@ -7,14 +8,20 @@ import JsonLd from "@/components/JsonLd";
 import ProductGrid from "@/components/product/ProductGrid";
 import Pagination from "@/components/product/Pagination";
 import SortSelect from "@/components/product/SortSelect";
+import ListingBusy from "@/components/product/ListingBusy";
 import { listCategories, listProducts } from "@/lib/server-api";
 import { itemListJsonLd, metaDescription } from "@/lib/seo";
+import type { ApiCategory } from "@/lib/api";
 import { PAGE_SIZE, listHref, parseListParams, type RawSearchParams } from "@/lib/list-params";
 
 // R1: never prerender at build time (the API is not reachable during `next build`).
 export const dynamic = "force-dynamic";
 
 type Props = { searchParams?: RawSearchParams };
+
+function flatten(list: ApiCategory[]): ApiCategory[] {
+  return list.flatMap((c) => [c, ...flatten(c.children ?? [])]);
+}
 
 async function load(searchParams: RawSearchParams) {
   const params = parseListParams(searchParams);
@@ -30,17 +37,24 @@ async function load(searchParams: RawSearchParams) {
     listCategories().catch(() => []), // the filter bar degrades; the grid does not depend on it
   ]);
   const topLevel = categories.filter((c) => c.active !== false && !c.parentId);
-  const activeCategory = params.category ? categories.find((c) => c.slug === params.category) : undefined;
+  const activeCategory = params.category ? flatten(categories).find((c) => c.slug === params.category) : undefined;
+  // Real 404s (decided before anything streams): unknown category, or a page past the end.
+  // When the category list itself is unavailable we cannot tell, so we do not 404.
+  if (params.category && categories.length > 0 && !activeCategory) notFound();
+  if (result.total > 0 && params.page > result.pages) notFound();
   return { params, result, categories: topLevel, activeCategory };
 }
 
 export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
   const { params, result, activeCategory } = await load(searchParams);
-  const title = activeCategory ? `Fresh Cut Flowers Online — ${activeCategory.name}` : "Fresh Cut Flowers Online";
-  const description = metaDescription(
-    activeCategory?.description ||
-      "Shop farm-fresh cut flowers, bouquets and plants from Fresh Petals India. Hand-selected stems, delivered fresh.",
-  );
+  const pageSuffix = params.page > 1 ? ` — Page ${params.page}` : "";
+  const title = `${activeCategory ? `Fresh Cut Flowers Online — ${activeCategory.name}` : "Fresh Cut Flowers Online"}${pageSuffix}`;
+  const description =
+    metaDescription(
+      activeCategory?.description ||
+        "Shop farm-fresh cut flowers, bouquets and plants from Fresh Petals India. Hand-selected stems, delivered fresh.",
+      155 - pageSuffix.length,
+    ) + pageSuffix;
   // Canonical keeps the filters that change the product set (category, tag, page) and drops sort/search.
   const canonical = params.q ? "/products" : listHref({ category: params.category, tag: params.tag, page: params.page });
   const noindex = Boolean(params.q) || result.items.length === 0;
@@ -76,6 +90,7 @@ export default async function ProductsPage({ searchParams }: Props) {
       {page < pages && <link rel="next" href={listHref(params, { page: page + 1 })} />}
 
       <Container>
+        <ListingBusy>
         <header className="pb-10 pt-12 md:pb-14 md:pt-20">
           <Eyebrow className="mb-4">{params.q ? "Search" : "The collection"}</Eyebrow>
           <h1 className="type-h1 text-charcoal">{heading}</h1>
@@ -121,11 +136,14 @@ export default async function ProductsPage({ searchParams }: Props) {
               cta={filtered ? { href: "/products", label: "Clear filters" } : undefined}
             />
           ) : (
-            <ProductGrid products={items} priorityCount={4} />
+            <div data-grid>
+              <ProductGrid products={items} priorityCount={4} />
+            </div>
           )}
         </div>
 
         <Pagination params={params} page={page} pages={pages} />
+        </ListingBusy>
       </Container>
     </main>
   );

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Button from "@/components/ui/Button";
 import EnquiryModal from "@/components/EnquiryModal";
 import { useCart } from "@/lib/cart-context";
+import { availability, minQty, toCartItem } from "@/lib/product-helpers";
 import type { ApiProduct } from "@/lib/api";
 
 type BuyBoxProduct = Pick<
@@ -20,15 +21,16 @@ export default function ProductBuyBox({ product }: { product: BuyBoxProduct }) {
   const { add } = useCart();
   const [enquiryOpen, setEnquiryOpen] = useState(false);
 
-  const min = product.minOrderQty && product.minOrderQty > 0 ? product.minOrderQty : 1;
+  const min = minQty(product);
   const [quantity, setQuantity] = useState(min);
 
-  const isEnquiry = product.saleMode === "ENQUIRY";
-  const outOfStock = !isEnquiry && product.stock <= 0;
-  // Highest allowed quantity: the largest multiple of the bunch size that fits in stock (never below min).
-  const max = product.stock > 0 ? Math.max(min, Math.floor(product.stock / min) * min) : Infinity;
-  const canDecrease = quantity - min >= min;
-  const canIncrease = quantity + min <= max;
+  const status = availability(product);
+  const isEnquiry = status === "enquiry";
+  const outOfStock = status === "out-of-stock";
+  // Quantity runs from the minimum order up to stock, one at a time (same rule as the cart drawer).
+  const max = product.stock > 0 ? product.stock : Infinity;
+  const canDecrease = quantity > min;
+  const canIncrease = quantity < max;
 
   if (isEnquiry) {
     return (
@@ -71,7 +73,7 @@ export default function ProductBuyBox({ product }: { product: BuyBoxProduct }) {
             className={stepBtn}
             aria-label="Decrease quantity"
             disabled={!canDecrease}
-            onClick={() => setQuantity((q) => Math.max(min, q - min))}
+            onClick={() => setQuantity((q) => Math.max(min, q - 1))}
           >
             −
           </button>
@@ -83,7 +85,7 @@ export default function ProductBuyBox({ product }: { product: BuyBoxProduct }) {
             className={stepBtn}
             aria-label="Increase quantity"
             disabled={!canIncrease}
-            onClick={() => setQuantity((q) => (q + min <= max ? q + min : q))}
+            onClick={() => setQuantity((q) => Math.min(max, q + 1))}
           >
             +
           </button>
@@ -92,20 +94,7 @@ export default function ProductBuyBox({ product }: { product: BuyBoxProduct }) {
           size="lg"
           className="flex-1"
           onClick={() =>
-            add(
-              {
-                productId: product.id,
-                slug: product.slug,
-                name: product.name,
-                price: product.price,
-                image: product.image,
-                saleMode: product.saleMode,
-                gstRate: product.gstRate,
-                minOrderQty: product.minOrderQty,
-                stock: product.stock,
-              },
-              quantity,
-            )
+            add(toCartItem(product), quantity)
           }
         >
           Add to bag
@@ -113,7 +102,11 @@ export default function ProductBuyBox({ product }: { product: BuyBoxProduct }) {
       </div>
       {(min > 1 || product.stock <= 10) && (
         <p className="mt-3 text-sm text-stone-dark">
-          {min > 1 && <span>Sold in bunches of {min}. </span>}
+          {min > 1 && (
+            <span>
+              Minimum order: {min} {product.unit || "units"}.{" "}
+            </span>
+          )}
           {product.stock <= 10 && <span>Only {product.stock} left.</span>}
         </p>
       )}

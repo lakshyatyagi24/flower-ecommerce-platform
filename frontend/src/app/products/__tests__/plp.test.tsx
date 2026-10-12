@@ -9,12 +9,15 @@ vi.mock('@/lib/server-api', () => ({
   listCategories: (...a: unknown[]) => listCategories(...a),
 }));
 vi.mock('next/navigation', () => ({
+  notFound: () => {
+    throw new Error('NEXT_NOT_FOUND');
+  },
   useRouter: () => ({ push: vi.fn() }),
   useSearchParams: () => new URLSearchParams(),
 }));
 vi.mock('@/lib/cart-context', () => ({ useCart: () => ({ add: vi.fn() }) }));
 
-import ProductsPage, { generateMetadata } from '../(list)/page';
+import ProductsPage, { generateMetadata } from '../page';
 
 const mk = (id: number, name: string): ApiProduct => ({
   id, name, slug: name.toLowerCase().replace(/ /g, '-'), description: null, price: 100 * id, image: null,
@@ -68,6 +71,34 @@ describe('products listing page', () => {
     expect(screen.getByRole('link', { name: 'Clear filters' }).getAttribute('href')).toBe('/products');
   });
 
+  it('404s for a page past the last page, but not for an empty first page', async () => {
+    await expect(ProductsPage({ searchParams: { page: '9' } })).rejects.toThrow('NEXT_NOT_FOUND');
+    await expect(generateMetadata({ searchParams: { page: '9' } })).rejects.toThrow('NEXT_NOT_FOUND');
+    listProducts.mockResolvedValue({ items: [], total: 0, page: 1, pages: 0, take: 24 });
+    render(await ProductsPage({ searchParams: { category: 'plants' } }));
+    expect(screen.getByText('No flowers match')).toBeTruthy();
+  });
+
+  it('404s for an unknown category slug (also when nested), keeps known ones', async () => {
+    await expect(ProductsPage({ searchParams: { category: 'nope' } })).rejects.toThrow('NEXT_NOT_FOUND');
+    listCategories.mockResolvedValue([{ ...cats[0], children: [{ id: 9, name: 'Child', slug: 'child' }] }]);
+    render(await ProductsPage({ searchParams: { category: 'child' } }));
+    expect(screen.getByRole('heading', { level: 1 })).toBeTruthy();
+  });
+
+  it('does not 404 an unknown category when the category list is unavailable', async () => {
+    listCategories.mockRejectedValue(new Error('x'));
+    render(await ProductsPage({ searchParams: { category: 'nope' } }));
+    expect(screen.getByRole('heading', { level: 1 })).toBeTruthy();
+  });
+
+  it('emits prev/next only for pages that exist', async () => {
+    listProducts.mockResolvedValue({ items: [mk(1, 'Red Rose')], total: 60, page: 3, pages: 3, take: 24 });
+    const { container } = render(await ProductsPage({ searchParams: { page: '3' } }));
+    expect(container.querySelector('link[rel="next"]')).toBeNull();
+    expect(container.querySelector('link[rel="prev"]')!.getAttribute('href')).toBe('/products?page=2');
+  });
+
   it('survives a categories outage', async () => {
     listCategories.mockRejectedValue(new Error('x'));
     render(await ProductsPage({ searchParams: {} }));
@@ -100,8 +131,18 @@ describe('listing metadata', () => {
   });
 
   it('page > 1 keeps the page in the canonical', async () => {
+    listProducts.mockResolvedValue({ items: [mk(1, 'Red Rose')], total: 60, page: 3, pages: 3, take: 24 });
     const m = await generateMetadata({ searchParams: { category: 'roses', page: '3' } });
     expect(m.alternates?.canonical).toBe('/products?category=roses&page=3');
+  });
+
+  it('page > 1 appends Page N to title and description', async () => {
+    listProducts.mockResolvedValue({ items: [mk(1, 'Red Rose')], total: 60, page: 2, pages: 3, take: 24 });
+    const m = await generateMetadata({ searchParams: { page: '2' } });
+    expect(m.title).toBe('Fresh Cut Flowers Online — Page 2');
+    expect(m.description).toMatch(/ — Page 2$/);
+    const c = await generateMetadata({ searchParams: { category: 'roses', page: '2' } });
+    expect(c.title).toBe('Fresh Cut Flowers Online — Roses — Page 2');
   });
 
   it('search: noindex,follow and canonical /products', async () => {
@@ -112,6 +153,6 @@ describe('listing metadata', () => {
 
   it('empty results are noindex', async () => {
     listProducts.mockResolvedValue({ items: [], total: 0, page: 1, pages: 0, take: 24 });
-    expect((await generateMetadata({ searchParams: { category: 'nope' } })).robots).toEqual({ index: false, follow: true });
+    expect((await generateMetadata({ searchParams: { category: 'plants' } })).robots).toEqual({ index: false, follow: true });
   });
 });

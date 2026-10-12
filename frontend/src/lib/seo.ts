@@ -1,5 +1,7 @@
 import type { ApiProduct } from './api';
 import { productImage } from './product-image';
+import { availability } from './product-helpers';
+import { leadText } from './description';
 
 /** Canonical site origin, no trailing slash. */
 export const SITE: string = (process.env.NEXT_PUBLIC_SITE_URL || 'https://freshpetalsindia.com').replace(/\/+$/, '');
@@ -25,11 +27,12 @@ export function metaDescription(text: string | null | undefined, max = 155): str
 type JsonObject = Record<string, unknown>;
 
 /**
- * schema.org Product. Availability is derived from stock for every sale mode:
- * stock > 0 -> InStock, otherwise OutOfStock (enquiry-only products included —
- * we do not claim PreOrder because we cannot promise a date).
+ * schema.org Product, or null when there is nothing rich to say.
+ * - PURCHASE products get an Offer (InStock / OutOfStock from availability()).
+ * - ENQUIRY products get NO Offer (the page says "Price on enquiry"; we must not publish a price).
+ * - A Product with neither offers nor aggregateRating is invalid for rich results, so null.
  */
-export function productJsonLd(p: ApiProduct): JsonObject {
+export function productJsonLd(p: ApiProduct): JsonObject | null {
   const ld: JsonObject = {
     '@context': 'https://schema.org',
     '@type': 'Product',
@@ -37,17 +40,19 @@ export function productJsonLd(p: ApiProduct): JsonObject {
     image: [absoluteUrl(productImage(p))],
     sku: p.slug,
     brand: { '@type': 'Brand', name: 'Fresh Petals India' },
-    offers: {
+  };
+  const desc = metaDescription(leadText(p.description), 5000);
+  if (desc) ld.description = desc;
+  if (p.saleMode !== 'ENQUIRY') {
+    ld.offers = {
       '@type': 'Offer',
       url: absoluteUrl(`/products/${p.slug}`),
       priceCurrency: 'INR',
       price: Number(p.price).toFixed(2),
-      availability: p.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      availability: availability(p) === 'in-stock' ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
       itemCondition: 'https://schema.org/NewCondition',
-    },
-  };
-  const desc = metaDescription(p.description, 5000);
-  if (desc) ld.description = desc;
+    };
+  }
   if ((p.reviewCount ?? 0) > 0) {
     ld.aggregateRating = {
       '@type': 'AggregateRating',
@@ -55,7 +60,7 @@ export function productJsonLd(p: ApiProduct): JsonObject {
       reviewCount: p.reviewCount,
     };
   }
-  return ld;
+  return ld.offers || ld.aggregateRating ? ld : null;
 }
 
 export function breadcrumbJsonLd(items: { name: string; path: string }[]): JsonObject {

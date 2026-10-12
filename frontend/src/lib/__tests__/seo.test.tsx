@@ -40,10 +40,21 @@ describe('productJsonLd', () => {
     const j = productJsonLd({ ...base, image: 'https://res.cloudinary.com/x/a.jpg' }) as any;
     expect(j.image).toEqual(['https://res.cloudinary.com/x/a.jpg']);
   });
-  it('is OutOfStock at zero stock, also for enquiry products', () => {
+  it('is OutOfStock at zero stock or stock below the minimum order', () => {
     expect((productJsonLd({ ...base, stock: 0 }) as any).offers.availability).toBe('https://schema.org/OutOfStock');
-    expect((productJsonLd({ ...base, stock: 0, saleMode: 'ENQUIRY' }) as any).offers.availability).toBe('https://schema.org/OutOfStock');
-    expect((productJsonLd({ ...base, stock: 3, saleMode: 'ENQUIRY' }) as any).offers.availability).toBe('https://schema.org/InStock');
+    expect((productJsonLd({ ...base, stock: 3, minOrderQty: 5 }) as any).offers.availability).toBe('https://schema.org/OutOfStock');
+  });
+  it('omits offers for enquiry products (no price is published)', () => {
+    const j = productJsonLd({ ...base, saleMode: 'ENQUIRY', reviewCount: 2, averageRating: 4 }) as any;
+    expect(j.offers).toBeUndefined();
+    expect(j.aggregateRating.reviewCount).toBe(2);
+  });
+  it('returns null for an enquiry product with neither offers nor ratings', () => {
+    expect(productJsonLd({ ...base, saleMode: 'ENQUIRY' })).toBeNull();
+  });
+  it('uses the clean lead paragraph, not label lines, as description', () => {
+    const j = productJsonLd({ ...base, description: 'What you get\n\nTwelve roses.' }) as any;
+    expect(j.description).toBe('Twelve roses.');
   });
   it('adds aggregateRating only when reviews exist', () => {
     const j = productJsonLd({ ...base, reviewCount: 3, averageRating: 4.666 }) as any;
