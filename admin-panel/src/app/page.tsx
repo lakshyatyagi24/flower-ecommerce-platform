@@ -27,6 +27,11 @@ function formatINR(amount: number): string {
   }
 }
 
+// A missing/failed value must read as "unknown" (—), never as a reassuring 0.
+function numOrNull(v: number | undefined): number | null {
+  return typeof v === "number" ? v : null;
+}
+
 function PaymentCard({
   title,
   count,
@@ -36,13 +41,13 @@ function PaymentCard({
   urgent,
 }: {
   title: string;
-  count: number;
+  count: number | null;
   href: string;
   icon: React.ReactNode;
   hint: string;
   urgent?: boolean;
 }) {
-  const emphasised = !!urgent && count > 0;
+  const emphasised = !!urgent && count !== null && count > 0;
   return (
     <Link href={href} className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
       <Card className={emphasised ? "border-destructive bg-destructive/10" : undefined}>
@@ -51,7 +56,7 @@ function PaymentCard({
           <span className={emphasised ? "text-destructive" : undefined}>{icon}</span>
         </CardHeader>
         <CardContent>
-          <div className={emphasised ? "text-2xl font-bold text-destructive" : "text-2xl font-bold"}>{count}</div>
+          <div className={emphasised ? "text-2xl font-bold text-destructive" : "text-2xl font-bold"}>{count === null ? "—" : count}</div>
           <p className="text-xs text-muted-foreground">{hint}</p>
         </CardContent>
       </Card>
@@ -62,6 +67,7 @@ function PaymentCard({
 export default function Dashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [statsFailed, setStatsFailed] = useState(false);
   const { addToast } = useToast();
 
   useEffect(() => {
@@ -73,6 +79,7 @@ export default function Dashboard() {
       })
       .catch((err) => {
         if (cancelled) return;
+        setStatsFailed(true);
         const message = err instanceof ApiError ? err.message : "Failed to load stats";
         addToast({ type: "error", title: "Error", description: message });
       })
@@ -152,17 +159,22 @@ export default function Dashboard() {
         </Card>
       </div>
 
+      {statsFailed && (
+        <p role="alert" className="text-sm text-destructive">
+          Couldn&apos;t load payment counts
+        </p>
+      )}
       <div className="grid gap-4 md:grid-cols-3">
         <PaymentCard
           title="Awaiting payment"
-          count={stats?.unpaidOnline ?? 0}
+          count={numOrNull(stats?.unpaidOnline)}
           href="/orders?attention=awaiting"
           icon={<Clock className="h-4 w-4 text-muted-foreground" />}
           hint="Online orders not paid yet"
         />
         <PaymentCard
           title="Refunds owed"
-          count={stats?.refundsDue ?? 0}
+          count={numOrNull(stats?.refundsDue)}
           href="/orders?attention=refund"
           icon={<RotateCcw className="h-4 w-4" />}
           hint="Paid, then cancelled — refund in Razorpay"
@@ -170,7 +182,7 @@ export default function Dashboard() {
         />
         <PaymentCard
           title="Check payments"
-          count={stats?.mismatches ?? 0}
+          count={numOrNull(stats?.mismatches)}
           href="/orders?attention=mismatch"
           icon={<AlertTriangle className="h-4 w-4" />}
           hint="Captured payment needs manual review"

@@ -17,9 +17,14 @@ export function splitRefundNote(note: string | null | undefined): { admin: strin
   return { admin: admin.join('\n').trim(), system };
 }
 
-/** True when system lines show a captured payment that needs a manual review/refund. */
+/**
+ * Must agree with the server: matches the marker ANYWHERE in the raw note, exactly like
+ * ATTENTION_WHERE.mismatch (refundNote contains ...) and adminUpdate's REFUNDED eligibility in
+ * flower-backend/src/orders/orders.service.ts. (The read-only box uses the anchored splitRefundNote,
+ * which is a different rule: what the server strips from admin edits.)
+ */
 export function hasCaptureTrace(note: string | null | undefined): boolean {
-  return splitRefundNote(note).system.some((l) => CAPTURE_TRACE.test(l));
+  return CAPTURE_TRACE.test(note ?? '');
 }
 
 export type PaymentBadge = {

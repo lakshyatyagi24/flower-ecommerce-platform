@@ -127,10 +127,12 @@ function OrdersView() {
   const [confirmingRefund, setConfirmingRefund] = useState(false);
   const [paymentBusy, setPaymentBusy] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
-  const keepNoteRef = useRef<string | null>(null);
   const { addToast } = useToast();
 
+  const reqRef = useRef(0);
   const fetchOrders = useCallback(async () => {
+    // Only the latest request may touch state (rapid filter changes / post-save refetch).
+    const id = ++reqRef.current;
     setLoading(true);
     try {
       const res = await adminApi.listOrders({
@@ -140,12 +142,14 @@ function OrdersView() {
         attention: attentionFilter || undefined,
         take: 200,
       });
+      if (id !== reqRef.current) return;
       setOrders(res.items);
     } catch (err) {
+      if (id !== reqRef.current) return;
       const message = err instanceof ApiError ? err.message : "Failed to load orders";
       addToast({ type: "error", title: "Error", description: message });
     } finally {
-      setLoading(false);
+      if (id === reqRef.current) setLoading(false);
     }
   }, [statusFilter, paymentStatusFilter, paymentMethodFilter, attentionFilter, addToast]);
 
@@ -156,9 +160,16 @@ function OrdersView() {
   // Sync the edit form whenever a different order is selected.
   useEffect(() => {
     setEdit(selected ? editFromOrder(selected) : blankEdit);
-    // After a "note changed meanwhile" conflict we reload the order but keep what the admin typed.
-    setRefundAdmin(keepNoteRef.current ?? splitRefundNote(selected?.refundNote).admin);
-    keepNoteRef.current = null;
+  }, [selected]);
+
+  // The refund note textarea resets only when a different order is opened, so an unrelated action
+  // (status change, Save details, refetch) never wipes what the admin is typing.
+  const noteOrderIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    const id = selected?.id ?? null;
+    if (id === noteOrderIdRef.current) return;
+    noteOrderIdRef.current = id;
+    setRefundAdmin(splitRefundNote(selected?.refundNote).admin);
     setConfirmingRefund(false);
   }, [selected]);
 
@@ -183,6 +194,7 @@ function OrdersView() {
         markRefunded ? { paymentStatus: "REFUNDED", refundNote: typed } : { refundNote: typed },
       );
       setSelected(updated);
+      setRefundAdmin(splitRefundNote(updated.refundNote).admin);
       addToast({
         type: "success",
         title: markRefunded ? "Marked refunded" : "Note saved",
@@ -194,12 +206,11 @@ function OrdersView() {
       addToast({ type: "error", title: "Error", description: message });
       if (err instanceof ApiError && err.status === 409) {
         // Reload so the screen shows the real state; keep the typed note when only the note raced.
-        if (message.includes(NOTE_CHANGED_MSG)) keepNoteRef.current = typed;
         try {
-          setSelected(await adminApi.getOrder(selected.id));
-        } catch {
-          keepNoteRef.current = null;
-        }
+          const fresh = await adminApi.getOrder(selected.id);
+          setSelected(fresh);
+          if (!message.includes(NOTE_CHANGED_MSG)) setRefundAdmin(splitRefundNote(fresh.refundNote).admin);
+        } catch {}
         fetchOrders();
       }
       setPaymentError(message);
