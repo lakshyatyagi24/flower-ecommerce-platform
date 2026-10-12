@@ -9,6 +9,11 @@ import { ApiOrder, api, ApiError } from "@/lib/api";
 import { formatINR } from "@/lib/cart-context";
 import { clearTrackEmail, getTrackEmail } from "@/lib/track-order-session";
 import { productImage } from "@/lib/product-image";
+import { paymentLine } from "@/lib/order-labels";
+import Container from "@/components/ui/Container";
+import Button from "@/components/ui/Button";
+import Skeleton from "@/components/ui/Skeleton";
+import { textLink } from "@/components/ui/form-styles";
 
 type Phase = { key: string; label: string; time: Date | null };
 
@@ -49,10 +54,7 @@ function buildPhases(order: ApiOrder): { phases: Phase[]; currentIndex: number }
   return { phases, currentIndex };
 }
 
-function fmt(d?: Date | null) {
-  if (!d) return "—";
-  return d.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
-}
+const label = "text-xs font-medium uppercase tracking-[0.16em] text-stone-dark";
 
 function TrackOrderResultsView() {
   const params = useSearchParams();
@@ -110,26 +112,30 @@ function TrackOrderResultsView() {
 
   if (loading) {
     return (
-      <main className="max-w-3xl mx-auto px-4 py-12">
-        <div className="bg-white rounded-lg shadow-sm p-6 animate-pulse space-y-3">
-          <div className="h-6 bg-slate-200 rounded w-1/2" />
-          <div className="h-4 bg-slate-200 rounded w-1/3" />
-          <div className="h-32 bg-slate-200 rounded mt-4" />
-        </div>
+      <main>
+        <Container className="py-12 lg:py-16" aria-busy="true">
+          <Skeleton className="h-10 w-1/3" />
+          <Skeleton className="mt-4 h-4 w-1/4" />
+          <Skeleton className="mt-10 h-64" />
+        </Container>
       </main>
     );
   }
 
   if (error || !order) {
     return (
-      <main className="max-w-3xl mx-auto px-4 py-12">
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-xl font-semibold mb-2">We couldn&apos;t find that order</h2>
-          <p className="text-sm text-red-600">{error}</p>
-          <Link href={/^\d+$/.test(orderId) ? `/track-order?orderId=${orderId}` : "/track-order"} className="mt-4 inline-block text-olive-green underline-offset-4 hover:underline">
-            Try again
-          </Link>
-        </div>
+      <main>
+        <Container className="py-16 lg:py-24">
+          <div className="mx-auto max-w-xl text-center">
+            <h1 className="type-h2">We couldn&apos;t find that order</h1>
+            <p role="alert" className="mt-4 text-base leading-relaxed text-stone-dark">
+              {error}
+            </p>
+            <div className="mt-8">
+              <Button href={/^\d+$/.test(orderId) ? `/track-order?orderId=${orderId}` : "/track-order"}>Try again</Button>
+            </div>
+          </div>
+        </Container>
       </main>
     );
   }
@@ -139,33 +145,55 @@ function TrackOrderResultsView() {
   const cancelled = order.status === "CANCELLED";
 
   return (
-    <main className="max-w-4xl mx-auto px-4 py-12">
-      <div className="bg-white rounded-lg shadow-sm p-6 space-y-6 rustic-vignette">
-        <header className="flex items-start justify-between gap-4">
+    <main>
+      <Container className="py-10 lg:py-16">
+        <header className="flex flex-col gap-3 border-b border-stone-light pb-8 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h2 className="text-2xl font-semibold">Order #{order.id}</h2>
-            <div className="text-sm text-slate-600">Placed {placedAt.toLocaleString()}</div>
+            <h1 className="type-h1">Order #{order.id}</h1>
+            <p className="mt-3 text-sm text-stone-dark">Placed {placedAt.toLocaleDateString(undefined, { dateStyle: "long" })}</p>
           </div>
-          <div className="text-right">
-            <div className="text-sm text-slate-500">Status</div>
-            <div className="text-lg font-medium text-olive-green">{order.status}</div>
+          <div className="sm:text-right">
+            <p className={label}>Status</p>
+            <p className="mt-1 text-sm font-medium tracking-[0.16em] text-charcoal">{order.status}</p>
           </div>
         </header>
 
         {cancelled && (
-          <div className="bg-red-50 border border-red-100 text-red-700 p-3 rounded-md text-sm">
+          <p className="mt-8 border border-stone-light px-4 py-3 text-sm leading-relaxed text-charcoal">
             This order was cancelled. If this is unexpected, please reach out to support.
-          </div>
+          </p>
         )}
 
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2">
-            <div className="mb-4">
-              <h3 className="text-sm font-semibold text-slate-700">Delivery details</h3>
-              <div className="mt-2 text-sm text-slate-600">
-                <div><strong>{order.customerName}</strong></div>
+        <div className="mt-10 grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-x-16">
+          <div className="space-y-12 lg:col-span-7">
+            <section aria-labelledby="progress-heading">
+              <h2 id="progress-heading" className={`${label} mb-6`}>
+                Order progress
+              </h2>
+              <OrderTimeline phases={phases} currentIndex={currentIndex} />
+            </section>
+
+            {order.trackingNumber && (
+              <section aria-labelledby="shipment-heading">
+                <h2 id="shipment-heading" className={`${label} mb-3`}>
+                  Shipment tracking
+                </h2>
+                {/* Courier and tracking number are plain text: never turned into links. */}
+                <p className="text-base text-charcoal">
+                  {order.courierName && <span className="block text-sm text-stone-dark">{order.courierName}</span>}
+                  <span className="break-all">{order.trackingNumber}</span>
+                </p>
+              </section>
+            )}
+
+            <section aria-labelledby="delivery-heading">
+              <h2 id="delivery-heading" className={`${label} mb-3`}>
+                Delivery details
+              </h2>
+              <div className="text-base leading-relaxed text-charcoal">
+                {order.customerName && <div>{order.customerName}</div>}
                 {order.customerPhone && <div>{order.customerPhone}</div>}
-                <div>{order.shippingAddress}</div>
+                {order.shippingAddress && <div className="whitespace-pre-line">{order.shippingAddress}</div>}
                 {(order.city || order.postalCode) && (
                   <div>
                     {order.city}
@@ -174,92 +202,89 @@ function TrackOrderResultsView() {
                   </div>
                 )}
               </div>
-            </div>
-
-            <div>
-              <h3 className="text-sm font-semibold text-slate-700 mb-3">Order progress</h3>
-              <OrderTimeline phases={phases} currentIndex={currentIndex} />
-            </div>
-
-            {order.trackingNumber && (
-              <div className="mt-6 rounded-md border border-olive-green/15 bg-olive-green/5 p-4">
-                <h3 className="text-sm font-semibold text-slate-700 mb-1">Shipment tracking</h3>
-                <div className="text-sm text-slate-700">
-                  {order.courierName && <span className="block text-xs uppercase tracking-wide text-olive-green/70">{order.courierName}</span>}
-                  <span className="font-mono text-base text-slate-900 break-all">{order.trackingNumber}</span>
-                </div>
-              </div>
-            )}
+              {order.notes && (
+                <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-stone-dark">
+                  <span className="block text-xs font-medium uppercase tracking-[0.16em]">Delivery notes</span>
+                  <span className="mt-1 block">{order.notes}</span>
+                </p>
+              )}
+            </section>
           </div>
 
-          <aside className="bg-slate-50 p-4 rounded-md text-sm">
-            <div className="mb-3">
-              <div className="text-slate-600">Payment</div>
-              <div className="text-olive-green font-semibold">{order.paymentMethod}</div>
-            </div>
-            <div className="mb-3">
-              <div className="text-slate-600">Subtotal</div>
-              <div>{formatINR(order.subtotal)}</div>
-            </div>
-            <div className="mb-3">
-              <div className="text-slate-600">Shipping</div>
-              <div>{order.shipping === 0 ? "Free" : formatINR(order.shipping)}</div>
-            </div>
-            {order.gst && order.gst > 0 ? (
-              <div className="mb-3">
-                <div className="text-slate-600">GST</div>
-                <div>{formatINR(order.gst)}</div>
-              </div>
-            ) : null}
-            <div>
-              <div className="text-slate-600">Total</div>
-              <div className="text-lg font-semibold text-olive-green">{formatINR(order.total)}</div>
-            </div>
-          </aside>
-        </section>
-
-        <section>
-          <h3 className="text-sm font-semibold text-slate-700 mb-3">Items in this order</h3>
-          <div className="bg-slate-50 p-4 rounded-md">
-            <ul className="space-y-3">
+          <aside aria-labelledby="items-heading" className="lg:col-span-5 lg:self-start lg:bg-ivory-deep lg:p-8">
+            <h2 id="items-heading" className={`${label} mb-6`}>
+              Items in this order
+            </h2>
+            <ul className="space-y-5">
               {order.items.map((it) => (
-                <li key={it.id} className="flex items-center gap-3">
-                  <div className="w-14 h-14 rounded-md overflow-hidden bg-white flex-shrink-0 relative">
-                    <Image src={productImage(it.product)} alt={it.productName} fill sizes="56px" className="object-cover" />
+                <li key={it.id} className="flex gap-4">
+                  <div className="relative aspect-[4/5] w-16 shrink-0 overflow-hidden rounded-sm bg-ivory-deep lg:bg-ivory">
+                    <Image src={productImage(it.product)} alt="" fill sizes="64px" className="object-cover" />
                   </div>
-                  <div className="flex-1 text-sm">
-                    <div className="font-medium text-slate-800">{it.productName}</div>
-                    <div className="text-slate-500 text-xs">Qty: {it.quantity} × {formatINR(it.unitPrice)}</div>
+                  <div className="min-w-0 flex-1 text-sm">
+                    <div className="text-charcoal">{it.productName}</div>
+                    <div className="mt-1 text-stone-dark">
+                      Qty {it.quantity} × {formatINR(it.unitPrice)}
+                    </div>
                   </div>
-                  <div className="text-sm font-medium">{formatINR(it.unitPrice * it.quantity)}</div>
+                  <div className="text-sm text-charcoal">{formatINR(it.unitPrice * it.quantity)}</div>
                 </li>
               ))}
             </ul>
-          </div>
-        </section>
-
-        {order.notes && (
-          <section>
-            <h3 className="text-sm font-semibold text-slate-700 mb-2">Delivery notes</h3>
-            <p className="text-sm text-slate-700 whitespace-pre-wrap">{order.notes}</p>
-          </section>
-        )}
-
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 border-t border-olive-green/10">
-          <div className="text-sm">
-            <div className="font-medium mb-1">Need help?</div>
-            <Link href="/contact" className="text-olive-green underline-offset-4 hover:underline">Contact support</Link>
-          </div>
-          <Link href="/products" className="text-olive-green font-semibold underline-offset-4 hover:underline">Continue shopping</Link>
+            <dl className="mt-6 space-y-3 border-t border-stone-light pt-6 text-sm text-stone-dark">
+              <div className="flex justify-between gap-4">
+                <dt>Payment</dt>
+                <dd className="text-charcoal">{paymentLine(order)}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt>Subtotal</dt>
+                <dd className="text-charcoal">{formatINR(order.subtotal)}</dd>
+              </div>
+              <div className="flex justify-between gap-4">
+                <dt>Shipping</dt>
+                <dd className="text-charcoal">{order.shipping === 0 ? "Free" : formatINR(order.shipping)}</dd>
+              </div>
+              {order.gst && order.gst > 0 ? (
+                <div className="flex justify-between gap-4">
+                  <dt>GST</dt>
+                  <dd className="text-charcoal">{formatINR(order.gst)}</dd>
+                </div>
+              ) : null}
+              <div className="flex justify-between gap-4 border-t border-stone-light pt-4 text-base text-charcoal">
+                <dt>Total</dt>
+                <dd className="font-display text-2xl">{formatINR(order.total)}</dd>
+              </div>
+            </dl>
+          </aside>
         </div>
-      </div>
+
+        <div className="mt-12 flex flex-col gap-3 border-t border-stone-light pt-8 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-stone-dark">
+            Need help?{" "}
+            <Link href="/contact" className={`text-charcoal ${textLink}`}>
+              Contact support
+            </Link>
+          </p>
+          <Button variant="ghost" href="/products">
+            Continue shopping
+          </Button>
+        </div>
+      </Container>
     </main>
   );
 }
 
 export default function TrackOrderResults() {
   return (
-    <Suspense fallback={<main className="max-w-3xl mx-auto px-4 py-12">Loading…</main>}>
+    <Suspense
+      fallback={
+        <main>
+          <Container className="py-12" aria-busy="true">
+            <Skeleton className="h-10 w-1/3" />
+          </Container>
+        </main>
+      }
+    >
       <TrackOrderResultsView />
     </Suspense>
   );

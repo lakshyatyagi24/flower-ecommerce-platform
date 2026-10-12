@@ -3,13 +3,18 @@ import React, { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { clearTrackEmail, setTrackEmail } from "@/lib/track-order-session";
+import AuthLayout from "@/components/account/AuthLayout";
+import Button from "@/components/ui/Button";
+import Field from "@/components/ui/Field";
+import Input from "@/components/ui/Input";
+import { textLink } from "@/components/ui/form-styles";
 
 function TrackOrderInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [orderId, setOrderId] = useState("");
   const [email, setEmail] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<{ orderId?: string; email?: string }>({});
 
   // Pre-fill from query (orderId only — the email is never put in a URL).
   // Drop any email left over from an earlier lookup.
@@ -24,18 +29,18 @@ function TrackOrderInner() {
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
+    setErrors({});
 
     if (!orderId.trim()) {
-      setError("Please enter your Order ID.");
+      setErrors({ orderId: "Please enter your Order ID." });
       return;
     }
     if (!/^\d+$/.test(orderId.trim())) {
-      setError("Order ID must be a number (e.g., 1042).");
+      setErrors({ orderId: "Order ID must be a number (e.g., 1042)." });
       return;
     }
     if (!email.trim()) {
-      setError("Please enter the email used at checkout.");
+      setErrors({ email: "Please enter the email used at checkout." });
       return;
     }
 
@@ -46,58 +51,39 @@ function TrackOrderInner() {
   }
 
   return (
-    <main className="max-w-3xl mx-auto px-4 py-12">
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h1 className="text-2xl font-semibold mb-2">Track your order</h1>
-        <p className="text-sm text-olive-green/80 mb-6">Enter your Order ID and email used at checkout to track delivery status.</p>
-
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="orderId" className="block text-sm font-medium text-gray-700 mb-1">Order ID</label>
-            <input
-              id="orderId"
-              value={orderId}
-              onChange={(e) => setOrderId(e.target.value)}
-              placeholder="e.g., 1042"
-              className="w-full border border-gray-200 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-olive-green/30"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email at checkout</label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              className="w-full border border-gray-200 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-olive-green/30"
-            />
-          </div>
-
-          {error && <p className="text-sm text-red-600">{error}</p>}
-
-          <div className="pt-2">
-            <button
-              type="submit"
-              className="inline-flex items-center gap-2 bg-olive-green text-white rounded-md px-4 py-2 hover:opacity-95 focus:outline-none focus:ring-2 focus:ring-olive-green/30"
-            >
-              Track Order
-            </button>
-          </div>
-
-          <div className="mt-6 text-sm">
-            <Link href="/contact" className="text-olive-green/80 hover:text-olive-green">Need help? Contact support</Link>
-          </div>
-        </form>
-      </div>
-    </main>
+    <AuthLayout
+      title="Track your order"
+      intro="Enter your Order ID and the email used at checkout to see delivery status."
+      footer={
+        <Link href="/contact" className={`text-charcoal ${textLink}`}>
+          Need help? Contact support
+        </Link>
+      }
+    >
+      <form onSubmit={onSubmit} noValidate className="space-y-6">
+        <Field label="Order ID" error={errors.orderId}>
+          <Input inputMode="numeric" autoComplete="off" value={orderId} onChange={(e) => setOrderId(e.target.value)} placeholder="e.g., 1042" />
+        </Field>
+        <Field label="Email at checkout" error={errors.email}>
+          <Input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+        </Field>
+        <Button type="submit" size="lg" className="w-full">
+          Track order
+        </Button>
+      </form>
+    </AuthLayout>
   );
 }
 
 export default function TrackOrderPage() {
   return (
-    <Suspense fallback={<main className="max-w-3xl mx-auto px-4 py-12">Loading…</main>}>
+    <Suspense
+      fallback={
+        <main>
+          <div className="mx-auto w-full max-w-[420px] px-5 py-20" aria-busy="true" />
+        </main>
+      }
+    >
       <TrackOrderInner />
     </Suspense>
   );

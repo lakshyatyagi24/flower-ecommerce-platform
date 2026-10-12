@@ -77,7 +77,7 @@ describe('Login page', () => {
   });
 
   it('shows the server message on failure', async () => {
-    login.mockRejectedValue(new ApiError('Invalid credentials', 401));
+    login.mockRejectedValue(new ApiError('Invalid credentials', 401, null));
     const user = userEvent.setup();
     render(<LoginPage />);
     await user.type(screen.getByLabelText(/^email/i), 'a@b.co');
