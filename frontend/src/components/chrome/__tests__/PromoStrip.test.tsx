@@ -45,12 +45,13 @@ describe('PromoStrip (announcement bar)', () => {
     expect(screen.getByRole('link', { name: 'New: wedding florals' })).toHaveAttribute('href', '/occasions/wedding');
   });
 
-  it('sanitises unsafe hrefs', () => {
+  it('renders unsafe hrefs as plain text, never a link', () => {
     settingsRaw['homepage.announcement'] = 'Hello';
     for (const bad of ['javascript:alert(1)', 'https://evil.example/x', '//evil.example']) {
       settingsRaw['homepage.announcementHref'] = bad;
       const { unmount } = render(<PromoStrip />);
-      expect(screen.getByRole('link', { name: 'Hello' })).toHaveAttribute('href', '/products');
+      expect(screen.queryByRole('link')).toBeNull();
+      expect(screen.getByRole('region', { name: 'Announcement' })).toHaveTextContent('Hello');
       unmount();
     }
   });
@@ -81,6 +82,12 @@ describe('PromoStrip (announcement bar)', () => {
     render(<PromoStrip />);
     expect(screen.getByRole('region', { name: 'Announcement' })).toBeInTheDocument();
     spy.mockRestore();
+  });
+
+  it('hides placeholder announcement text left in the database', () => {
+    settingsRaw['homepage.announcement'] = 'Lorem ipsum - please update';
+    render(<PromoStrip />);
+    expect(screen.queryByRole('region', { name: 'Announcement' })).toBeNull();
   });
 
   it('never carries a delivery or limited-time claim', () => {

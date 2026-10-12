@@ -61,19 +61,18 @@ export type StoreSettings = {
 };
 
 const FALLBACK_HERO: StoreHero = {
-  eyebrow: "Mandi-fresh every morning",
-  title: "Fresh-cut flowers, delivered the same day.",
-  subtitle:
-    "Roses, orchids, lilies, carnations, sunflowers and more — sourced directly from the mandi. Bulk pricing for corporates, custom bouquets and arrangements on enquiry.",
-  ctaLabel: "Shop bouquets",
+  eyebrow: "Hand-tied by our florists",
+  title: "Fresh-cut flowers, arranged with care.",
+  subtitle: "Fresh-cut stems and bouquets, arranged by our florists in Delhi NCR.",
+  ctaLabel: "Shop flowers",
   ctaHref: "/products",
 };
 
 const FALLBACK_USPS: StoreUSP[] = [
-  { title: "Freshness guarantee", body: "Farm-fresh blooms dispatched within 24–48 hrs of harvest — vibrant, fragrant, and long-lasting." },
-  { title: "Same-day delivery", body: "Order before 3 PM for same-day delivery across 8+ major Indian cities." },
-  { title: "Easy replacement", body: "Flowers arrived damaged? Contact us within 48 hours for a free replacement or full refund." },
-  { title: "Made for occasions", body: "Birthdays, anniversaries, weddings or sympathy — we craft for every moment." },
+  { title: "Hand-tied by our florists", body: "Every bouquet is arranged by hand in Delhi NCR." },
+  { title: "Fresh-cut stems", body: "Sourced from the flower market and prepared for your vase." },
+  { title: "Careful packing", body: "Wrapped so your flowers arrive in good condition." },
+  { title: "Made for occasions", body: "Birthdays, anniversaries, weddings or sympathy: we arrange for every moment." },
 ];
 
 const FALLBACK: StoreSettings = {
@@ -95,6 +94,22 @@ const FALLBACK: StoreSettings = {
   seo: { metaTitle: "", metaDescription: "", ogImage: "" },
 };
 
+/**
+ * True for values that must never reach customers: empty, or leftover seed/placeholder text. The live
+ * database may still hold strings seeded earlier (for example "orders@example.com"), so every settings
+ * consumer treats such values as UNSET.
+ */
+export function isPlaceholderSetting(value: string | null | undefined): boolean {
+  if (value == null) return true;
+  const v = value.trim();
+  return v === "" || /example\.com|please update|placeholder|lorem ipsum/i.test(v);
+}
+
+function clean(raw: Record<string, string>, key: string): string {
+  const v = raw[key];
+  return isPlaceholderSetting(v) ? "" : v.trim();
+}
+
 function parseFloatSafe(v: string | undefined, fallback: number): number {
   if (!v) return fallback;
   const n = parseFloat(v);
@@ -102,15 +117,15 @@ function parseFloatSafe(v: string | undefined, fallback: number): number {
 }
 
 function pick(raw: Record<string, string>, key: string, fallback: string): string {
-  const v = raw[key]?.trim();
+  const v = clean(raw, key);
   return v ? v : fallback;
 }
 
 function buildUsps(raw: Record<string, string>): StoreUSP[] {
   const items: StoreUSP[] = [];
   for (let i = 1; i <= 4; i += 1) {
-    const title = raw[`trust.usp${i}Title`]?.trim();
-    const body = raw[`trust.usp${i}Body`]?.trim();
+    const title = clean(raw, `trust.usp${i}Title`);
+    const body = clean(raw, `trust.usp${i}Body`);
     if (title || body) {
       items.push({
         title: title || FALLBACK_USPS[i - 1]?.title || "",
@@ -124,13 +139,13 @@ function buildUsps(raw: Record<string, string>): StoreUSP[] {
 function fromRaw(raw: Record<string, string>): StoreSettings {
   return {
     raw,
-    name: raw["store.name"]?.trim() || FALLBACK.name,
-    email: raw["store.email"]?.trim() || "",
-    phone: raw["store.phone"]?.trim() || "",
-    whatsapp: raw["store.whatsapp"]?.trim() || raw["store.phone"]?.trim() || "",
-    address: raw["store.address"]?.trim() || "",
-    instagram: raw["store.instagram"]?.trim() || "",
-    gstin: raw["store.gstin"]?.trim() || "",
+    name: clean(raw, "store.name") || FALLBACK.name,
+    email: clean(raw, "store.email"),
+    phone: clean(raw, "store.phone"),
+    whatsapp: clean(raw, "store.whatsapp") || clean(raw, "store.phone"),
+    address: clean(raw, "store.address"),
+    instagram: clean(raw, "store.instagram"),
+    gstin: clean(raw, "store.gstin"),
     shippingFlatRate: parseFloatSafe(raw["shipping.flatRate"], FALLBACK.shippingFlatRate),
     shippingFreeThreshold: parseFloatSafe(raw["shipping.freeThreshold"], FALLBACK.shippingFreeThreshold),
     hero: {
@@ -142,9 +157,9 @@ function fromRaw(raw: Record<string, string>): StoreSettings {
     },
     usps: buildUsps(raw),
     social: {
-      facebook: raw["social.facebook"]?.trim() || "",
-      youtube: raw["social.youtube"]?.trim() || "",
-      pinterest: raw["social.pinterest"]?.trim() || "",
+      facebook: clean(raw, "social.facebook"),
+      youtube: clean(raw, "social.youtube"),
+      pinterest: clean(raw, "social.pinterest"),
     },
     delivery: {
       cutoffTime: raw["delivery.cutoffTime"]?.trim() || "",
@@ -196,7 +211,15 @@ export function useSettings(): StoreSettings {
 export function whatsappLink(phoneOrUrl: string, message?: string): string | null {
   if (!phoneOrUrl) return null;
   const trimmed = phoneOrUrl.trim();
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  // A full URL is accepted only when it is exactly a wa.me link; anything else is not trusted.
+  if (/^https?:\/\//i.test(trimmed)) {
+    try {
+      const u = new URL(trimmed);
+      return u.protocol === "https:" && u.hostname === "wa.me" ? trimmed : null;
+    } catch {
+      return null;
+    }
+  }
   const digits = trimmed.replace(/\D+/g, "");
   if (digits.length < 8) return null;
   const base = `https://wa.me/${digits}`;
@@ -207,18 +230,30 @@ export function instagramLink(value: string): string | null {
   if (!value) return null;
   const trimmed = value.trim();
   if (!trimmed) return null;
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  const handle = trimmed.replace(/^@/, "");
-  return `https://www.instagram.com/${handle}`;
+  if (/^https?:\/\//i.test(trimmed)) {
+    try {
+      const u = new URL(trimmed);
+      return u.protocol === "https:" && /^(www\.)?instagram\.com$/.test(u.hostname) ? trimmed : null;
+    } catch {
+      return null;
+    }
+  }
+  const handle = trimmed.replace(/^@+/, "");
+  if (!handle) return null;
+  return `https://www.instagram.com/${encodeURIComponent(handle)}`;
 }
 
 export function telLink(phone: string): string | null {
   if (!phone) return null;
-  const digits = phone.replace(/[^\d+]/g, "");
-  return digits ? `tel:${digits}` : null;
+  const trimmed = phone.trim();
+  const digits = trimmed.replace(/[^\d]/g, "");
+  if (!digits) return null;
+  return `tel:${trimmed.startsWith("+") ? "+" : ""}${digits}`;
 }
 
 export function mailtoLink(email: string): string | null {
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null;
-  return `mailto:${email}`;
+  if (!email) return null;
+  const address = email.replace(/[?#\s]/g, "");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(address)) return null;
+  return `mailto:${address}`;
 }

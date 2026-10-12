@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { safeHref } from "@/lib/hero";
-import { useSettings } from "@/lib/settings-context";
+import { isPlaceholderSetting, useSettings } from "@/lib/settings-context";
 import { CloseIcon } from "./chrome/icons";
 
 const KEY = "fp_announcement_dismissed";
@@ -27,10 +27,12 @@ export default function PromoStrip() {
   }, []);
 
   const text = settings.raw?.["homepage.announcement"]?.trim();
-  if (!mounted || !text || dismissed === text) return null;
+  if (!mounted || isPlaceholderSetting(text) || dismissed === text) return null;
 
   const rawHref = settings.raw["homepage.announcementHref"]?.trim();
-  const href = rawHref ? safeHref(rawHref) : null;
+  // An unsafe or non-relative link is rejected by safeHref (it answers /products): show plain text instead.
+  const safe = rawHref ? safeHref(rawHref) : null;
+  const href = rawHref && safe && !(safe === "/products" && rawHref !== "/products") ? safe : null;
   const dismiss = () => {
     setDismissed(text);
     try {

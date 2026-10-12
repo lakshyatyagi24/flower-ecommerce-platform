@@ -24,7 +24,7 @@ export const ALLOWLIST: string[] = [
 ];
 
 const SRC = join(__dirname, '..');
-const ROOTS = ['components', 'app'];
+const ROOTS = ['components', 'app', 'lib'];
 const SOURCE = /\.(tsx?|jsx?|mdx?|css)$/;
 
 function walk(dir: string, out: string[] = []): string[] {

@@ -12,7 +12,7 @@ export default function QuickContactDetails() {
   const phoneHref = telLink(settings.phone);
   const emailHref = mailtoLink(settings.email);
   const waHref = whatsappLink(settings.whatsapp || settings.phone, "Hi, I'd like to enquire about your flowers.");
-  const addressText = settings.address || "Delhi NCR, India";
+  const addressText = settings.address.trim();
   const mapsQuery = encodeURIComponent(addressText);
 
   return (
@@ -66,6 +66,7 @@ export default function QuickContactDetails() {
         </div>
       </div>
 
+      {addressText && (
       <div className="p-4 bg-white rounded-lg border shadow-sm flex items-start gap-3 hover:shadow-md transition-shadow duration-150 transform hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:shadow-none motion-reduce:transform-none">
         <div className="p-2 bg-indigo-50 rounded-md">
           <svg className="w-5 h-5 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden>
@@ -78,6 +79,7 @@ export default function QuickContactDetails() {
           <a href={`https://www.google.com/maps/search/?api=1&query=${mapsQuery}`} target="_blank" rel="noopener noreferrer" className="text-olive-green hover:underline text-sm">{addressText}</a>
         </div>
       </div>
+      )}
 
       <div className="p-4 bg-white rounded-lg border shadow-sm flex items-start gap-3 hover:shadow-md transition-shadow duration-150 transform hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:shadow-none motion-reduce:transform-none">
         <div className="p-2 bg-gray-50 rounded-md">
