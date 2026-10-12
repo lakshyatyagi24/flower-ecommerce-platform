@@ -1,26 +1,24 @@
 "use client";
-import React from 'react';
-import Image from 'next/image';
-import { useCart } from '@/lib/cart-context';
+import { useCart } from "@/lib/cart-context";
+import { BagIcon } from "./chrome/icons";
+import { iconButton } from "./chrome/styles";
 
-const Cart = () => {
+/** Header bag button: opens the cart drawer; the count badge is hidden at 0. */
+export default function Cart() {
   const { count, open } = useCart();
+  const label = count > 0 ? `Open bag, ${count} ${count === 1 ? "item" : "items"}` : "Open bag";
   return (
-    <button
-      type="button"
-      onClick={open}
-      aria-label={count ? `Cart with ${count} items` : 'Cart is empty'}
-      className="relative flex items-center flex-shrink-0 text-olive-green/95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40 rounded-md p-1"
-    >
-      <Image src="/cart-icon.svg" alt="" aria-hidden width={20} height={20} className="w-5 h-5 transition-transform hover:scale-110 flex-shrink-0" />
-      <span className="sr-only">Cart</span>
+    <button type="button" onClick={open} aria-label={label} className={`relative ${iconButton}`}>
+      <BagIcon />
       {count > 0 && (
-        <span className="absolute -top-2 -right-2 inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-bold leading-none text-white bg-red-600 rounded-full">
-          {count}
+        <span
+          data-testid="cart-badge"
+          aria-hidden
+          className="absolute right-0.5 top-1 flex h-[18px] min-w-[18px] items-center rounded-full justify-center bg-charcoal px-1 text-[10px] font-medium leading-none text-ivory"
+        >
+          {count > 99 ? "99+" : count}
         </span>
       )}
     </button>
   );
-};
-
-export default Cart;
+}

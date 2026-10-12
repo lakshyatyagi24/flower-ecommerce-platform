@@ -1,117 +1,113 @@
 "use client";
-import React, { useState } from "react";
-import Logo from "./Logo";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
-import LocationSelector from "./LocationSelector";
-import SearchBar from "./SearchBar";
+import { usePathname } from "next/navigation";
 import Cart from "./Cart";
-import CurrencySelector from "./CurrencySelector";
-import UserSignIn from "./UserSignIn";
-import Categories from "./Categories";
+import SignInModal from "./SignInModal";
+import AccountMenu from "./chrome/AccountMenu";
+import HeaderSearch from "./chrome/HeaderSearch";
+import { MenuIcon } from "./chrome/icons";
+import MobileMenu, { MOBILE_MENU_ID } from "./chrome/MobileMenu";
+import { PRIMARY_LINKS } from "./chrome/nav-data";
+import OccasionsMenu from "./chrome/OccasionsMenu";
+import { iconButton, navLink } from "./chrome/styles";
+import Wordmark from "./chrome/Wordmark";
 
-const Navbar = () => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+/**
+ * Sticky site header: 56px on mobile, 64px from lg. A normal sticky element, so there is no spacer and no
+ * band above the page. The link lists are static markup and are server-rendered (R15).
+ */
+export default function Navbar() {
+  const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [signInOpen, setSignInOpen] = useState(false);
+  const burgerRef = useRef<HTMLButtonElement>(null);
+  const signInFrom = useRef<HTMLElement | null>(null);
+
+  const lastPath = useRef(pathname);
+  useEffect(() => {
+    if (lastPath.current !== pathname) {
+      lastPath.current = pathname;
+      setMenuOpen(false);
+    }
+  }, [pathname]);
+
+  const openSignIn = (trigger: HTMLElement | null) => {
+    signInFrom.current = trigger;
+    setSignInOpen(true);
+  };
+
+  const [first, ...rest] = PRIMARY_LINKS;
+  const current = (href: string) => (pathname === href || pathname?.startsWith(`${href}/`) ? "page" : undefined);
 
   return (
     <>
-      <nav className="navbar w-full backdrop-blur" aria-label="Primary">
-        <div className="navbar-inner max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between w-full">
-            <div className="flex items-center gap-3 flex-none">
-              <Logo />
-              <span className="hidden lg:inline text-xs tracking-[0.18em] uppercase text-olive-green/70">Fresh flowers, delivered fast</span>
-            </div>
+      <header className="sticky top-0 z-40 border-b border-stone-light bg-ivory">
+        <div className="mx-auto grid h-14 w-full max-w-[1280px] grid-cols-[1fr_auto_1fr] items-center px-5 md:px-8 lg:h-16">
+          <button
+            ref={burgerRef}
+            type="button"
+            aria-label="Open menu"
+            aria-expanded={menuOpen}
+            aria-controls={MOBILE_MENU_ID}
+            onClick={() => setMenuOpen(true)}
+            className={`${iconButton} col-start-1 row-start-1 -ml-3 justify-self-start lg:hidden`}
+          >
+            <MenuIcon />
+          </button>
 
-            <div className="hidden md:flex items-center justify-center flex-1 gap-x-10">
-              <ul className="flex items-center gap-x-6" role="menubar" aria-label="Primary pages">
-                <li role="none"><Link href="/" role="menuitem" className="nav-link px-2 py-1 rounded-md text-[13px] font-semibold tracking-wide uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40">Home</Link></li>
-                <li role="none"><Link href="/products" role="menuitem" className="nav-link px-2 py-1 rounded-md text-[13px] font-semibold tracking-wide uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40">Shop</Link></li>
-                <li role="none"><Link href="/about" role="menuitem" className="nav-link px-2 py-1 rounded-md text-[13px] font-semibold tracking-wide uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40">About</Link></li>
-                <li role="none"><Link href="/contact" role="menuitem" className="nav-link px-2 py-1 rounded-md text-[13px] font-semibold tracking-wide uppercase focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40">Contact</Link></li>
-              </ul>
+          <Wordmark className="col-start-2 row-start-1 justify-self-center lg:col-start-1 lg:justify-self-start" />
 
-              <div className="max-w-md w-full">
-                <div className="search-input ring-1 ring-olive-green/10">
-                  <SearchBar />
-                </div>
-              </div>
-            </div>
+          <nav aria-label="Primary" className="col-start-2 row-start-1 hidden lg:block">
+            <ul className="flex items-center gap-10">
+              <li>
+                <Link href={first.href} aria-current={current(first.href)} className={navLink}>
+                  {first.label}
+                </Link>
+              </li>
+              <li>
+                <OccasionsMenu />
+              </li>
+              {rest.map((l) => (
+                <li key={l.href}>
+                  <Link href={l.href} aria-current={current(l.href)} className={navLink}>
+                    {l.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
 
-            <div className="hidden md:flex items-center gap-x-3 flex-none">
-              <Link href="/track-order" className="flex items-center text-olive-green/80 hover:text-olive-green px-2 py-1 rounded-md text-sm font-medium whitespace-nowrap flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40" aria-label="Track Order">
-                <Image src="/track-order-icon.svg" alt="Track Order" width={20} height={20} className="w-5 h-5 mr-2 transition-transform hover:scale-110"/>
-                <span className="hidden md:inline">{'Track\u00A0Order'}</span>
-              </Link>
-              <div className="flex items-center text-olive-green">
-                <Cart />
-              </div>
-              <div className="flex items-center text-olive-green/70">
-                <CurrencySelector />
-              </div>
-              <div className="flex items-center">
-                <UserSignIn />
-              </div>
-              <div className="h-6 w-px bg-olive-green/20 mx-2" aria-hidden />
-              <div className="hidden lg:flex items-center min-w-[170px] px-3 py-2 rounded-full bg-white/80 border border-olive-green/10 shadow-sm">
-                <LocationSelector />
-              </div>
+          <div className="col-start-3 row-start-1 flex items-center justify-self-end lg:-mr-3">
+            <HeaderSearch />
+            <div className="hidden lg:block">
+              <AccountMenu onSignIn={openSignIn} />
             </div>
-
-            <div className="md:hidden flex items-center">
-              <button
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="inline-flex items-center justify-center p-2 rounded-md text-olive-green hover:text-light-brown hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40"
-                aria-expanded={isMobileMenuOpen}
-                aria-controls="mobile-menu"
-                aria-label="Toggle navigation menu"
-              >
-                <span className="sr-only">Open main menu</span>
-                {isMobileMenuOpen ? (
-                  <svg className="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                ) : (
-                  <svg className="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-                )}
-              </button>
-            </div>
+            <Cart />
           </div>
         </div>
+      </header>
 
-  {isMobileMenuOpen && (
-          <div className="md:hidden bg-white/95 border-t border-olive-green/10" id="mobile-menu">
-            <div className="px-2 pt-3 pb-4 space-y-1 sm:px-3" role="menu" aria-label="Mobile primary">
-              <div className="mb-3 shadow-sm">
-                <SearchBar />
-              </div>
-              <Link href="/" role="menuitem" className="text-olive-green hover:text-light-brown block px-3 py-2 rounded-md text-base font-semibold uppercase tracking-wide focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40">Home</Link>
-              <Link href="/products" role="menuitem" className="text-olive-green hover:text-light-brown block px-3 py-2 rounded-md text-base font-semibold uppercase tracking-wide focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40">Shop</Link>
-              <Link href="/about" role="menuitem" className="text-olive-green hover:text-light-brown block px-3 py-2 rounded-md text-base font-semibold uppercase tracking-wide focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40">About</Link>
-              <Link href="/contact" role="menuitem" className="text-olive-green hover:text-light-brown block px-3 py-2 rounded-md text-base font-semibold uppercase tracking-wide focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40">Contact</Link>
-              <Link href="/track-order" role="menuitem" className="flex items-center text-olive-green hover:text-light-brown px-3 py-2 rounded-md text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-olive-green/40" aria-label="Track Order mobile">
-                <Image src="/track-order-icon.svg" alt="Track Order" width={20} height={20} className="mr-2"/>
-                Track Order
-              </Link>
-              <Cart />
-              <CurrencySelector />
-              <UserSignIn />
-            </div>
-            <div className="px-2 pt-2 pb-4">
-              <LocationSelector />
-            </div>
-          </div>
-        )}
+      {menuOpen && (
+        <MobileMenu
+          onClose={() => setMenuOpen(false)}
+          onSignIn={() => {
+            signInFrom.current = burgerRef.current;
+            setMenuOpen(false);
+            setSignInOpen(true);
+          }}
+        />
+      )}
 
-  <Categories />
-      </nav>
-
-      {/* spacer to offset sticky navbar + categories so page content isn't hidden */}
-      <div className="nav-spacer" aria-hidden />
+      {signInOpen && (
+        <SignInModal
+          onClose={() => {
+            setSignInOpen(false);
+            const back = signInFrom.current;
+            setTimeout(() => back?.focus(), 0);
+          }}
+        />
+      )}
     </>
   );
-};
-
-export default Navbar;
+}

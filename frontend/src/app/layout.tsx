@@ -72,9 +72,14 @@ export default function RootLayout({
         <SettingsProvider>
           <AuthProvider>
             <CartProvider>
+              <a href="#main" className="skip-link">
+                Skip to main content
+              </a>
               <PromoStrip />
               <Navbar />
-              {children}
+              <div id="main" tabIndex={-1} className="outline-none">
+                {children}
+              </div>
               <Footer />
               <CartDrawer />
               <WhatsAppButton />

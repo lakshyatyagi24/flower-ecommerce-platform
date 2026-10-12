@@ -104,21 +104,26 @@ h1, h2, h3, .type-display, .type-h1, .type-h2, .type-h3 { text-wrap: balance; }
   }
 }
 
-/* Skip link for keyboard users */
+/* Skip link for keyboard users: first in tab order, visible on focus */
 .skip-link {
   position: absolute;
   left: 8px;
-  top: -40px;
-  background: #7C835A;
-  color: #fff;
-  padding: 8px 12px;
-  border-radius: 6px;
+  top: -64px;
+  background: var(--color-charcoal);
+  color: var(--color-ivory);
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
   z-index: 10000;
   text-decoration: none;
   font-size: 14px;
-  transition: top .2s ease;
 }
-.skip-link:focus { top: 8px; outline: 2px solid #fff; }
+.skip-link:focus { top: 8px; outline: 2px solid var(--color-moss); outline-offset: 2px; }
+
+/* Site chrome: quiet fade for menus and overlays; drawer slides in from the right. */
+@keyframes chromeFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes drawerIn { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+.chrome-fade { animation: chromeFade 160ms ease-out both; }
+.drawer-in { animation: drawerIn 260ms ease-out both; }
 
 /* Classic / modern navbar utilities used across the app */
 :root {
