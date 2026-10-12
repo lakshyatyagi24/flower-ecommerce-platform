@@ -98,7 +98,7 @@ export default async function ProductPage({ params }: Params) {
 
   const crumbs = [
     { name: "Home", path: "/" },
-    ...(product.category ? [{ name: product.category.name, path: `/products?category=${product.category.slug}` }] : []),
+    ...(product.category ? [{ name: product.category.name, path: `/collections/${product.category.slug}` }] : []),
     { name: product.name, path: `/products/${product.slug}` },
   ];
 

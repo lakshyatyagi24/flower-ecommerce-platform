@@ -39,7 +39,7 @@ export default function CorporatePage() {
 
           <p className="mt-8 text-sm text-slate-600">
             Looking for one-off cut flowers instead?{" "}
-            <Link href="/products?category=cut-flowers" className="text-olive-green font-semibold underline-offset-4 hover:underline">
+            <Link href="/collections/cut-flowers" className="text-olive-green font-semibold underline-offset-4 hover:underline">
               Shop the cut-flower catalogue →
             </Link>
           </p>

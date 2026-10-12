@@ -58,10 +58,10 @@ const Footer: React.FC = () => {
             <div>
               <h4 className="font-semibold mb-3 text-olive-green uppercase tracking-wide text-xs">Shop</h4>
               <ul className="space-y-2">
-                <li><Link href="/products?category=cut-flowers" className="text-gray-700 hover:text-olive-green">Cut flowers</Link></li>
-                <li><Link href="/products?category=plants" className="text-gray-700 hover:text-olive-green">Plants</Link></li>
+                <li><Link href="/collections/cut-flowers" className="text-gray-700 hover:text-olive-green">Cut flowers</Link></li>
+                <li><Link href="/collections/plants" className="text-gray-700 hover:text-olive-green">Plants</Link></li>
                 <li><Link href="/corporate" className="text-gray-700 hover:text-olive-green">Corporate bouquets</Link></li>
-                <li><Link href="/products?category=arrangements" className="text-gray-700 hover:text-olive-green">Arrangements</Link></li>
+                <li><Link href="/collections/arrangements" className="text-gray-700 hover:text-olive-green">Arrangements</Link></li>
               </ul>
             </div>
 

@@ -121,7 +121,7 @@ const SearchBar: React.FC = () => {
       router.push(`/products/${prod.slug}`);
     } else if ((s as Suggestion).type === "category") {
       const cat = s as Suggestion & { type: "category" };
-      router.push(`/products?category=${encodeURIComponent(cat.slug)}`);
+      router.push(`/collections/${encodeURIComponent(cat.slug)}`);
     } else if ((s as Suggestion).type === "static") {
       const st = s as Suggestion & { type: "static" };
       router.push(st.href);
