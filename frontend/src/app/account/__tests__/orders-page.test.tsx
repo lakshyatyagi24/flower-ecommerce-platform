@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, within, fireEvent, act } from '@testing-library/react'
+import { render, screen, within, fireEvent, act, waitFor } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import MyOrdersPage from '../orders/page'
 import { api } from '@/lib/api'
@@ -9,9 +9,10 @@ const router = { push: vi.fn(), replace: vi.fn() }
 const auth = { user: { id: 1, email: 'a@b.co', name: 'A', phone: '' }, loading: false }
 
 vi.mock('next/navigation', () => ({ useRouter: () => router }))
-vi.mock('@/lib/cart-context', () => ({ formatINR: (n: number) => `Rs${n}` }))
+const cart = { clear: vi.fn() }
+vi.mock('@/lib/cart-context', () => ({ formatINR: (n: number) => `Rs${n}`, useCart: () => cart }))
 vi.mock('@/lib/auth-context', () => ({ useAuth: () => auth }))
-vi.mock('@/lib/api', () => ({ api: { listMyOrders: vi.fn() } }))
+vi.mock('@/lib/api', () => ({ api: { listMyOrders: vi.fn(), getMyOrder: vi.fn() }, ApiError: class extends Error {} }))
 vi.mock('@/lib/razorpay-flow', () => ({ payForOrder: vi.fn() }))
 
 const list = api.listMyOrders as unknown as ReturnType<typeof vi.fn>
@@ -26,6 +27,8 @@ function order(id: number, over: Record<string, unknown>) {
 }
 
 beforeEach(() => {
+  window.sessionStorage.clear()
+  cart.clear.mockReset()
   list.mockReset()
   pay.mockReset()
 })
@@ -76,6 +79,39 @@ describe('My orders payment state', () => {
     expect(list).toHaveBeenCalledTimes(2)
     await screen.findByText('Paid')
     expect(screen.queryByRole('button', { name: /pay now/i })).toBeNull()
+  })
+
+  it('paying from My Orders clears the cart and the matching pending key', async () => {
+    window.sessionStorage.setItem('fp_pending_order', JSON.stringify({ id: 1, createdAt: Date.now() }))
+    render(<MyOrdersPage />)
+    await screen.findByRole('heading', { name: 'Order #1' })
+    fireEvent.click(within(card(1)).getByRole('button', { name: /pay now/i }))
+    await act(async () => pay.mock.calls[0][1].onPaid())
+    expect(cart.clear).toHaveBeenCalled()
+    expect(window.sessionStorage.getItem('fp_pending_order')).toBeNull()
+  })
+
+  it('a pending key for a different order is left alone', async () => {
+    const other = JSON.stringify({ id: 99, createdAt: Date.now() })
+    window.sessionStorage.setItem('fp_pending_order', other)
+    render(<MyOrdersPage />)
+    await screen.findByRole('heading', { name: 'Order #1' })
+    fireEvent.click(within(card(1)).getByRole('button', { name: /pay now/i }))
+    await act(async () => pay.mock.calls[0][1].onPaid())
+    expect(window.sessionStorage.getItem('fp_pending_order')).toBe(other)
+  })
+
+  it('Check status after a payment error resolves a cancelled order', async () => {
+    const getOne = api.getMyOrder as unknown as ReturnType<typeof vi.fn>
+    render(<MyOrdersPage />)
+    await screen.findByRole('heading', { name: 'Order #1' })
+    fireEvent.click(within(card(1)).getByRole('button', { name: /pay now/i }))
+    act(() => pay.mock.calls[0][1].onError('Order is cancelled'))
+    expect(within(card(1)).getByRole('alert')).toBeInTheDocument()
+    getOne.mockResolvedValue(order(1, { status: 'CANCELLED' }))
+    list.mockResolvedValue([order(1, { status: 'CANCELLED' })])
+    fireEvent.click(within(card(1)).getByRole('button', { name: /check status/i }))
+    await waitFor(() => expect(within(card(1)).queryByRole('button', { name: /pay now/i })).toBeNull())
   })
 
   it('shows a payment error message on the order', async () => {

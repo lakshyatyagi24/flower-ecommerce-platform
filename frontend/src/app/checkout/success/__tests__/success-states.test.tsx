@@ -13,7 +13,8 @@ vi.mock('next/navigation', () => ({
   useRouter: () => router,
   useSearchParams: () => params,
 }))
-vi.mock('@/lib/cart-context', () => ({ formatINR: (n: number) => `Rs${n}` }))
+const cart = { clear: vi.fn() }
+vi.mock('@/lib/cart-context', () => ({ formatINR: (n: number) => `Rs${n}`, useCart: () => cart }))
 vi.mock('@/lib/auth-context', () => ({ useAuth: () => auth }))
 vi.mock('@/lib/api', () => {
   class ApiError extends Error {
@@ -37,6 +38,8 @@ const base = {
 }
 
 beforeEach(() => {
+  window.sessionStorage.clear()
+  cart.clear.mockReset()
   getMyOrder.mockReset()
   setMethod.mockReset()
   pay.mockReset()
@@ -75,7 +78,8 @@ describe('Checkout success page states', () => {
     await screen.findByRole('button', { name: /pay now/i })
   })
 
-  it('onPaid reloads the order and shows payment received', async () => {
+  it('paying from the success page clears the cart and the matching pending key, then shows payment received', async () => {
+    window.sessionStorage.setItem('fp_pending_order', JSON.stringify({ id: 9, createdAt: Date.now() }))
     getMyOrder.mockResolvedValueOnce(base)
     render(<CheckoutSuccessPage />)
     await screen.findByRole('button', { name: /pay now/i })
@@ -83,16 +87,81 @@ describe('Checkout success page states', () => {
     getMyOrder.mockResolvedValue({ ...base, status: 'PAID', paymentStatus: 'PAID' })
     act(() => pay.mock.calls[0][1].onPaid())
     await screen.findByText(/payment received/i)
+    expect(cart.clear).toHaveBeenCalled()
+    expect(window.sessionStorage.getItem('fp_pending_order')).toBeNull()
   })
 
-  it('Switch to COD calls the API then shows the COD state', async () => {
+  it('refund-due from the success page also clears cart + key', async () => {
+    window.sessionStorage.setItem('fp_pending_order', JSON.stringify({ id: 9, createdAt: Date.now() }))
     getMyOrder.mockResolvedValueOnce(base)
+    render(<CheckoutSuccessPage />)
+    fireEvent.click(await screen.findByRole('button', { name: /pay now/i }))
+    getMyOrder.mockResolvedValue({ ...base, status: 'CANCELLED', paymentStatus: 'PAID' })
+    act(() => pay.mock.calls[0][1].onRefundDue())
+    await screen.findByText(/payment was received after the order expired/i)
+    expect(cart.clear).toHaveBeenCalled()
+    expect(window.sessionStorage.getItem('fp_pending_order')).toBeNull()
+  })
+
+  it('a pending key for a DIFFERENT order is left alone', async () => {
+    const other = JSON.stringify({ id: 77, createdAt: Date.now() })
+    window.sessionStorage.setItem('fp_pending_order', other)
+    getMyOrder.mockResolvedValueOnce(base)
+    render(<CheckoutSuccessPage />)
+    fireEvent.click(await screen.findByRole('button', { name: /pay now/i }))
+    getMyOrder.mockResolvedValue({ ...base, status: 'PAID', paymentStatus: 'PAID' })
+    act(() => pay.mock.calls[0][1].onPaid())
+    await screen.findByText(/payment received/i)
+    expect(window.sessionStorage.getItem('fp_pending_order')).toBe(other)
+  })
+
+  it('Switch to COD confirms, re-checks, calls the API, clears cart + key and shows the COD state', async () => {
+    window.sessionStorage.setItem('fp_pending_order', JSON.stringify({ id: 9, createdAt: Date.now() }))
+    getMyOrder.mockResolvedValueOnce(base)
+    getMyOrder.mockResolvedValueOnce(base) // pre-switch re-check
     setMethod.mockResolvedValue({ ...base, paymentMethod: 'COD' })
     render(<CheckoutSuccessPage />)
     fireEvent.click(await screen.findByRole('button', { name: /switch to cash on delivery/i }))
+    expect(screen.getByText(/Only do this if you have not paid/i)).toBeInTheDocument()
+    expect(setMethod).not.toHaveBeenCalled()
     getMyOrder.mockResolvedValue({ ...base, paymentMethod: 'COD' })
+    fireEvent.click(screen.getByRole('button', { name: /yes, switch/i }))
     await screen.findByText(/pay on delivery/i)
     expect(setMethod).toHaveBeenCalledWith(9, 'a@b.co')
+    expect(cart.clear).toHaveBeenCalled()
+    expect(window.sessionStorage.getItem('fp_pending_order')).toBeNull()
+  })
+
+  it('Switch finds the order already PAID and never calls the switch API', async () => {
+    getMyOrder.mockResolvedValueOnce(base)
+    render(<CheckoutSuccessPage />)
+    fireEvent.click(await screen.findByRole('button', { name: /switch to cash on delivery/i }))
+    getMyOrder.mockResolvedValue({ ...base, status: 'PAID', paymentStatus: 'PAID' })
+    fireEvent.click(screen.getByRole('button', { name: /yes, switch/i }))
+    await screen.findByText(/payment received/i)
+    expect(setMethod).not.toHaveBeenCalled()
+    expect(cart.clear).toHaveBeenCalled()
+  })
+
+  it('payment errors use role=alert and offer Check status', async () => {
+    getMyOrder.mockResolvedValueOnce(base)
+    render(<CheckoutSuccessPage />)
+    fireEvent.click(await screen.findByRole('button', { name: /pay now/i }))
+    act(() => pay.mock.calls[0][1].onError('Order is cancelled'))
+    expect(screen.getByRole('alert').textContent).toMatch(/Order is cancelled/)
+    getMyOrder.mockResolvedValue({ ...base, status: 'CANCELLED' })
+    fireEvent.click(screen.getByRole('button', { name: /check status/i }))
+    await screen.findByText(/this order expired because payment was not completed/i)
+  })
+
+  it.each([
+    ['REFUNDED', { paymentStatus: 'REFUNDED' }, /your payment was refunded/i],
+    ['COD', { paymentMethod: 'COD' }, /this order was cancelled/i],
+  ])('cancelled %s order uses accurate copy', async (_n, over, re) => {
+    getMyOrder.mockResolvedValue({ ...base, status: 'CANCELLED', ...over })
+    render(<CheckoutSuccessPage />)
+    await screen.findByText(re)
+    expect(screen.queryByText(/nothing was charged/i)).toBeNull()
   })
 
   it('CANCELLED + payment PAID: refund notice', async () => {

@@ -141,7 +141,8 @@ describe('Checkout payment method', () => {
   it('dismiss shows the pending panel; Pay now re-invokes payForOrder', async () => {
     const { container, handlers } = await placeOnlineOrder()
     act(() => handlers.onDismiss())
-    expect(screen.getByText(/Payment not completed\. Your order #42 is reserved for 30 minutes\./)).toBeInTheDocument()
+    expect(screen.getByText(/wait a minute and press Check status before switching\. Your order #42 is reserved for 30 minutes\./)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /check status/i })).toBeInTheDocument()
     expect(container.querySelector('form')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: /pay now/i }))
     expect(pay).toHaveBeenCalledTimes(2)
@@ -151,31 +152,102 @@ describe('Checkout payment method', () => {
   it('payment failure shows the same pending message', async () => {
     const { handlers } = await placeOnlineOrder()
     act(() => handlers.onFailure('Card declined'))
-    expect(screen.getByText(/Payment not completed\. Your order #42 is reserved/)).toBeInTheDocument()
+    expect(screen.getByRole('alert').textContent).toMatch(/Your order #42 is reserved/)
+    expect(screen.getByRole('button', { name: /check status/i })).toBeInTheDocument()
   })
 
-  it('Switch to cash on delivery calls setOrderPaymentMethod then clears and navigates', async () => {
+  it('Switch asks for confirmation, re-checks the order, then switches and clears', async () => {
     const { handlers } = await placeOnlineOrder()
     setMethod.mockResolvedValue({ ...baseOrder, paymentMethod: 'COD' })
+    getMyOrder.mockResolvedValue(baseOrder)
     act(() => handlers.onDismiss())
     fireEvent.click(screen.getByRole('button', { name: /switch to cash on delivery/i }))
+    expect(screen.getByText(/Only do this if you have not paid/i)).toBeInTheDocument()
+    expect(setMethod).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: /yes, switch/i }))
     await waitFor(() => expect(router.push).toHaveBeenCalledWith(SUCCESS))
+    expect(getMyOrder).toHaveBeenCalledWith(42)
     expect(setMethod).toHaveBeenCalledWith(42, 'a@b.co')
     expect(cart.clear).toHaveBeenCalled()
     expect(window.sessionStorage.getItem(KEY)).toBeNull()
   })
 
-  it('409 on switch shows a message and Check status which detects a paid order', async () => {
+  it('declining the confirmation does not call the API', async () => {
     const { handlers } = await placeOnlineOrder()
+    act(() => handlers.onDismiss())
+    fireEvent.click(screen.getByRole('button', { name: /switch to cash on delivery/i }))
+    fireEvent.click(screen.getByRole('button', { name: /keep online payment/i }))
+    expect(getMyOrder).not.toHaveBeenCalled()
+    expect(setMethod).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: /switch to cash on delivery/i })).toBeInTheDocument()
+  })
+
+  it('switch finds the order already PAID: treats it as paid and never switches', async () => {
+    const { handlers } = await placeOnlineOrder()
+    getMyOrder.mockResolvedValue({ ...baseOrder, status: 'PAID', paymentStatus: 'PAID' })
+    act(() => handlers.onDismiss())
+    fireEvent.click(screen.getByRole('button', { name: /switch to cash on delivery/i }))
+    fireEvent.click(screen.getByRole('button', { name: /yes, switch/i }))
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith(SUCCESS))
+    expect(setMethod).not.toHaveBeenCalled()
+    expect(cart.clear).toHaveBeenCalled()
+  })
+
+  it('switch finds the order CANCELLED: shows the expired state and never switches', async () => {
+    const { handlers } = await placeOnlineOrder()
+    getMyOrder.mockResolvedValue({ ...baseOrder, status: 'CANCELLED' })
+    act(() => handlers.onDismiss())
+    fireEvent.click(screen.getByRole('button', { name: /switch to cash on delivery/i }))
+    fireEvent.click(screen.getByRole('button', { name: /yes, switch/i }))
+    await screen.findByText(/this order expired because payment was not completed/i)
+    expect(setMethod).not.toHaveBeenCalled()
+    expect(window.sessionStorage.getItem(KEY)).toBeNull()
+  })
+
+  it('409 on switch shows an alert and Check status which detects a paid order', async () => {
+    const { handlers } = await placeOnlineOrder()
+    getMyOrder.mockResolvedValue(baseOrder)
     setMethod.mockRejectedValue(new ApiError('Order can no longer be switched to cash on delivery', 409, null))
     act(() => handlers.onDismiss())
     fireEvent.click(screen.getByRole('button', { name: /switch to cash on delivery/i }))
+    fireEvent.click(screen.getByRole('button', { name: /yes, switch/i }))
     await screen.findByText(/This order can no longer be switched/i)
+    expect(screen.getByRole('alert')).toBeInTheDocument()
     expect(router.push).not.toHaveBeenCalled()
     getMyOrder.mockResolvedValue({ ...baseOrder, status: 'PAID', paymentStatus: 'PAID' })
     fireEvent.click(screen.getByRole('button', { name: /check status/i }))
     await waitFor(() => expect(router.push).toHaveBeenCalledWith(SUCCESS))
     expect(cart.clear).toHaveBeenCalled()
+  })
+
+  it('Check status on a still-pending order keeps the panel with a not-paid note', async () => {
+    const { handlers } = await placeOnlineOrder()
+    act(() => handlers.onDismiss())
+    getMyOrder.mockResolvedValue(baseOrder)
+    fireEvent.click(screen.getByRole('button', { name: /check status/i }))
+    await screen.findByText(/still pending and has not been paid yet/i)
+    expect(router.push).not.toHaveBeenCalled()
+  })
+
+  it('a 400 from createRazorpayOrder (onError) offers Check status which resolves a cancelled order', async () => {
+    const { handlers } = await placeOnlineOrder()
+    act(() => handlers.onError('Order is cancelled'))
+    getMyOrder.mockResolvedValue({ ...baseOrder, status: 'CANCELLED' })
+    fireEvent.click(screen.getByRole('button', { name: /check status/i }))
+    await screen.findByText(/this order expired because payment was not completed/i)
+    expect(screen.queryByRole('button', { name: /pay now/i })).toBeNull()
+  })
+
+  it.each([
+    ['REFUNDED', { paymentStatus: 'REFUNDED' }, /your payment was refunded/i],
+    ['COD', { paymentMethod: 'COD' }, /this order was cancelled/i],
+  ])('expired copy for a cancelled %s order does not claim nothing was charged', async (_n, over, re) => {
+    const { handlers } = await placeOnlineOrder()
+    act(() => handlers.onDismiss())
+    getMyOrder.mockResolvedValue({ ...baseOrder, status: 'CANCELLED', ...over })
+    fireEvent.click(screen.getByRole('button', { name: /check status/i }))
+    await screen.findByText(re)
+    expect(screen.queryByText(/nothing was charged/i)).toBeNull()
   })
 
   it('verify error shows guidance + Check status; a cancelled order shows the expired message', async () => {
@@ -184,7 +256,7 @@ describe('Checkout payment method', () => {
     expect(screen.getByText(/could not confirm your payment yet/i)).toBeInTheDocument()
     getMyOrder.mockResolvedValue({ ...baseOrder, status: 'CANCELLED', paymentStatus: 'UNPAID' })
     fireEvent.click(screen.getByRole('button', { name: /check status/i }))
-    await screen.findByText(/this order expired/i)
+    await screen.findByText(/this order expired because payment was not completed/i)
     expect(window.sessionStorage.getItem(KEY)).toBeNull()
     expect(screen.getByRole('link', { name: /products/i })).toBeInTheDocument()
     expect(router.push).not.toHaveBeenCalled()
@@ -193,7 +265,7 @@ describe('Checkout payment method', () => {
   it('onError shows the message with Pay now / Switch buttons', async () => {
     const { handlers } = await placeOnlineOrder()
     act(() => handlers.onError('Online payment is temporarily unavailable.'))
-    expect(screen.getByText(/temporarily unavailable/i)).toBeInTheDocument()
+    expect(screen.getByRole('alert').textContent).toMatch(/temporarily unavailable/i)
     expect(screen.getByRole('button', { name: /pay now/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /switch to cash on delivery/i })).toBeInTheDocument()
   })
@@ -205,6 +277,7 @@ describe('Checkout restores a pending order', () => {
     getMyOrder.mockResolvedValue(baseOrder)
     const { container } = render(<CheckoutPage />)
     await screen.findByText(/Your order #42 is reserved for 30 minutes/)
+    expect(screen.getByRole('button', { name: /check status/i })).toBeInTheDocument()
     expect(getMyOrder).toHaveBeenCalledWith(42)
     expect(container.querySelector('form')).toBeNull()
     expect(createOrder).not.toHaveBeenCalled()
@@ -227,13 +300,25 @@ describe('Checkout restores a pending order', () => {
   })
 
   it.each([
-    ['COD', { ...baseOrder, paymentMethod: 'COD' }],
     ['CANCELLED', { ...baseOrder, status: 'CANCELLED' }],
+    ['REFUNDED', { ...baseOrder, status: 'CANCELLED', paymentStatus: 'REFUNDED' }],
   ])('a %s order clears the key and shows the normal form', async (_n, order) => {
     window.sessionStorage.setItem(KEY, JSON.stringify({ id: 42, createdAt: Date.now() }))
     getMyOrder.mockResolvedValue(order)
     const { container } = render(<CheckoutPage />)
     await waitFor(() => expect(container.querySelector('form')).not.toBeNull())
+    expect(window.sessionStorage.getItem(KEY)).toBeNull()
+  })
+
+  it.each([
+    ['COD', { ...baseOrder, paymentMethod: 'COD' }],
+    ['CANCELLED but PAID (refund due)', { ...baseOrder, status: 'CANCELLED', paymentStatus: 'PAID' }],
+  ])('a %s order goes to the success page, clearing cart + key', async (_n, order) => {
+    window.sessionStorage.setItem(KEY, JSON.stringify({ id: 42, createdAt: Date.now() }))
+    getMyOrder.mockResolvedValue(order)
+    render(<CheckoutPage />)
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith(SUCCESS))
+    expect(cart.clear).toHaveBeenCalled()
     expect(window.sessionStorage.getItem(KEY)).toBeNull()
   })
 

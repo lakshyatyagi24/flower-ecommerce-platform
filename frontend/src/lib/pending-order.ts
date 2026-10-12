@@ -47,3 +47,22 @@ export function readPendingOrderId(): number | null {
   clearPendingOrder();
   return null;
 }
+
+/**
+ * Clears the stored pending-order key, but only when it refers to this order,
+ * so resolving one order never forgets a different pending one.
+ */
+export function resolveOrderLocally(orderId: number): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const raw = window.sessionStorage.getItem(PENDING_ORDER_KEY);
+    if (raw === null) return;
+    let id: unknown;
+    try {
+      id = (JSON.parse(raw) as { id?: unknown } | null)?.id;
+    } catch {
+      id = undefined;
+    }
+    if (id === orderId) window.sessionStorage.removeItem(PENDING_ORDER_KEY);
+  } catch {}
+}

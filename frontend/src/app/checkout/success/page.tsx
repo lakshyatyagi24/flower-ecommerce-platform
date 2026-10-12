@@ -1,11 +1,12 @@
 "use client";
 
-import React, { Suspense, useEffect, useState } from "react";
+import React, { Suspense, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { ApiError, api } from "@/lib/api";
-import { payForOrder, type PayHandlers } from "@/lib/razorpay-flow";
+import { api } from "@/lib/api";
+import { EXPIRED_COPY, expiredKindOf, usePayForOrder } from "@/lib/use-pay-for-order";
+import PaymentActions from "@/components/PaymentActions";
 import { useApi } from "@/lib/use-api";
 import { safeRedirect } from "@/lib/safe-redirect";
 import { formatINR } from "@/lib/cart-context";
@@ -13,10 +14,11 @@ import ErrorState from "@/components/ui/ErrorState";
 
 const RESERVED_NOTE = "Your order is reserved for 30 minutes from when it was placed. After that it is cancelled automatically.";
 
-function OrderSummary({ orderId, email }: { orderId: number; email: string }) {
+function OrderSummary({ orderId }: { orderId: number }) {
   const { data: order, error, loading, reload } = useApi(() => api.getMyOrder(orderId), [orderId]);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  // Every resolution (paid / refund due / switched to COD / expired) clears the
+  // cart and a matching pending key inside the hook; we just reload the order.
+  const pay = usePayForOrder({ orderId, onResolved: () => reload() });
 
   if (loading && !order) {
     return <div className="mt-6 animate-pulse h-24 bg-slate-100 rounded" aria-busy="true" />;
@@ -37,37 +39,6 @@ function OrderSummary({ orderId, email }: { orderId: number; email: string }) {
   const paid = order.paymentStatus === "PAID";
   const pending = online && order.status === "PENDING" && unpaid;
 
-  const handlers: PayHandlers = {
-    onPaid: () => reload(),
-    onRefundDue: () => reload(),
-    onDismiss: () => setNotice("Payment not completed. " + RESERVED_NOTE),
-    onFailure: () => setNotice("Payment not completed. " + RESERVED_NOTE),
-    onVerifyError: (m) => {
-      setNotice(m);
-      reload();
-    },
-    onError: (m) => setNotice(m),
-  };
-
-  const switchToCod = async () => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      await api.setOrderPaymentMethod(order.id, email);
-      setNotice(null);
-      reload();
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 409) {
-        setNotice("This order can no longer be switched.");
-        reload();
-      } else {
-        setNotice(err instanceof Error && err.message ? err.message : "Could not switch to cash on delivery");
-      }
-    } finally {
-      setBusy(false);
-    }
-  };
-
   let heading: string;
   let body: React.ReactNode;
   if (cancelled && paid) {
@@ -86,10 +57,10 @@ function OrderSummary({ orderId, email }: { orderId: number; email: string }) {
       </div>
     );
   } else if (cancelled) {
-    heading = "Order expired";
+    heading = expiredKindOf(order) === "unpaid" ? "Order expired" : "Order cancelled";
     body = (
       <div className="mt-2" role="status">
-        <p>This order expired because payment was not completed. Nothing was charged.</p>
+        <p>{EXPIRED_COPY[expiredKindOf(order)]}</p>
         <p className="mt-2">
           <Link href="/products" className="underline underline-offset-4 text-olive-green">
             Browse products
@@ -102,27 +73,7 @@ function OrderSummary({ orderId, email }: { orderId: number; email: string }) {
     body = (
       <div className="mt-2">
         <p>Your order #{order.id} is waiting for payment. {RESERVED_NOTE}</p>
-        <div className="mt-4 flex flex-col sm:flex-row gap-3">
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => {
-              setNotice(null);
-              void payForOrder(order.id, handlers);
-            }}
-            className="bg-olive-green text-white px-6 py-3 rounded-full font-semibold disabled:opacity-50"
-          >
-            Pay now
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={switchToCod}
-            className="px-6 py-3 rounded-full font-semibold border border-olive-green text-olive-green disabled:opacity-50"
-          >
-            Switch to cash on delivery
-          </button>
-        </div>
+        <PaymentActions pay={pay} orderId={order.id} />
       </div>
     );
   } else if (online && paid) {
@@ -149,11 +100,6 @@ function OrderSummary({ orderId, email }: { orderId: number; email: string }) {
     <div className="mt-6 text-left text-sm text-slate-700">
       <h2 className="text-xl font-semibold text-slate-900">{heading}</h2>
       {body}
-      {notice && (
-        <div className="mt-3 px-4 py-3 rounded bg-amber-50 text-amber-800" role="status">
-          {notice}
-        </div>
-      )}
       <ul className="mt-4 space-y-1">
         {order.items.map((it) => (
           <li key={it.id} className="flex justify-between gap-4">
@@ -196,7 +142,7 @@ function CheckoutSuccessView() {
         <div className="text-5xl mb-4">🌸</div>
         <h1 className="text-3xl font-semibold text-slate-900">Your order</h1>
         {orderId ? (
-          <OrderSummary orderId={orderId} email={user.email} />
+          <OrderSummary orderId={orderId} />
         ) : (
           <ErrorState
             message="We couldn't find that order."

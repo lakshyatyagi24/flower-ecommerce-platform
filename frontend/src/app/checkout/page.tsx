@@ -10,10 +10,9 @@ import { useAuth } from "@/lib/auth-context";
 import { ApiError, api } from "@/lib/api";
 import { useApi } from "@/lib/use-api";
 import ErrorState from "@/components/ui/ErrorState";
-import { payForOrder, type PayHandlers } from "@/lib/razorpay-flow";
 import { clearPendingOrder, readPendingOrderId, savePendingOrder } from "@/lib/pending-order";
-
-const RESERVED_MSG = (id: number) => `Payment not completed. Your order #${id} is reserved for 30 minutes.`;
+import { EXPIRED_COPY, reservedMessage, usePayForOrder, type ExpiredKind } from "@/lib/use-pay-for-order";
+import PaymentActions from "@/components/PaymentActions";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -41,11 +40,22 @@ export default function CheckoutPage() {
   // is not paid yet: while set, the checkout form is not rendered, so a second
   // order can't be created by accident.
   const [pendingId, setPendingId] = useState<number | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [showCheck, setShowCheck] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [expired, setExpired] = useState(false);
+  const [expired, setExpired] = useState<ExpiredKind | null>(null);
   const [restoring, setRestoring] = useState(true);
+
+  // Shared pay/switch/check behaviour: clears the cart and matching pending key
+  // itself whenever an order resolves, then we just navigate or show expiry.
+  const pay = usePayForOrder({
+    orderId: pendingId,
+    onResolved: (kind, id, expiredKind) => {
+      if (kind === "expired") {
+        setPendingId(null);
+        setExpired(expiredKind ?? "unpaid");
+      } else {
+        router.push(`/checkout/success?orderId=${id}`);
+      }
+    },
+  });
 
   const goToSuccess = (id: number) => {
     clear();
@@ -71,15 +81,19 @@ export default function CheckoutPage() {
       .getMyOrder(id)
       .then((o) => {
         if (cancelled) return;
-        if (o.paymentStatus === "PAID" && o.status !== "CANCELLED") {
-          goToSuccess(id);
+        if (o.paymentStatus === "PAID" || o.paymentMethod === "COD") {
+          // Paid (any status, incl. refund due) or switched to COD: show the
+          // success page, which explains the exact state; the helper clears
+          // the cart and pending key.
+          pay.applyOrder(o);
         } else if (
           o.status === "PENDING" &&
           o.paymentMethod === "RAZORPAY" &&
           (o.paymentStatus === "UNPAID" || o.paymentStatus === "FAILED")
         ) {
           setPendingId(id);
-          setNotice(RESERVED_MSG(id));
+          pay.setNotice({ text: reservedMessage(id), kind: "status" });
+          pay.setShowCheck(true);
           setRestoring(false);
         } else {
           clearPendingOrder();
@@ -96,73 +110,6 @@ export default function CheckoutPage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
-
-  const payHandlers = (id: number): PayHandlers => ({
-    onPaid: () => goToSuccess(id),
-    // The success page explains the refund from the order's stored state.
-    onRefundDue: () => goToSuccess(id),
-    onDismiss: () => {
-      setNotice(RESERVED_MSG(id));
-      setShowCheck(false);
-    },
-    onFailure: () => {
-      setNotice(RESERVED_MSG(id));
-      setShowCheck(false);
-    },
-    onVerifyError: (msg) => {
-      setNotice(msg);
-      setShowCheck(true);
-    },
-    onError: (msg) => {
-      setNotice(msg);
-      setShowCheck(false);
-    },
-  });
-
-  const payNow = (id: number) => {
-    setNotice(null);
-    setShowCheck(false);
-    void payForOrder(id, payHandlers(id));
-  };
-
-  const switchToCod = async (id: number) => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      await api.setOrderPaymentMethod(id, user?.email);
-      goToSuccess(id);
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 409) {
-        setNotice("This order can no longer be switched. Check its status below.");
-        setShowCheck(true);
-      } else {
-        setNotice(err instanceof Error && err.message ? err.message : "Could not switch to cash on delivery");
-      }
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const checkStatus = async (id: number) => {
-    if (busy) return;
-    setBusy(true);
-    try {
-      const o = await api.getMyOrder(id);
-      if (o.status === "CANCELLED" && o.paymentStatus !== "PAID") {
-        clearPendingOrder();
-        setPendingId(null);
-        setExpired(true);
-      } else if (o.paymentStatus === "PAID" || o.paymentMethod === "COD" || o.status === "CANCELLED") {
-        goToSuccess(id);
-      } else {
-        setNotice("Your payment has not been confirmed yet. " + RESERVED_MSG(id));
-      }
-    } catch (err) {
-      setNotice(err instanceof Error && err.message ? err.message : "Could not check the order status");
-    } finally {
-      setBusy(false);
-    }
-  };
 
   // Login is required to place an order. Send guests to /account/login with a
   // callback so they bounce back here once authenticated.
@@ -280,39 +227,7 @@ export default function CheckoutPage() {
           <p className="mt-2 text-slate-700">
             Your order #{pendingId} has been created and is waiting for payment. It stays reserved for 30 minutes.
           </p>
-          {notice && (
-            <div className="mt-4 px-4 py-3 rounded bg-amber-50 text-amber-800 text-sm" role="status">
-              {notice}
-            </div>
-          )}
-          <div className="mt-6 flex flex-col sm:flex-row gap-3">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => payNow(pendingId)}
-              className="bg-olive-green text-white px-6 py-3 rounded-full font-semibold disabled:opacity-50"
-            >
-              Pay now
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => switchToCod(pendingId)}
-              className="px-6 py-3 rounded-full font-semibold border border-olive-green text-olive-green disabled:opacity-50"
-            >
-              Switch to cash on delivery
-            </button>
-            {showCheck && (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => checkStatus(pendingId)}
-                className="px-6 py-3 rounded-full font-semibold underline underline-offset-4 disabled:opacity-50"
-              >
-                Check status
-              </button>
-            )}
-          </div>
+          <PaymentActions pay={pay} orderId={pendingId} />
         </div>
       </main>
     );
@@ -321,12 +236,14 @@ export default function CheckoutPage() {
   if (expired) {
     return (
       <main className="section-shell mt-12 mb-16 text-center">
-        <h1 className="text-2xl font-semibold text-slate-900">Order expired</h1>
-        <p className="mt-2 text-slate-700">This order expired because payment was not completed. Nothing was charged.</p>
+        <h1 className="text-2xl font-semibold text-slate-900">
+          {expired === "unpaid" ? "Order expired" : expired === "refunded" ? "Payment refunded" : "Order cancelled"}
+        </h1>
+        <p className="mt-2 text-slate-700">{EXPIRED_COPY[expired]}</p>
         <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
           <button
             type="button"
-            onClick={() => setExpired(false)}
+            onClick={() => setExpired(null)}
             className="bg-olive-green text-white px-6 py-3 rounded-full font-semibold"
           >
             Back to checkout
@@ -399,8 +316,7 @@ export default function CheckoutPage() {
         // refresh shows the pending panel instead of a fresh, submittable form.
         savePendingOrder(order.id);
         setPendingId(order.id);
-        setNotice(null);
-        void payForOrder(order.id, payHandlers(order.id));
+        void pay.payNow(order.id);
       }
     } catch (err) {
       const message = err instanceof ApiError ? err.message : err instanceof Error ? err.message : "Could not place order";

@@ -7,7 +7,8 @@ import { ApiOrder, api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { formatINR } from "@/lib/cart-context";
 import { setTrackEmail } from "@/lib/track-order-session";
-import { payForOrder, type PayHandlers } from "@/lib/razorpay-flow";
+import { usePayForOrder } from "@/lib/use-pay-for-order";
+import PaymentActions from "@/components/PaymentActions";
 
 function paymentLabel(o: ApiOrder): string {
   if (o.paymentStatus === "REFUNDED") return "Refunded";
@@ -25,6 +26,13 @@ function canPayNow(o: ApiOrder): boolean {
   );
 }
 
+// Pay now (and Check status after a problem) for one order. Resolving the order
+// clears the cart / pending key inside the hook, then we refresh the list.
+function OrderPayment({ order, onResolved }: { order: ApiOrder; onResolved: () => void }) {
+  const pay = usePayForOrder({ orderId: order.id, onResolved });
+  return <PaymentActions pay={pay} orderId={order.id} allowSwitch={false} />;
+}
+
 export default function MyOrdersPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -32,7 +40,6 @@ export default function MyOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
-  const [payNotes, setPayNotes] = useState<Record<number, string>>({});
 
   useEffect(() => {
     if (authLoading) return;
@@ -57,32 +64,6 @@ export default function MyOrdersPage() {
       cancelled = true;
     };
   }, [user, authLoading, router, tick]);
-
-  const setNote = (id: number, msg: string | null) =>
-    setPayNotes((n) => {
-      const next = { ...n };
-      if (msg) next[id] = msg;
-      else delete next[id];
-      return next;
-    });
-
-  const handlersFor = (id: number): PayHandlers => ({
-    onPaid: () => {
-      setNote(id, null);
-      setTick((t) => t + 1);
-    },
-    onRefundDue: () => {
-      setNote(id, null);
-      setTick((t) => t + 1);
-    },
-    onDismiss: () => setNote(id, "Payment not completed. Your order stays reserved for 30 minutes from when it was placed."),
-    onFailure: () => setNote(id, "Payment not completed. Your order stays reserved for 30 minutes from when it was placed."),
-    onVerifyError: (m) => {
-      setNote(id, m);
-      setTick((t) => t + 1);
-    },
-    onError: (m) => setNote(id, m),
-  });
 
   if (authLoading || (!user && !error)) {
     return (
@@ -154,23 +135,7 @@ export default function MyOrdersPage() {
                   </div>
                 </div>
                 <div className="flex flex-col gap-2 sm:items-end sm:justify-end">
-                  {canPayNow(o) && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setNote(o.id, null);
-                        void payForOrder(o.id, handlersFor(o.id));
-                      }}
-                      className="bg-olive-green text-white px-5 py-2 rounded-full font-semibold hover:opacity-95"
-                    >
-                      Pay now
-                    </button>
-                  )}
-                  {payNotes[o.id] && (
-                    <p className="text-sm text-amber-800 sm:text-right" role="status">
-                      {payNotes[o.id]}
-                    </p>
-                  )}
+                  {canPayNow(o) && <OrderPayment order={o} onResolved={() => setTick((t) => t + 1)} />}
                   <Link
                     href={`/track-order/results?orderId=${o.id}`}
                     onClick={() => setTrackEmail(o.customerEmail || user?.email || "")}
