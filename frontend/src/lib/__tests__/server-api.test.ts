@@ -85,4 +85,32 @@ describe('server-api', () => {
     expect(await getSettings()).toEqual({ a: 'b' });
     expect(fetchMock.mock.calls[0][1]).toMatchObject({ next: { revalidate: 300 } });
   });
+
+  it('getHeroSlide falls back to the static hero when fetch rejects or the API returns 500', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const { getHeroSlide } = await load();
+    const { HERO_FALLBACK } = await import('../hero');
+    fetchMock.mockRejectedValueOnce(new Error('ECONNREFUSED'));
+    expect(await getHeroSlide()).toEqual(HERO_FALLBACK);
+    fetchMock.mockResolvedValueOnce(fail(500));
+    expect(await getHeroSlide()).toEqual(HERO_FALLBACK);
+  });
+
+  it('passes an abort signal so a hung API cannot hang the page, and aborts become failures', async () => {
+    fetchMock.mockResolvedValue(ok([]));
+    const { listCategories } = await load();
+    await listCategories();
+    const init = fetchMock.mock.calls[0][1] as RequestInit & { next?: { revalidate: number } };
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+    expect(init.next).toEqual({ revalidate: 60 });
+    const abort = Object.assign(new Error('The operation was aborted'), { name: 'TimeoutError' });
+    fetchMock.mockRejectedValueOnce(abort);
+    await expect(listCategories()).rejects.toThrow();
+  });
+
+  it('a 404 for getProduct is still null with the signal in place', async () => {
+    fetchMock.mockResolvedValue(fail(404));
+    const { getProduct } = await load();
+    expect(await getProduct('nope')).toBeNull();
+  });
 });

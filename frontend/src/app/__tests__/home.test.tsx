@@ -93,7 +93,7 @@ describe('Home page', () => {
   it('still renders hero and static sections (and does not throw) when every data call fails', async () => {
     getSettings.mockRejectedValue(new Error('down'));
     listProducts.mockRejectedValue(new Error('down'));
-    getHeroSlide.mockResolvedValue(HERO_FALLBACK); // getHeroSlide itself never throws
+    getHeroSlide.mockRejectedValue(new Error('down')); // the page must not rely on getHeroSlide never throwing
     await renderHome();
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
     expect(screen.getByText('Hand-tied by our florists')).toBeInTheDocument();
@@ -109,6 +109,16 @@ describe('Home page', () => {
     await renderHome();
     // featured failed: the section falls back to the newest products, and the page still renders.
     expect(names('White Lily')).toHaveLength(1);
+  });
+
+  it('puts products with a real photo first within a row', async () => {
+    const withPhoto = { ...mk(9, 'Photo Rose'), image: 'https://res.cloudinary.com/demo/image/upload/a.jpg' };
+    listProducts.mockImplementation(async (p: { featured?: boolean }) =>
+      p.featured ? page([]) : page([mk(3, 'White Lily'), withPhoto, mk(4, 'Blue Iris')]),
+    );
+    await renderHome();
+    const first = screen.getAllByRole('heading', { level: 3 })[0];
+    expect(first.textContent).toBe('Photo Rose');
   });
 
   it('has no testimonials, ratings or invented claims', async () => {

@@ -18,7 +18,7 @@ export const HERO_FALLBACK: HeroContent = {
   source: 'fallback',
   eyebrow: 'Fresh Petals India',
   title: 'Fresh flowers, arranged with care.',
-  subtitle: 'Hand-tied bouquets and fresh-cut stems from our Delhi NCR studio.',
+  subtitle: 'Fresh-cut stems and bouquets, arranged by our florists in Delhi NCR.',
   alt: 'An autumn bouquet of burnt-orange blooms and berries against a deep blue backdrop',
   image: '/images/home-hero.webp',
   href: '/products',
@@ -36,10 +36,14 @@ function clean(v: unknown, max: number): string | undefined {
   return t.length > max ? `${t.slice(0, max - 1).trimEnd()}\u2026` : t;
 }
 
+// Browsers strip tabs/newlines from URLs and treat backslashes as slashes, so "/	/evil.com" would become "//evil.com".
+const hasUnsafeChar = (v: string) => Array.from(v).some((ch) => ch.charCodeAt(0) < 32 || ch.charCodeAt(0) === 127 || ch === String.fromCharCode(92));
+
 /** Relative paths only (or same-site absolute URLs, reduced to a path); anything else becomes /products. */
 export function safeHref(href: unknown, siteUrl = process.env.NEXT_PUBLIC_SITE_URL || ''): string {
   if (typeof href !== 'string') return '/products';
   const h = href.trim();
+  if (hasUnsafeChar(href)) return '/products';
   if (h.startsWith('/') && !h.startsWith('//') && !h.startsWith('/\\')) return h;
   if (siteUrl && /^https?:\/\//i.test(h)) {
     try {

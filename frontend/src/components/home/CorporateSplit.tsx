@@ -6,9 +6,9 @@ import Eyebrow from '@/components/ui/Eyebrow';
 /** Editorial split: image left on desktop (above the copy on mobile). */
 export default function CorporateSplit() {
   return (
-    <section className="py-16 md:py-24">
+    <section className="py-16 md:pb-0 md:pt-24">
       <Container>
-        <div className="grid items-center gap-10 md:grid-cols-2 md:gap-16 lg:gap-24">
+        <div className="grid items-center gap-10 md:grid-cols-[5fr_6fr] md:gap-16 lg:gap-24">
           <div className="relative aspect-[4/5] w-full overflow-hidden rounded-sm bg-ivory-deep md:max-h-[640px]">
             <Image
               src="/images/home-corporate.webp"
@@ -19,10 +19,10 @@ export default function CorporateSplit() {
               className="h-full w-full object-cover"
             />
           </div>
-          <div className="max-w-md">
+          <div className="max-w-lg">
             <Eyebrow className="mb-5">For business</Eyebrow>
             <h2 className="type-h2 text-charcoal">Flowers for work and for gatherings</h2>
-            <p className="mt-5 text-base leading-relaxed text-stone-dark">
+            <p className="mt-5 text-lg leading-relaxed text-stone-dark">
               Flowers for offices, events and gifting, arranged to your brief and quoted on request.
             </p>
             <div className="mt-8">

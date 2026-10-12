@@ -45,6 +45,7 @@ export default function SocialNewsletter() {
               <label htmlFor="sn-email" className="sr-only">
                 Your email address
               </label>
+              {/* No bare flex-1 here: in the stacked (flex-col) layout flex-basis 0 would override h-11 and collapse the input. */}
               <input
                 id="sn-email"
                 type="email"
@@ -55,7 +56,7 @@ export default function SocialNewsletter() {
                 placeholder="Email address"
                 aria-invalid={status === "error"}
                 aria-describedby={status === "error" ? "sn-error" : undefined}
-                className="h-11 min-w-0 flex-1 rounded-sm border border-stone bg-transparent px-4 text-sm text-charcoal placeholder:text-stone-dark focus:border-charcoal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss"
+                className="h-11 min-h-11 w-full min-w-0 rounded-sm sm:flex-1 border border-stone bg-transparent px-4 text-sm text-charcoal placeholder:text-stone-dark focus:border-charcoal focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss"
               />
               <Button type="submit" disabled={status === "sending"}>
                 {status === "sending" ? "Subscribing…" : "Subscribe"}

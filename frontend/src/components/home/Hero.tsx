@@ -11,7 +11,7 @@ import { HERO_IMAGE_SIZE, type HeroContent } from '@/lib/hero';
 export default function Hero({ hero }: { hero: HeroContent }) {
   return (
     <section aria-labelledby="home-hero-title" className="border-b border-stone-light">
-      <div className="mx-auto grid w-full max-w-[1440px] md:grid-cols-2">
+      <div className="grid w-full md:grid-cols-2">
         <div className="relative aspect-[5/4] w-full overflow-hidden bg-ivory-deep md:order-2 md:aspect-auto md:h-[min(calc(100vh-150px),760px)] md:min-h-[520px]">
           <Image
             src={hero.image}
@@ -19,11 +19,12 @@ export default function Hero({ hero }: { hero: HeroContent }) {
             width={HERO_IMAGE_SIZE.width}
             height={HERO_IMAGE_SIZE.height}
             priority
-            sizes="(min-width: 1440px) 720px, (min-width: 768px) 50vw, 100vw"
+            sizes="(min-width: 768px) 50vw, 100vw"
             className="h-full w-full object-cover"
           />
         </div>
-        <div className="flex items-center px-5 py-12 md:order-1 md:px-12 md:py-16 lg:px-20">
+        {/* lg: the text column starts at the same x as Container content (max 1280, px-8) so the h1 shares a left edge with section headings. */}
+        <div className="flex items-center px-5 py-12 md:order-1 md:py-16 md:pl-8 md:pr-12 lg:pl-[max(2rem,calc((100vw-1280px)/2+2rem))] lg:pr-16">
           <div className="max-w-md">
             {hero.eyebrow && <Eyebrow className="mb-5">{hero.eyebrow}</Eyebrow>}
             <h1 id="home-hero-title" className="type-display text-charcoal">

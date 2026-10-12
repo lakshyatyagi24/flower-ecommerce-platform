@@ -24,7 +24,8 @@ export type ListParams = {
 export type ProductPage = { items: ApiProduct[]; total: number; page: number; pages: number; take: number };
 
 async function get<T>(path: string, revalidate = 60, allow404 = false): Promise<T | null> {
-  const res = await fetch(`${base()}${path}`, { next: { revalidate } });
+  // 5s timeout: a hung API must fail the call (callers degrade) rather than hang the page.
+  const res = await fetch(`${base()}${path}`, { next: { revalidate }, signal: AbortSignal.timeout(5000) });
   if (allow404 && res.status === 404) return null;
   if (!res.ok) throw new Error(`API ${path.split('?')[0]} responded ${res.status}`);
   return (await res.json()) as T;

@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Hero from "@/components/home/Hero";
 import UspLine from "@/components/home/UspLine";
-import { ProductSection } from "@/components/home/FeaturedProducts";
+import ProductSection from "@/components/home/ProductSection";
 import OccasionTiles from "@/components/home/OccasionTiles";
 import CorporateSplit from "@/components/home/CorporateSplit";
 import SocialNewsletter from "@/components/SocialNewsletter";
 import { getHeroSlide, getSettings, listProducts } from "@/lib/server-api";
 import { uspsFromSettings } from "@/lib/product-helpers";
+import { HERO_FALLBACK } from "@/lib/hero";
+import { photosFirst } from "@/lib/home-order";
 import type { ApiProduct } from "@/lib/api";
 
 // Server-rendered on every request (R1: `next build` must not need the API). Each data-driven section
@@ -40,7 +42,7 @@ async function safe<T>(label: string, fn: () => Promise<T>, fallback: T): Promis
 
 export default async function Home() {
   const [hero, settings, featured, newest] = await Promise.all([
-    getHeroSlide(),
+    safe("hero slider", getHeroSlide, HERO_FALLBACK),
     safe("settings", getSettings, {} as Record<string, string>),
     safe("featured products", async () => (await listProducts({ featured: true, take: SECTION_SIZE })).items, [] as ApiProduct[]),
     // Over-fetch so New arrivals can skip anything already shown under Featured.
@@ -48,9 +50,9 @@ export default async function Home() {
   ]);
 
   const usingFeatured = featured.length > 0;
-  const featuredItems = usingFeatured ? featured : newest.slice(0, SECTION_SIZE);
+  const featuredItems = photosFirst(usingFeatured ? featured : newest.slice(0, SECTION_SIZE));
   const shown = new Set(featuredItems.map((p) => p.id));
-  const arrivals = newest.filter((p) => !shown.has(p.id)).slice(0, SECTION_SIZE);
+  const arrivals = photosFirst(newest.filter((p) => !shown.has(p.id))).slice(0, SECTION_SIZE);
 
   return (
     <main>

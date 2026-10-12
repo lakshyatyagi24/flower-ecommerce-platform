@@ -13,7 +13,7 @@ type Props = {
 };
 
 /** Heading plus a 4-up (2-up on mobile) product grid. Renders nothing when there are no products. */
-export function ProductSection({ title, eyebrow, link, products, priorityCount = 0 }: Props) {
+export default function ProductSection({ title, eyebrow, link, products, priorityCount = 0 }: Props) {
   if (products.length === 0) return null;
   return (
     <section className="py-16 md:py-24">
@@ -26,5 +26,3 @@ export function ProductSection({ title, eyebrow, link, products, priorityCount =
     </section>
   );
 }
-
-export default ProductSection;

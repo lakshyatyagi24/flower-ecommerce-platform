@@ -71,6 +71,15 @@ describe('pickHero', () => {
   });
 });
 
+describe('safeHref control characters', () => {
+  it('rejects tab, newline, CR, NUL, DEL and backslash anywhere', () => {
+    const c = (n: number) => String.fromCharCode(n);
+    const bad = ['/' + c(9) + '/evil.com', '/' + c(10) + '/evil.com', '/' + c(13) + '/evil.com', '/a' + c(0) + 'b', '/a' + c(127) + 'b', '/a' + c(92) + 'b', '/ok/' + c(92) + 'evil', c(9) + '//evil.com'];
+    for (const h of bad) expect(safeHref(h, '')).toBe('/products');
+    expect(safeHref('/collections/cut-flowers?sort=newest', '')).toBe('/collections/cut-flowers?sort=newest');
+  });
+});
+
 describe('safeHref', () => {
   it('allows the site origin and returns a relative path', () => {
     expect(safeHref('https://freshpetalsindia.com/products?x=1', 'https://freshpetalsindia.com')).toBe('/products?x=1');

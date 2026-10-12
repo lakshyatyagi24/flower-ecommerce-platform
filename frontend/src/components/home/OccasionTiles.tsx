@@ -12,7 +12,7 @@ export default function OccasionTiles() {
   return (
     <section className="border-y border-stone-light py-16 md:py-24">
       <Container>
-        <SectionHeading eyebrow="Find the right bunch" title="Shop by occasion" align="center" />
+        <SectionHeading eyebrow="Find the right bunch" title="Shop by occasion" />
         <ul className="mt-10 grid grid-cols-2 gap-3 md:mt-14 md:grid-cols-4 md:gap-5">
           {tiles.map((o) => (
             <li key={o.slug}>
