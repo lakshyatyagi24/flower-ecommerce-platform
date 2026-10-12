@@ -1,24 +1,29 @@
 "use client";
-import React, { useEffect, useRef, useState } from 'react';
-import Image from 'next/image';
+import React, { useRef, useState } from 'react';
 import Link from 'next/link';
-import SignupModal from './SignupModal';
-import Tooltip from './Tooltip';
 import { useRouter } from 'next/navigation';
-import FocusTrap from 'focus-trap-react';
 import { useAuth } from '@/lib/auth-context';
 import { ApiError } from '@/lib/api';
 import { safeRedirect } from '@/lib/safe-redirect';
+import { useModal } from '@/components/chrome/use-modal';
+import { AuthMessage } from '@/components/account/AuthLayout';
+import SignupModal from './SignupModal';
+import Button from '@/components/ui/Button';
+import Field from '@/components/ui/Field';
+import Input, { PasswordInput } from '@/components/ui/Input';
+import { textLink } from '@/components/ui/form-styles';
 
 type Props = {
   onClose: () => void;
 };
 
+const MAX_ATTEMPTS = 5;
+const LOCK_MINUTES = 15;
+
 const SignInModal: React.FC<Props> = ({ onClose }) => {
   const overlayRef = useRef<HTMLDivElement | null>(null);
-  const modalRef = useRef<HTMLDivElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
   const firstInputRef = useRef<HTMLInputElement | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showSignup, setShowSignup] = useState(false);
@@ -29,8 +34,8 @@ const SignInModal: React.FC<Props> = ({ onClose }) => {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [alert, setAlert] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
 
-  const MAX_ATTEMPTS = 5;
-  const LOCK_MINUTES = 15;
+  // Focus trap, Escape, scroll lock and focus return are shared with the rest of the chrome.
+  useModal(true, dialogRef, onClose);
 
   const makeKey = (e: string) => `signin_fail_${e.toLowerCase()}`;
 
@@ -76,15 +81,6 @@ const SignInModal: React.FC<Props> = ({ onClose }) => {
     if (rec.lockUntil && rec.lockUntil > Date.now()) return rec.lockUntil;
     return 0;
   };
-
-  useEffect(() => {
-    firstInputRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
 
   const onOverlayClick = (e: React.MouseEvent) => {
     if (e.target === overlayRef.current) onClose();
@@ -149,159 +145,128 @@ const SignInModal: React.FC<Props> = ({ onClose }) => {
     }
   };
 
+  const lockKey = email || 'guest';
+  const lock = isLocked(lockKey);
+  const locked = !!(lock && lock > Date.now());
+  const left = getRemainingAttempts(lockKey);
+
   return (
     <div
       ref={overlayRef}
       onClick={onOverlayClick}
-      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center p-4 sm:p-6 bg-black/40"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="signin-title"
-      aria-describedby="signin-desc"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-charcoal/50 sm:items-center sm:p-6"
     >
-      <FocusTrap focusTrapOptions={{
-        clickOutsideDeactivates: true,
-        initialFocus: () => firstInputRef.current as HTMLElement | null,
-        returnFocusOnDeactivate: true,
-      }}>
-        <div ref={modalRef} className="relative w-full max-w-md sm:max-w-lg bg-white rounded-lg shadow-lg border border-olive-green/10 overflow-hidden mx-2">
-          <div className="absolute top-0 right-0 -translate-y-6 translate-x-6 pointer-events-none">
-            <Image src="/autumn-rustic-banner.svg" alt="floral" width={120} height={120} className="opacity-90" />
-          </div>
-
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <h3 id="signin-title" className="text-lg font-semibold text-olive-green">Welcome back</h3>
-                <p id="signin-desc" className="text-xs text-gray-500 mt-1 inline">Sign in to access your cart, orders, and event bookings.</p>
-                <div className="mt-1 text-xs text-gray-500 relative">
-                  <span>Your information is secure.</span>
-                  <Tooltip triggerLabel={<span className="ml-2 text-olive-green hover:underline text-xs">Why?</span>}>
-                    <div className="mb-2">We protect your account with industry-standard encryption. After several failed sign-in attempts we temporarily lock this form locally to deter attackers. Passwords are never stored in plain text.</div>
-                    <div>
-                      <a href="/contact" className="text-olive-green hover:underline">Contact support</a> if you need help.
-                    </div>
-                  </Tooltip>
-                </div>
-              </div>
-              <button
-                onClick={onClose}
-                aria-label="Close sign in dialog"
-                className="text-olive-green/70 hover:text-olive-green ml-4 p-3 rounded-full focus:outline-none focus:ring-2 focus:ring-olive-green/40"
-                style={{ minWidth: 44, minHeight: 44 }}
-              >
-                ×
-              </button>
-            </div>
-
-            {!showSignup ? (
-              <>
-                {alert && (
-                  <div className={`mb-3 px-3 py-2 rounded text-sm ${alert.type === 'error' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`} role="alert" aria-live="assertive">
-                    {alert.message}
-                  </div>
-                )}
-
-                <form onSubmit={handleEmailSignIn} className="space-y-4">
-                  <div>
-                    <label htmlFor="signin-email" className="block text-sm font-medium text-gray-700">Email</label>
-                    <input
-                      id="signin-email"
-                      ref={firstInputRef}
-                      type="email"
-                      required
-                      aria-invalid={!!emailError}
-                      aria-describedby={emailError ? 'signin-email-error signin-desc' : 'signin-desc'}
-                      value={email}
-                      onChange={(e) => { setEmail(e.target.value); validateEmail(e.target.value); }}
-                      placeholder="you@example.com"
-                      className="mt-1 w-full rounded-md border-gray-200 shadow-sm focus:ring-2 focus:ring-olive-green/40"
-                    />
-                    {emailError && <div id="signin-email-error" className="mt-1 text-sm text-red-600">{emailError}</div>}
-                  </div>
-
-                  <div>
-                    <label htmlFor="signin-password" className="block text-sm font-medium text-gray-700">Password</label>
-                    <div className="mt-1 relative">
-                      <input
-                        id="signin-password"
-                        type={showPassword ? 'text' : 'password'}
-                        required
-                        aria-invalid={!!passwordError}
-                        aria-describedby={passwordError ? 'signin-password-error signin-desc' : 'signin-desc'}
-                        value={password}
-                        onChange={(e) => { setPassword(e.target.value); validatePassword(e.target.value); }}
-                        placeholder="Enter your password"
-                        className="w-full rounded-md border-gray-200 shadow-sm pr-10 focus:ring-2 focus:ring-olive-green/40"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword((s) => !s)}
-                        aria-label={showPassword ? 'Hide password' : 'Show password'}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-sm text-olive-green/80 inline-flex items-center justify-center"
-                        style={{ minWidth: 44, minHeight: 44 }}
-                      >
-                        {showPassword ? 'Hide' : 'Show'}
-                      </button>
-                    </div>
-                    {passwordError && <div id="signin-password-error" className="mt-1 text-sm text-red-600">{passwordError}</div>}
-                    <div className="mt-2 text-sm">
-                      <Link href="/account/forgot-password" onClick={onClose} className="text-olive-green hover:underline">Forgot password?</Link>
-                    </div>
-                    <div className="mt-2 text-sm" aria-live="polite">
-                      {(() => {
-                        const key = (email || 'guest');
-                        const lock = isLocked(key);
-                        const locked = !!(lock && lock > Date.now());
-                        if (locked) {
-                          const ms = (lock as number) - Date.now();
-                          const mins = Math.floor(ms / 60000);
-                          const secs = Math.ceil((ms % 60000) / 1000);
-                          return (
-                            <div id="signin-lockout" className="text-sm text-red-600">Too many failed attempts. Try again in {mins} min {secs}s.</div>
-                          );
-                        }
-                        const left = getRemainingAttempts(key);
-                        return <div className="text-gray-500">{left > 0 ? `${left} attempt${left === 1 ? '' : 's'} remaining` : 'You have no attempts remaining'}</div>;
-                      })()}
-                    </div>
-                  </div>
-
-                  <div>
-                    {(() => {
-                      const lock = isLocked(email || 'guest');
-                      const disabled = !!(lock && lock > Date.now()) || submitting;
-                      return (
-                        <button
-                          type="submit"
-                          disabled={disabled}
-                          aria-label="Sign in"
-                          className={`w-full inline-flex items-center justify-center gap-2 rounded-md border border-black px-4 py-3 text-sm font-medium ${disabled ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-white hover:bg-olive-green/5'}`}
-                          style={{ minHeight: 48 }}
-                        >
-                          {submitting ? 'Signing in...' : 'Sign In'}
-                        </button>
-                      );
-                    })()}
-                  </div>
-                </form>
-
-                <div className="mt-3 text-sm text-gray-600">
-                  Don&apos;t have an account? <button type="button" onClick={() => setShowSignup(true)} className="text-olive-green hover:underline">Create one</button>
-                </div>
-              </>
-            ) : (
-              <SignupModal
-                onClose={onClose}
-                onBackToSignIn={() => {
-                  setShowSignup(false);
-                  setTimeout(() => firstInputRef.current?.focus(), 0);
-                }}
-              />
-            )}
-          </div>
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={showSignup ? 'signup-title' : 'signin-title'}
+        aria-describedby={showSignup ? undefined : 'signin-desc'}
+        tabIndex={-1}
+        className="max-h-[100dvh] w-full overflow-y-auto border border-stone-light bg-ivory px-5 pb-8 pt-6 outline-none sm:max-h-[calc(100dvh-3rem)] sm:max-w-[440px] sm:rounded-sm sm:px-10 sm:pb-10 sm:pt-8"
+      >
+        <div className="flex items-start justify-between gap-4">
+          {showSignup ? (
+            <button
+              type="button"
+              onClick={() => {
+                setShowSignup(false);
+                setTimeout(() => firstInputRef.current?.focus(), 0);
+              }}
+              className={`-ml-3 inline-flex min-h-[44px] items-center px-3 text-xs font-medium uppercase tracking-[0.12em] text-stone-dark hover:text-charcoal ${textLink} no-underline`}
+            >
+              ← Back
+            </button>
+          ) : (
+            <span aria-hidden="true" />
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close sign in dialog"
+            className="-mr-3 inline-flex h-11 w-11 items-center justify-center text-charcoal hover:text-moss focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M2 2l12 12M14 2L2 14" stroke="currentColor" strokeWidth="1.2" />
+            </svg>
+          </button>
         </div>
-      </FocusTrap>
+
+        {!showSignup ? (
+          <>
+            <h2 id="signin-title" className="font-display text-3xl text-charcoal">Welcome back</h2>
+            <p id="signin-desc" className="mt-3 text-sm leading-relaxed text-stone-dark">
+              Sign in to access your cart, orders, and event bookings.
+            </p>
+
+            <div className="mt-8">
+              {alert && <AuthMessage type={alert.type}>{alert.message}</AuthMessage>}
+
+              <form onSubmit={handleEmailSignIn} noValidate className="space-y-6">
+                <Field id="signin-email" label="Email" error={emailError}>
+                  <Input
+                    ref={firstInputRef}
+                    data-autofocus
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (emailError) validateEmail(e.target.value);
+                    }}
+                    onBlur={() => email && validateEmail(email)}
+                    placeholder="you@example.com"
+                  />
+                </Field>
+
+                <div>
+                  <Field id="signin-password" label="Password" error={passwordError}>
+                    <PasswordInput
+                      autoComplete="current-password"
+                      value={password}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        if (passwordError) validatePassword(e.target.value);
+                      }}
+                      onBlur={() => password && validatePassword(password)}
+                      placeholder="Enter your password"
+                    />
+                  </Field>
+                  <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4">
+                    <Link href="/account/forgot-password" onClick={onClose} className={`inline-flex min-h-[44px] items-center text-sm text-stone-dark ${textLink}`}>
+                      Forgot password?
+                    </Link>
+                    <div aria-live="polite" className="text-sm">
+                      {locked ? (
+                        <span id="signin-lockout" className="text-danger">
+                          Too many failed attempts. Try again in {Math.floor((lock - Date.now()) / 60000)} min {Math.ceil(((lock - Date.now()) % 60000) / 1000)}s.
+                        </span>
+                      ) : (
+                        <span className="text-stone-dark">
+                          {left > 0 ? `${left} attempt${left === 1 ? '' : 's'} remaining` : 'You have no attempts remaining'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <Button type="submit" size="lg" disabled={locked || submitting} aria-label="Sign in" className="w-full">
+                  {submitting ? 'Signing in...' : 'Sign In'}
+                </Button>
+              </form>
+
+              <p className="mt-6 text-center text-sm text-stone-dark">
+                Don&apos;t have an account?{' '}
+                <button type="button" onClick={() => setShowSignup(true)} className={`inline-flex min-h-[44px] items-center text-charcoal ${textLink}`}>
+                  Create one
+                </button>
+              </p>
+            </div>
+          </>
+        ) : (
+          <SignupModal onClose={onClose} />
+        )}
+      </div>
     </div>
   );
 };

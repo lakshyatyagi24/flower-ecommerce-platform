@@ -1,15 +1,23 @@
 "use client";
 import React, { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { ApiError } from '@/lib/api';
+import { AuthMessage } from '@/components/account/AuthLayout';
+import Button from '@/components/ui/Button';
+import Field from '@/components/ui/Field';
+import Input, { PasswordInput } from '@/components/ui/Input';
+import { textLink } from '@/components/ui/form-styles';
 
 type Props = {
   onClose: () => void;
-  onBackToSignIn: () => void;
 };
 
-const SignupModal: React.FC<Props> = ({ onClose, onBackToSignIn }) => {
-  const overlayRef = useRef<HTMLDivElement | null>(null);
+/**
+ * Sign-up form shown inside the SignInModal dialog. Focus trap, Escape, scroll lock and the heading/back/close
+ * chrome belong to the dialog; this is only the content.
+ */
+const SignupModal: React.FC<Props> = ({ onClose }) => {
   const firstInputRef = useRef<HTMLInputElement | null>(null);
   const { register } = useAuth();
   const [name, setName] = useState('');
@@ -21,16 +29,7 @@ const SignupModal: React.FC<Props> = ({ onClose, onBackToSignIn }) => {
 
   useEffect(() => {
     firstInputRef.current?.focus();
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
-  const onOverlayClick = (e: React.MouseEvent) => {
-    if (e.target === overlayRef.current) onClose();
-  };
+  }, []);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,50 +56,38 @@ const SignupModal: React.FC<Props> = ({ onClose, onBackToSignIn }) => {
   };
 
   return (
-    <div ref={overlayRef} onClick={onOverlayClick} className="w-full">
-      <div className="p-2">
-        <div className="flex items-center justify-between mb-3">
-          <button type="button" onClick={onBackToSignIn} className="text-olive-green hover:underline">← Back</button>
-          <button onClick={onClose} aria-label="Close" className="text-olive-green/70 hover:text-olive-green">×</button>
-        </div>
+    <div>
+      <h2 id="signup-title" className="font-display text-3xl text-charcoal">Create your account</h2>
 
-        <h4 className="text-lg font-semibold text-olive-green mb-2">Create your account</h4>
+      <div className="mt-8">
+        {alert && <AuthMessage type={alert.type}>{alert.message}</AuthMessage>}
 
-        {alert && (
-          <div className={`mb-3 px-3 py-2 rounded text-sm ${alert.type === 'error' ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`} role="alert" aria-live="assertive">
-            {alert.message}
-          </div>
-        )}
+        <form onSubmit={handleSignup} noValidate className="space-y-6">
+          <Field id="signup-name" label="Full name" optional>
+            <Input ref={firstInputRef} data-autofocus type="text" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Doe" />
+          </Field>
+          <Field id="signup-email" label="Email">
+            <Input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
+          </Field>
+          <Field id="signup-phone" label="Phone" optional>
+            <Input type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 99999 11111" />
+          </Field>
+          <Field id="signup-password" label="Password" hint="At least 8 characters.">
+            <PasswordInput autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          </Field>
 
-        <form onSubmit={handleSignup} className="space-y-3">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Full name</label>
-            <input ref={firstInputRef} type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Doe" className="mt-1 w-full rounded-md border-gray-200 shadow-sm focus:ring-2 focus:ring-olive-green/40" />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Email</label>
-            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className="mt-1 w-full rounded-md border-gray-200 shadow-sm focus:ring-2 focus:ring-olive-green/40" />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Phone (optional)</label>
-            <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+91 99999 11111" className="mt-1 w-full rounded-md border-gray-200 shadow-sm focus:ring-2 focus:ring-olive-green/40" />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Password</label>
-            <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 8 characters" className="mt-1 w-full rounded-md border-gray-200 shadow-sm focus:ring-2 focus:ring-olive-green/40" />
-          </div>
-
-          <div>
-            <button type="submit" disabled={submitting} className="w-full inline-flex items-center justify-center gap-2 rounded-md border border-black px-4 py-2 text-sm font-medium bg-white hover:bg-olive-green/5 disabled:bg-gray-100 disabled:text-gray-400">
-              {submitting ? 'Creating...' : 'Create account'}
-            </button>
-          </div>
+          <Button type="submit" size="lg" disabled={submitting} className="w-full">
+            {submitting ? 'Creating...' : 'Create account'}
+          </Button>
         </form>
 
-        <div className="mt-3 text-sm text-center text-gray-600">By creating an account you agree to our <a href="/terms" className="text-olive-green hover:underline">terms</a>.</div>
+        <p className="mt-6 text-center text-xs leading-relaxed text-stone-dark">
+          By creating an account you agree to our{' '}
+          <Link href="/terms" onClick={onClose} className={textLink}>
+            terms
+          </Link>
+          .
+        </p>
       </div>
     </div>
   );
