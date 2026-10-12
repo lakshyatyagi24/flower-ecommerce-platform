@@ -101,16 +101,6 @@ const SECTIONS: Section[] = [
     ],
   },
   {
-    id: "payment",
-    title: "Payment Settings",
-    description: "Cash-on-delivery is currently the only checkout option. Razorpay/Stripe keys are forward-compatible.",
-    fields: [
-      { key: "payment.stripeKey", label: "Stripe Secret Key", type: "password", placeholder: "sk_test_…" },
-      { key: "payment.razorpayKeyId", label: "Razorpay Key ID", type: "password", placeholder: "rzp_test_…" },
-      { key: "payment.razorpayKeySecret", label: "Razorpay Key Secret", type: "password", placeholder: "secret" },
-    ],
-  },
-  {
     id: "policies",
     title: "Policies",
     description: "Short summaries surfaced near checkout and on product pages.",
