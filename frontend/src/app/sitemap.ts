@@ -1,5 +1,7 @@
 import type { MetadataRoute } from 'next';
-import { listProducts } from '@/lib/server-api';
+import { listCategories, listProducts } from '@/lib/server-api';
+import { flattenCategories } from '@/lib/catalogue-data';
+import { OCCASIONS } from '@/lib/occasions';
 import { absoluteUrl } from '@/lib/seo';
 
 // R1: the API is not reachable during `next build`, so this is never prerendered.
@@ -63,6 +65,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   } while (page <= pages && page <= MAX_PAGES);
   if (page <= pages) {
     console.warn(`sitemap: stopped at the ${MAX_PAGES}-page cap; ${pages} pages exist, later products are not listed`);
+  }
+
+  // Landing pages with at least one product (R4: empty ones are noindex and must not be listed).
+  // One cheap `take: 1` call each; any failure throws so the sitemap 5xxs instead of going partial.
+  const categories = flattenCategories(await listCategories()).filter((c) => c.active !== false && SAFE_SLUG.test(c.slug));
+  const counts = await Promise.all([
+    ...categories.map(async (c) => ({ path: `/collections/${c.slug}`, total: (await listProducts({ category: c.slug, take: 1 })).total })),
+    ...OCCASIONS.map(async (o) => ({ path: `/occasions/${o.slug}`, total: (await listProducts({ tag: o.tag, take: 1 })).total })),
+  ]);
+  for (const { path, total } of counts) {
+    if (total < 1) continue;
+    const url = absoluteUrl(path);
+    entries.set(url, { url });
   }
 
   return limitEntries([...entries.values()]);
