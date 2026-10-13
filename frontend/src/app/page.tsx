@@ -16,16 +16,18 @@ import type { ApiProduct } from "@/lib/api";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: { absolute: "Fresh Flowers & Bouquets Online in Delhi NCR" },
+  title: { absolute: "Fresh Cut Flowers Online in Delhi NCR" },
   description:
-    "Order farm-fresh flowers, bouquets and plants online from Fresh Petals India. Mandi-fresh stems, careful packing and delivery across Delhi NCR.",
+    "Order fresh cut flowers online from Fresh Petals India, with delivery across Delhi NCR. Corporate and event enquiries welcome.",
   alternates: { canonical: "/" },
   openGraph: {
-    title: "Fresh Flowers & Bouquets Online in Delhi NCR",
+    title: "Fresh Cut Flowers Online in Delhi NCR",
     description:
-      "Farm-fresh flowers, bouquets and plants sourced from the mandi every morning and delivered across Delhi NCR.",
+      "Fresh cut flowers delivered across Delhi NCR, with custom enquiries for corporate clients and events.",
     url: "/",
     type: "website",
+    siteName: "Fresh Petals India",
+    locale: "en_IN",
   },
 };
 

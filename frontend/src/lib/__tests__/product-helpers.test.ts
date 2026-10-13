@@ -72,6 +72,6 @@ describe('uspsFromSettings', () => {
   });
   it('falls back to a generic claim with no same-day promise', () => {
     const out = uspsFromSettings({});
-    expect(out).toEqual([{ title: 'Hand-tied by our florists', body: '' }]);
+    expect(out).toEqual([{ title: 'Chosen with care', body: '' }]);
   });
 });

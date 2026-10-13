@@ -56,6 +56,18 @@ describe('Footer', () => {
     expect(within(contact).getByRole('link', { name: /Instagram/ })).toHaveAttribute('href', 'https://www.instagram.com/freshpetals');
   });
 
+  it('shows Facebook, YouTube and Pinterest only when they are valid https profile URLs', () => {
+    settings.value = {
+      ...settings.value, phone: '', email: '', address: '', whatsapp: '', instagram: '',
+      social: { facebook: 'https://www.facebook.com/freshpetals', youtube: 'https://evil.example/yt', pinterest: 'https://pinterest.com/freshpetals/' },
+    } as never;
+    render(<Footer />);
+    const contact = screen.getByRole('heading', { name: 'Contact' }).parentElement!;
+    expect(within(contact).getByRole('link', { name: 'Facebook' })).toHaveAttribute('href', 'https://www.facebook.com/freshpetals');
+    expect(within(contact).getByRole('link', { name: 'Pinterest' })).toHaveAttribute('href', 'https://pinterest.com/freshpetals/');
+    expect(within(contact).queryByRole('link', { name: 'YouTube' })).toBeNull(); // off-platform host rejected
+  });
+
   it('shows just the email when only the email is set', () => {
     set({ email: 'hello@example.com' });
     render(<Footer />);

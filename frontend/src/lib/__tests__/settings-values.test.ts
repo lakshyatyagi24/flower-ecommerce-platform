@@ -64,3 +64,17 @@ describe('link builders', () => {
     expect(whatsappLink('')).toBeNull();
   });
 });
+
+import { socialLink } from '../settings-context';
+describe('socialLink', () => {
+  it('accepts https profile URLs on the platform host only', () => {
+    expect(socialLink('facebook', 'https://facebook.com/x')).toBe('https://facebook.com/x');
+    expect(socialLink('youtube', 'https://www.youtube.com/@x')).toBe('https://www.youtube.com/@x');
+    expect(socialLink('pinterest', 'https://in.pinterest.com/x/')).toBe('https://in.pinterest.com/x/');
+  });
+  it('rejects http, javascript:, lookalike hosts, credentials, blanks and placeholders', () => {
+    for (const v of ['http://facebook.com/x', 'javascript:alert(1)', 'https://facebook.com.evil.com/x', 'https://evil.com/facebook.com', 'https://a:b@facebook.com/x', '', '  ', 'https://example.com/fb', 'x'])
+      expect(socialLink('facebook', v)).toBeNull();
+    expect(socialLink('youtube', 'https://facebook.com/x')).toBeNull();
+  });
+});

@@ -6,7 +6,7 @@ import { describe, it, expect } from 'vitest';
  * Honesty guard (R10/R16): the storefront must not hardcode delivery-time or urgency claims. Anything that
  * needs such a sentence must read it from settings.
  */
-export const BANNED_PHRASES = ['same-day', 'same day', 'free delivery', 'within a few hours', 'limited time'];
+export const BANNED_PHRASES = ['same-day', 'same day', 'free delivery', 'within a few hours', 'limited time', 'farm-fresh', 'next-day', '24 hours', 'guarantee'];
 
 /**
  * Files allowed to contain a banned phrase. EMPTY since Task 3.7b: every claim was removed or moved to settings.

@@ -34,30 +34,31 @@ export const revalidate = 300;
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
   title: {
-    default: "Fresh Petals India — Cut Flowers, Plants & Corporate Floral Solutions",
+    default: "Fresh Petals India — Cut Flowers & Corporate Floral Solutions",
     template: "%s · Fresh Petals India",
   },
   description:
-    "Farm-fresh cut flowers, indoor plants, and bulk corporate bouquets. Daily mandi-fresh stems, online ordering for cut flowers, custom enquiries for events.",
+    "Fresh cut flowers online, plus custom floral enquiries for corporate clients and events. Order online and have them delivered across Delhi NCR.",
   keywords: [
     "cut flowers",
     "fresh flowers",
     "wholesale flowers",
-    "corporate bouquets",
-    "indoor plants",
+    "corporate flowers",
     "floral arrangements",
     "Delhi flower supplier",
   ],
   openGraph: {
     title: "Fresh Petals India — Cut Flowers & Corporate Florals",
     description:
-      "Farm-fresh cut flowers, indoor plants, and bulk corporate bouquets — sourced fresh from the mandi every morning.",
+      "Fresh cut flowers online, plus custom floral enquiries for corporate clients and events.",
     type: "website",
+    siteName: "Fresh Petals India",
+    locale: "en_IN",
   },
   twitter: {
     card: "summary_large_image",
     title: "Fresh Petals India",
-    description: "Farm-fresh cut flowers, plants & corporate floral solutions.",
+    description: "Fresh cut flowers and corporate floral solutions.",
   },
   icons: {
     icon: "/favicon.ico",

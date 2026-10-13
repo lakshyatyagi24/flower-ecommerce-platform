@@ -18,7 +18,7 @@ export const HERO_FALLBACK: HeroContent = {
   source: 'fallback',
   eyebrow: 'Fresh Petals India',
   title: 'Fresh flowers, arranged with care.',
-  subtitle: 'Fresh-cut stems and bouquets, arranged by our florists in Delhi NCR.',
+  subtitle: 'Fresh-cut stems for gifting, for your home and for events in Delhi NCR.',
   alt: 'An autumn bouquet of burnt-orange blooms and berries against a deep blue backdrop',
   image: '/images/home-hero.webp',
   href: '/products',

@@ -74,7 +74,7 @@ describe('product detail page', () => {
     listProducts.mockRejectedValue(new Error('down'));
     const { container } = render(await ProductPage({ params: { slug: 'red-rose' } }));
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Red Rose');
-    expect(container.textContent).toContain('Hand-tied by our florists');
+    expect(container.textContent).toContain('Chosen with care');
     expect(container.textContent).not.toMatch(/same-day/i);
   });
 

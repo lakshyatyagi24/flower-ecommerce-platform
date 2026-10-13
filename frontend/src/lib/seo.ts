@@ -6,6 +6,32 @@ import { PLACEHOLDER_IMAGE } from './product-image';
 /** Canonical site origin, no trailing slash. */
 export const SITE: string = (process.env.NEXT_PUBLIC_SITE_URL || 'https://freshpetalsindia.com').replace(/\/+$/, '');
 
+export const OG_DEFAULT_ALT = 'Fresh Petals India: fresh flowers, delivered';
+
+/**
+ * openGraph + twitter blocks for pages that define their own `openGraph` (which replaces the parent's wholesale
+ * in Next, so image, site name and locale must be repeated). Uses the static brand cards.
+ */
+export function socialMeta(title: string, description: string, url: string) {
+  return {
+    openGraph: {
+      title,
+      description,
+      url,
+      type: 'website' as const,
+      siteName: 'Fresh Petals India',
+      locale: 'en_IN',
+      images: [{ url: '/opengraph-image.png', width: 1200, height: 630, alt: OG_DEFAULT_ALT }],
+    },
+    twitter: {
+      card: 'summary_large_image' as const,
+      title,
+      description,
+      images: [{ url: '/twitter-image.png', width: 1200, height: 630, alt: OG_DEFAULT_ALT }],
+    },
+  };
+}
+
 export function absoluteUrl(path: string): string {
   if (/^https?:\/\//i.test(path)) return path;
   return `${SITE}${path.startsWith('/') ? '' : '/'}${path}`;

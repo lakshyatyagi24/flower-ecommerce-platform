@@ -1,5 +1,5 @@
 "use client";
-import { instagramLink, mailtoLink, telLink, useSettings, whatsappLink } from "@/lib/settings-context";
+import { instagramLink, mailtoLink, socialLink, telLink, useSettings, whatsappLink } from "@/lib/settings-context";
 import { InstagramIcon, WhatsAppIcon } from "./icons";
 
 const link =
@@ -16,9 +16,14 @@ export default function FooterContact() {
   const wa = whatsappLink(s.whatsapp || s.phone);
   const ig = instagramLink(s.instagram);
   const address = s.address.trim();
+  const others = [
+    { label: "Facebook", href: socialLink("facebook", s.social?.facebook) },
+    { label: "YouTube", href: socialLink("youtube", s.social?.youtube) },
+    { label: "Pinterest", href: socialLink("pinterest", s.social?.pinterest) },
+  ].filter((x): x is { label: string; href: string } => Boolean(x.href));
 
   // Nothing configured: no empty column.
-  if (!tel && !mail && !address && !wa && !ig) return null;
+  if (!tel && !mail && !address && !wa && !ig && others.length === 0) return null;
 
   return (
     <div className="col-span-2 lg:col-span-1">
@@ -55,6 +60,13 @@ export default function FooterContact() {
             </a>
           </li>
         )}
+        {others.map((o) => (
+          <li key={o.label}>
+            <a href={o.href} target="_blank" rel="noopener noreferrer" className={link}>
+              {o.label}
+            </a>
+          </li>
+        ))}
       </ul>
     </div>
   );

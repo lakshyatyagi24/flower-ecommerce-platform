@@ -66,5 +66,5 @@ export function uspsFromSettings(settings: Record<string, string>, max = 3): Usp
     const body = settings[`trust.usp${i}Body`]?.trim() ?? '';
     if (title) out.push({ title, body });
   }
-  return out.length > 0 ? out : [{ title: 'Hand-tied by our florists', body: '' }];
+  return out.length > 0 ? out : [{ title: 'Chosen with care', body: '' }];
 }

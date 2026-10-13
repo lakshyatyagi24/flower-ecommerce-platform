@@ -1,5 +1,6 @@
 "use client";
 
+import { parseFlatRate, parseFreeThreshold, shippingFor } from "@/lib/shipping";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -252,12 +253,12 @@ export default function CheckoutPage() {
     }
   }, [user]);
 
-  const flatRate = parseFloat(settings["shipping.flatRate"] || "0") || 0;
-  const freeThreshold = parseFloat(settings["shipping.freeThreshold"] || "0") || 0;
+  // Mirrors the backend rule exactly (see lib/shipping.ts): threshold "0" => every order ships free.
+  const flatRate = parseFlatRate(settings["shipping.flatRate"]);
+  const freeThreshold = parseFreeThreshold(settings["shipping.freeThreshold"]);
   const shipping = useMemo(() => {
     if (count === 0) return 0;
-    if (freeThreshold > 0 && liveSubtotal >= freeThreshold) return 0;
-    return flatRate;
+    return shippingFor(liveSubtotal, flatRate, freeThreshold);
   }, [liveSubtotal, count, flatRate, freeThreshold]);
   const total = liveSubtotal + shipping + liveGstTotal;
 

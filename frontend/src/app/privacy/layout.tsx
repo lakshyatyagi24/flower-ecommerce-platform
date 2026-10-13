@@ -4,7 +4,7 @@ export const metadata: Metadata = {
   title: "Privacy Policy",
   description: "How Fresh Petals India collects, uses and protects your personal information when you shop with us.",
   alternates: { canonical: "/privacy" },
-  openGraph: { title: "Privacy Policy", description: "How Fresh Petals India collects, uses and protects your personal information when you shop with us.", url: "/privacy", type: "website" },
+  openGraph: { siteName: "Fresh Petals India", locale: "en_IN", title: "Privacy Policy", description: "How Fresh Petals India collects, uses and protects your personal information when you shop with us.", url: "/privacy", type: "website" },
 };
 
 export default function Layout({ children }: { children: React.ReactNode }) {

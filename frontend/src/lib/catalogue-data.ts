@@ -5,7 +5,7 @@ import { listCategories, listProducts, type ProductPage } from './server-api';
 import { PAGE_SIZE, listHref, parseListParams, type ListParams, type RawSearchParams } from './list-params';
 import { occasionForTag } from './occasions';
 import { shownCategories } from './categories';
-import { metaDescription } from './seo';
+import { metaDescription, socialMeta } from './seo';
 
 export function flattenCategories(list: ApiCategory[]): ApiCategory[] {
   return list.flatMap((c) => [c, ...flattenCategories(c.children ?? [])]);
@@ -23,10 +23,13 @@ export type CatalogueData = {
 
 /**
  * Where a /products?category=|tag= URL permanently lives now (ruling R9), or undefined when it stays on /products.
- * A known category wins over a tag; sort, page and search are carried over; unknown values never redirect.
+ * A known category alone goes to its collection and an occasion tag alone to its occasion page. A category AND a tag
+ * together stay on /products (the landing pages cannot express both, and a redirect would silently drop the tag).
+ * Sort, page and search are carried over; unknown values never redirect.
  */
 export function landingRedirectTarget(params: ListParams, knownCategory?: ApiCategory): string | undefined {
   const rest = { category: undefined, tag: undefined } as const;
+  if (params.category && params.tag) return undefined;
   if (params.category && knownCategory) {
     return listHref(params, rest, `/collections/${encodeURIComponent(knownCategory.slug)}`);
   }
@@ -113,7 +116,7 @@ export function landingMetadata(args: {
     title,
     description,
     alternates: { canonical },
-    openGraph: { title, description, url: canonical, type: 'website' },
+    ...socialMeta(title, description, canonical),
     ...(noindex ? { robots: { index: false, follow: true } } : {}),
   };
 }

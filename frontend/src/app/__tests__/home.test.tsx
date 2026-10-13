@@ -82,7 +82,7 @@ describe('Home page', () => {
 
   it('renders the USP fallback without delivery claims, and settings USPs when present', async () => {
     const { unmount } = await renderHome();
-    expect(screen.getByText('Hand-tied by our florists')).toBeInTheDocument();
+    expect(screen.getByText('Chosen with care')).toBeInTheDocument();
     unmount();
     getSettings.mockResolvedValue({ 'trust.usp1Title': 'Packed with care', 'trust.usp2Title': 'Quoted for events' });
     await renderHome();
@@ -96,7 +96,7 @@ describe('Home page', () => {
     getHeroSlide.mockRejectedValue(new Error('down')); // the page must not rely on getHeroSlide never throwing
     await renderHome();
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
-    expect(screen.getByText('Hand-tied by our florists')).toBeInTheDocument();
+    expect(screen.getByText('Chosen with care')).toBeInTheDocument();
     expect(headingTexts()).toEqual(['Shop by occasion', 'Flowers for work and for gatherings', 'Notes from the studio']);
     expect(console.error).toHaveBeenCalled();
   });

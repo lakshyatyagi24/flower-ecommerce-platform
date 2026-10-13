@@ -61,16 +61,16 @@ export type StoreSettings = {
 };
 
 const FALLBACK_HERO: StoreHero = {
-  eyebrow: "Hand-tied by our florists",
+  eyebrow: "Fresh cut flowers",
   title: "Fresh-cut flowers, arranged with care.",
-  subtitle: "Fresh-cut stems and bouquets, arranged by our florists in Delhi NCR.",
+  subtitle: "Fresh-cut stems for gifting, for your home and for events in Delhi NCR.",
   ctaLabel: "Shop flowers",
   ctaHref: "/products",
 };
 
 const FALLBACK_USPS: StoreUSP[] = [
-  { title: "Hand-tied by our florists", body: "Every bouquet is arranged by hand in Delhi NCR." },
-  { title: "Fresh-cut stems", body: "Sourced from the flower market and prepared for your vase." },
+  { title: "Chosen with care", body: "Stems are selected and prepared for your vase." },
+  { title: "Fresh-cut stems", body: "Prepared for your vase." },
   { title: "Careful packing", body: "Wrapped so your flowers arrive in good condition." },
   { title: "Made for occasions", body: "Birthdays, anniversaries, weddings or sympathy: we arrange for every moment." },
 ];
@@ -239,6 +239,25 @@ export function whatsappLink(phoneOrUrl: string, message?: string): string | nul
   if (digits.length < 8) return null;
   const base = `https://wa.me/${digits}`;
   return message ? `${base}?text=${encodeURIComponent(message)}` : base;
+}
+
+const SOCIAL_HOSTS = {
+  facebook: /^((www|m|web)\.)?(facebook\.com|fb\.com|fb\.me)$/,
+  youtube: /^((www|m)\.)?(youtube\.com|youtu\.be)$/,
+  pinterest: /^([a-z]{2,3}\.|www\.)?pinterest\.[a-z.]{2,6}$/,
+} as const;
+
+/** Facebook / YouTube / Pinterest profile link: only an https URL on the platform's own host, else null. */
+export function socialLink(kind: keyof typeof SOCIAL_HOSTS, value: string | null | undefined): string | null {
+  const v = value?.trim();
+  if (!v || isPlaceholderSetting(v)) return null;
+  try {
+    const u = new URL(v);
+    if (u.protocol !== "https:" || u.username || u.password) return null;
+    return SOCIAL_HOSTS[kind].test(u.hostname.toLowerCase()) ? u.toString() : null;
+  } catch {
+    return null;
+  }
 }
 
 export function instagramLink(value: string): string | null {

@@ -186,6 +186,14 @@ describe('checkout order summary', () => {
     expect(within(summary).getByText('Total').nextSibling).toHaveTextContent('Rs336')
   })
 
+  it('shipping.freeThreshold "0" shows free shipping, mirroring what the backend charges', async () => {
+    fn(api.getSettings).mockResolvedValue({ 'shipping.flatRate': '50', 'shipping.freeThreshold': '0' })
+    await renderForm()
+    const summary = screen.getByRole('complementary', { name: /order summary/i })
+    expect(within(summary).getByText('Shipping').nextSibling).not.toHaveTextContent('Rs50')
+    expect(within(summary).getByText('Total').nextSibling).toHaveTextContent('Rs286')
+  })
+
   it('the mobile accordion toggle announces expanded state and shows count and total', async () => {
     await renderForm()
     const toggle = screen.getByRole('button', { name: /order summary \(3 items\)/i })

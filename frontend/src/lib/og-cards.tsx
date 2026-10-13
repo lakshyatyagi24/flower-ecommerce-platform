@@ -30,7 +30,7 @@ export function BrandCard(): ReactElement {
         <div style={{ fontSize: 124, lineHeight: 1, color: BRAND.charcoal, letterSpacing: -1, display: 'flex' }}>Fresh Petals India</div>
         <div style={{ width: 96, height: 2, background: BRAND.stone, marginTop: 44, marginBottom: 40, display: 'flex' }} />
         <div style={{ fontSize: 44, color: BRAND.stoneDark, letterSpacing: 6, textTransform: 'uppercase', display: 'flex' }}>
-          Farm-fresh flowers, delivered
+          Fresh flowers, delivered
         </div>
       </div>
     </div>
@@ -87,7 +87,7 @@ export function ProductCard({ name, price }: { name: string; price: string | nul
           {price && <div style={{ fontSize: 48, color: BRAND.moss, marginTop: 28, display: 'flex' }}>{price}</div>}
         </div>
         <div style={{ fontSize: 22, color: BRAND.stone, letterSpacing: 2, textTransform: 'uppercase', display: 'flex' }}>
-          Farm-fresh flowers, delivered
+          Fresh flowers, delivered
         </div>
       </div>
     </div>

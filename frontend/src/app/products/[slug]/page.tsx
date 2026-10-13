@@ -54,6 +54,8 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
       description,
       url: path,
       type: "website",
+      siteName: "Fresh Petals India",
+      locale: "en_IN",
       ...(photo ? { images: [{ url: photo, width: 1200, height: 630, alt: product.name }] } : {}),
     },
     twitter: { card: "summary_large_image", title, description, ...(photo ? { images: [photo] } : {}) },

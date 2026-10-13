@@ -4,7 +4,7 @@ export const metadata: Metadata = {
   title: "Sign In",
   description: "Sign in to your Fresh Petals India account to view orders and check out faster.",
   alternates: { canonical: "/account/login" },
-  openGraph: { title: "Sign In", description: "Sign in to your Fresh Petals India account to view orders and check out faster.", url: "/account/login", type: "website" },
+  openGraph: { siteName: "Fresh Petals India", locale: "en_IN", title: "Sign In", description: "Sign in to your Fresh Petals India account to view orders and check out faster.", url: "/account/login", type: "website" },
   robots: { index: false, follow: false },
 };
 

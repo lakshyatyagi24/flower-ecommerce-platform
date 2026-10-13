@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import CatalogueView from "@/components/product/CatalogueView";
 import { loadCatalogue } from "@/lib/catalogue-data";
-import { metaDescription } from "@/lib/seo";
+import { metaDescription, socialMeta } from "@/lib/seo";
 import { listHref, type RawSearchParams } from "@/lib/list-params";
 
 // R1: never prerender at build time (the API is not reachable during `next build`).
@@ -19,7 +19,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
   const title = `Fresh Cut Flowers Online${pageSuffix}`;
   const description =
     metaDescription(
-      "Shop farm-fresh cut flowers, bouquets and plants from Fresh Petals India. Hand-selected stems, delivered fresh.",
+      "Shop fresh cut flowers online from Fresh Petals India. Choose your stems and have them delivered across Delhi NCR.",
       155 - pageSuffix.length,
     ) + pageSuffix;
   // Canonical keeps the filters that change the product set (category, tag, page) and drops sort/search.
@@ -29,7 +29,7 @@ export async function generateMetadata({ searchParams }: Props): Promise<Metadat
     title,
     description,
     alternates: { canonical },
-    openGraph: { title, description, url: canonical, type: "website" },
+    ...socialMeta(title, description, canonical),
     ...(noindex ? { robots: { index: false, follow: true } } : {}),
   };
 }
@@ -46,7 +46,7 @@ export default async function ProductsPage({ searchParams }: Props) {
       activeCategorySlug={params.category}
       eyebrow={params.q ? "Search" : "The collection"}
       heading={heading}
-      intro="Hand-selected stems, bouquets and plants, cut fresh and delivered to your door."
+      intro="Fresh cut flowers, ready to order online and delivered to your door."
       filtered={Boolean(params.category || params.tag || params.q)}
     />
   );

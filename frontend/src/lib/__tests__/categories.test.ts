@@ -35,3 +35,16 @@ describe('collectionTitle', () => {
     expect(collectionTitle({ name: 'Corporate Bouquets', defaultSaleMode: 'ENQUIRY' }).length + 21).toBeLessThanOrEqual(60);
   });
 });
+
+import { landingRedirectTarget } from '../catalogue-data';
+
+describe('landingRedirectTarget', () => {
+  const cat = { id: 1, name: 'Cut Flowers', slug: 'cut-flowers', active: true } as never;
+  it('redirects a known category alone and an occasion tag alone', () => {
+    expect(landingRedirectTarget({ page: 1, category: 'cut-flowers' }, cat)).toBe('/collections/cut-flowers');
+    expect(landingRedirectTarget({ page: 1, tag: 'sympathy' })).toBe('/occasions/sympathy');
+  });
+  it('category + tag together stays on /products so the tag filter is not lost', () => {
+    expect(landingRedirectTarget({ page: 1, category: 'cut-flowers', tag: 'sympathy' }, cat)).toBeUndefined();
+  });
+});
