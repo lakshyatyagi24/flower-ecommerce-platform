@@ -9,6 +9,7 @@
     "lint": "next lint",
     "test": "vitest",
     "lint:colours": "node scripts/check-colours.mjs",
+    "check:bundle": "node scripts/check-bundle.mjs",
     "patch:og": "node scripts/patch-og-windows.mjs",
     "render:og": "node scripts/render-og-default.mjs"
   },
