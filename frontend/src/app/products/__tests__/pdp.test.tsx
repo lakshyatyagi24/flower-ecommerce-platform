@@ -137,7 +137,7 @@ describe('generateMetadata', () => {
   it('builds title, description, canonical and twitter card (no explicit images)', async () => {
     const m = await generateMetadata({ params: { slug: 'red-rose' } });
     expect(m.title).toBe('Red Rose — Fresh Cut Flowers');
-    expect(m.description).toBe('First paragraph.');
+    expect(m.description).toBe('Red Rose in Roses from Fresh Petals India. Priced at ₹499 per stem. Order online.');
     expect(m.alternates?.canonical).toBe('/products/red-rose');
     // Placeholder-only product: images come from the file-based opengraph-image/twitter-image routes.
     expect((m.openGraph as { images?: unknown }).images).toBeUndefined();
@@ -160,12 +160,22 @@ describe('generateMetadata', () => {
     await expect(generateMetadata({ params: { slug: 'x' } })).rejects.toThrow('NEXT_NOT_FOUND');
   });
 
-  it('uses the clean lead paragraph (not seed label lines) for description, og and twitter', async () => {
-    getProduct.mockResolvedValue({ ...product, description: 'What you get\n\nTwelve fresh roses.\n\nSize it right\n\nFits a vase.' });
+  it('never puts imported product description text into meta, og, twitter or Product JSON-LD', async () => {
+    const copy = 'Bunch of 12 or 24 stems in brown paper with flower food and a care card.';
+    getProduct.mockResolvedValue({ ...product, description: copy });
+    getSettings.mockResolvedValue({ 'delivery.supportedCities': 'Delhi NCR, Gurugram' });
     const m = await generateMetadata({ params: { slug: 'x' } });
-    expect(m.description).toBe('Twelve fresh roses.');
-    expect(m.openGraph?.description).toBe('Twelve fresh roses.');
-    expect(m.twitter?.description).toBe('Twelve fresh roses.');
+    const expected = 'Red Rose in Roses from Fresh Petals India. Priced at ₹499 per stem. Order online for delivery in Delhi NCR.';
+    expect(m.description).toBe(expected);
+    expect(m.openGraph?.description).toBe(expected);
+    expect(m.twitter?.description).toBe(expected);
+    const { container } = render(await ProductPage({ params: { slug: 'x' } }));
+    const json = JSON.stringify(ld(container));
+    expect(json).not.toMatch(/brown paper|care card|flower food|Bunch of/i);
+    expect(json).toContain(expected);
+    expect(JSON.stringify(m)).not.toMatch(/brown paper|care card|flower food|Bunch of/i);
+    // page body may still show the (owner-to-rewrite) description
+    expect(container.textContent).toContain('Bunch of 12 or 24');
   });
 
   it('uses a type-appropriate title suffix', async () => {

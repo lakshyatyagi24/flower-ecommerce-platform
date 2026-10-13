@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
-import { absoluteUrl, SITE, productJsonLd, breadcrumbJsonLd, itemListJsonLd, metaDescription } from '../seo';
+import { absoluteUrl, SITE, productJsonLd, productFactsDescription, breadcrumbJsonLd, itemListJsonLd, metaDescription } from '../seo';
 import JsonLd from '../../components/JsonLd';
 import type { ApiProduct } from '../api';
 
@@ -27,7 +27,7 @@ describe('productJsonLd', () => {
     expect(j['@context']).toBe('https://schema.org');
     expect(j['@type']).toBe('Product');
     expect(j.name).toBe('Red Rose');
-    expect(j.image).toEqual(['https://freshpetalsindia.com/images/placeholder-bloom.jpg']);
+    expect(j.image).toBeUndefined(); // no photo: never advertise the placeholder
     expect(j.sku).toBe('red-rose');
     expect(j.brand).toEqual({ '@type': 'Brand', name: 'Fresh Petals India' });
     expect(j.offers).toMatchObject({
@@ -52,16 +52,23 @@ describe('productJsonLd', () => {
   it('returns null for an enquiry product with neither offers nor ratings', () => {
     expect(productJsonLd({ ...base, saleMode: 'ENQUIRY' })).toBeNull();
   });
-  it('uses the clean lead paragraph, not label lines, as description', () => {
-    const j = productJsonLd({ ...base, description: 'What you get\n\nTwelve roses.' }) as any;
-    expect(j.description).toBe('Twelve roses.');
+  it('builds description from structured facts only, never the imported product text', () => {
+    const copy = 'Bunch of 12 or 24 stems wrapped in brown paper with flower food and a care card.';
+    const j = productJsonLd({ ...base, description: copy, unit: 'stem', category: { id: 1, name: 'Cut Flowers', slug: 'cut-flowers' } } as any, { city: 'Delhi NCR' }) as any;
+    expect(j.description).toBe('Red Rose in Cut Flowers from Fresh Petals India. Priced at ₹499 per stem. Order online for delivery in Delhi NCR.');
+    expect(JSON.stringify(j)).not.toMatch(/brown paper|care card|flower food|Bunch of/i);
+  });
+  it('facts description handles enquiry, piece unit and missing city', () => {
+    expect(productFactsDescription({ name: 'X', price: 10, saleMode: 'ENQUIRY' })).toBe('X from Fresh Petals India. Price on enquiry. Order online.');
+    expect(productFactsDescription({ name: 'X', price: 1500, unit: 'piece', saleMode: 'PURCHASE' })).toContain('Priced at ₹1,500.');
+  });
+  it('includes the image only when the product has a real photo', () => {
+    expect((productJsonLd({ ...base, image: null }) as any).image).toBeUndefined();
+    expect((productJsonLd({ ...base, image: '' }) as any).image).toBeUndefined();
   });
   it('adds aggregateRating only when reviews exist', () => {
     const j = productJsonLd({ ...base, reviewCount: 3, averageRating: 4.666 }) as any;
     expect(j.aggregateRating).toEqual({ '@type': 'AggregateRating', ratingValue: '4.7', reviewCount: 3 });
-  });
-  it('omits description when empty', () => {
-    expect((productJsonLd({ ...base, description: null }) as any).description).toBeUndefined();
   });
 });
 

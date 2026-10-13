@@ -1,7 +1,7 @@
 import type { ApiProduct } from './api';
 import { productImage } from './product-image';
 import { availability } from './product-helpers';
-import { leadText } from './description';
+import { PLACEHOLDER_IMAGE } from './product-image';
 
 /** Canonical site origin, no trailing slash. */
 export const SITE: string = (process.env.NEXT_PUBLIC_SITE_URL || 'https://freshpetalsindia.com').replace(/\/+$/, '');
@@ -32,17 +32,34 @@ type JsonObject = Record<string, unknown>;
  * - ENQUIRY products get NO Offer (the page says "Price on enquiry"; we must not publish a price).
  * - A Product with neither offers nor aggregateRating is invalid for rich results, so null.
  */
-export function productJsonLd(p: ApiProduct): JsonObject | null {
+/**
+ * Description for meta tags and structured data, built ONLY from structured facts (name, category, price,
+ * unit, optional delivery city). Never from product.description: that text is imported copy that has not been
+ * vetted and can carry unverifiable claims or duplicate other sites.
+ */
+export function productFactsDescription(
+  p: Pick<ApiProduct, 'name' | 'price' | 'unit' | 'saleMode'> & { category?: { name: string } | null },
+  opts: { city?: string | null } = {},
+): string {
+  const unit = p.unit && p.unit !== 'piece' ? ` per ${p.unit}` : '';
+  const price = p.saleMode === 'ENQUIRY' ? 'Price on enquiry.' : `Priced at ₹${Number(p.price).toLocaleString('en-IN')}${unit}.`;
+  const cat = p.category?.name ? ` in ${p.category.name}` : '';
+  const city = opts.city?.trim() ? ` Order online for delivery in ${opts.city.trim()}.` : ' Order online.';
+  return `${p.name}${cat} from Fresh Petals India. ${price}${city}`;
+}
+
+export function productJsonLd(p: ApiProduct, opts: { city?: string | null } = {}): JsonObject | null {
   const ld: JsonObject = {
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: p.name,
-    image: [absoluteUrl(productImage(p))],
     sku: p.slug,
     brand: { '@type': 'Brand', name: 'Fresh Petals India' },
   };
-  const desc = metaDescription(leadText(p.description), 5000);
-  if (desc) ld.description = desc;
+  // No photo: omit `image` rather than advertise the placeholder as the product's picture.
+  const img = productImage(p);
+  if (img !== PLACEHOLDER_IMAGE) ld.image = [absoluteUrl(img)];
+  ld.description = productFactsDescription(p, opts);
   if (p.saleMode !== 'ENQUIRY') {
     ld.offers = {
       '@type': 'Offer',

@@ -12,8 +12,8 @@ import ProductGrid from "@/components/product/ProductGrid";
 import Stars from "@/components/product/Stars";
 import ProductReviews from "@/components/ProductReviewsLazy";
 import { getProduct, getSettings, listProducts } from "@/lib/server-api";
-import { breadcrumbJsonLd, metaDescription, productJsonLd } from "@/lib/seo";
-import { leadText, splitDescription } from "@/lib/description";
+import { breadcrumbJsonLd, metaDescription, productFactsDescription, productJsonLd } from "@/lib/seo";
+import { splitDescription } from "@/lib/description";
 import { careCopy, uspsFromSettings } from "@/lib/product-helpers";
 import { productImage } from "@/lib/product-image";
 import { ogPhotoUrl } from "@/lib/og";
@@ -39,9 +39,8 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     notFound();
   }
   const title = `${product.name} — ${TITLE_SUFFIX[product.productType ?? ""] ?? "Fresh Cut Flowers"}`;
-  const description =
-    metaDescription(leadText(product.description)) ||
-    `Order ${product.name} online from Fresh Petals India. Farm-fresh flowers, delivered fresh.`;
+  // Structured facts only; never the imported product.description (see productFactsDescription).
+  const description = metaDescription(productFactsDescription(product, { city: await safeCity() }));
   const path = `/products/${product.slug}`;
   // Real photo: explicit 1200x630 Cloudinary JPEG (small enough for WhatsApp/Facebook).
   // No real photo: no explicit images, so the file-based generated text card is used.
@@ -71,6 +70,15 @@ async function safeRelated(product: ApiProduct): Promise<ApiProduct[]> {
   }
 }
 
+function cityFromSettings(settings: Record<string, string>): string | null {
+  const first = (settings?.["delivery.supportedCities"] ?? "").split(",")[0]?.trim();
+  return first || null;
+}
+
+async function safeCity(): Promise<string | null> {
+  return cityFromSettings(await safeSettings());
+}
+
 async function safeSettings(): Promise<Record<string, string>> {
   try {
     return await getSettings();
@@ -94,7 +102,7 @@ export default async function ProductPage({ params }: Params) {
   const returnsSummary = settings["policies.returnsSummary"]?.trim();
   const reviewCount = product.reviewCount ?? 0;
   const rating = product.averageRating ?? 0;
-  const productLd = productJsonLd(product);
+  const productLd = productJsonLd(product, { city: cityFromSettings(settings) });
 
   const crumbs = [
     { name: "Home", path: "/" },
