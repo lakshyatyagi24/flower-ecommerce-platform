@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Copy, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import { adminApi, AdminOrder, ApiError } from "@/lib/api";
+import { formatDeliveryDate } from "@/lib/delivery-date";
 import { hasCaptureTrace, paymentBadge, splitRefundNote } from "@/lib/refund-note";
 
 const STATUSES = ["PENDING", "PAID", "SHIPPED", "COMPLETED", "CANCELLED"] as const;
@@ -118,6 +119,8 @@ function OrdersView() {
   const [attentionFilter, setAttentionFilter] = useState<string>(
     (ATTENTION_VALUES as readonly string[]).includes(initialAttention) ? initialAttention : "",
   );
+  // "" = newest first; "deliveryDate" = soonest delivery date first (orders without one last).
+  const [sortBy, setSortBy] = useState<"" | "deliveryDate">("");
   const [selected, setSelected] = useState<AdminOrder | null>(null);
   const [edit, setEdit] = useState<EditState>(blankEdit);
   const [updatingStatus, setUpdatingStatus] = useState(false);
@@ -140,6 +143,7 @@ function OrdersView() {
         paymentStatus: paymentStatusFilter || undefined,
         paymentMethod: paymentMethodFilter || undefined,
         attention: attentionFilter || undefined,
+        sort: sortBy || undefined,
         take: 200,
       });
       if (id !== reqRef.current) return;
@@ -151,7 +155,7 @@ function OrdersView() {
     } finally {
       if (id === reqRef.current) setLoading(false);
     }
-  }, [statusFilter, paymentStatusFilter, paymentMethodFilter, attentionFilter, addToast]);
+  }, [statusFilter, paymentStatusFilter, paymentMethodFilter, attentionFilter, sortBy, addToast]);
 
   useEffect(() => {
     fetchOrders();
@@ -327,6 +331,18 @@ function OrdersView() {
             <option value="awaiting">Awaiting payment</option>
           </select>
         </div>
+        <div>
+          <Label htmlFor="sortBy">Sort by</Label>
+          <select
+            id="sortBy"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value === "deliveryDate" ? "deliveryDate" : "")}
+            className="mt-1 block p-2 border rounded text-sm"
+          >
+            <option value="">Newest first</option>
+            <option value="deliveryDate">Delivery date (soonest first)</option>
+          </select>
+        </div>
       </div>
 
       <Card>
@@ -356,6 +372,7 @@ function OrdersView() {
                   <TableHead>Payment</TableHead>
                   <TableHead>Tracking</TableHead>
                   <TableHead>Date</TableHead>
+                  <TableHead>Deliver on</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -389,6 +406,9 @@ function OrdersView() {
                       )}
                     </TableCell>
                     <TableCell className="text-sm">{new Date(o.createdAt).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-sm whitespace-nowrap">
+                      {formatDeliveryDate(o.deliveryDate) || <span className="text-muted-foreground">—</span>}
+                    </TableCell>
                     <TableCell>
                       <Button variant="outline" size="sm" onClick={() => { setPaymentError(null); setSelected(o); }}>
                         View
@@ -418,6 +438,9 @@ function OrdersView() {
                 </div>
                 <div>
                   <h3 className="font-semibold mb-1">Shipping</h3>
+                  <div className="font-medium">
+                    Delivery date: {formatDeliveryDate(selected.deliveryDate) || "not set (older order)"}
+                  </div>
                   <div className="whitespace-pre-wrap">{selected.shippingAddress}</div>
                   {(selected.city || selected.postalCode) && (
                     <div className="text-muted-foreground">

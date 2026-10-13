@@ -34,7 +34,7 @@ type Section = {
 };
 
 // Settings the storefront does not read yet are intentionally NOT listed here (homepage.hero*, seo.*,
-// delivery.cutoffTime / leadTimeDays; supportedPincodes is honoured since Task 4.1). Their database rows are left untouched: a section save only
+// the delivery date rules and supportedPincodes are honoured since Tasks 4.1 / 4.2). Their database rows are left untouched: a section save only
 // writes the keys listed below. Add them back when the storefront starts honouring them.
 const SECTIONS: Section[] = [
   {
@@ -110,6 +110,35 @@ const SECTIONS: Section[] = [
         rows: 3,
         placeholder: "110001, 1100*",
         hint: "Separate with commas, spaces or new lines. Use a full 6-digit PIN (110001) or a prefix ending in * (1100*). Entries are validated when you save: anything that is not a 6-digit PIN or a prefix like 1100* is rejected. Leave empty to deliver everywhere (nothing is restricted). Once a list is set, orders to other PIN codes are refused at checkout.",
+      },
+      {
+        key: "delivery.cutoffTime",
+        label: "Order cut-off time",
+        placeholder: "15:00",
+        maxLength: 5,
+        hint: "24-hour HH:MM in India time (e.g. 15:00). Orders placed at or after this time can only be delivered from the next day. Invalid values are rejected when you save; leaving it empty uses 15:00.",
+      },
+      {
+        key: "delivery.leadTimeDays",
+        label: "Lead time (days)",
+        type: "number",
+        placeholder: "0",
+        hint: "Extra whole days needed to prepare an order, added after the cut-off rule. 0 means the earliest delivery is today (before the cut-off) or tomorrow (after it). Allowed: 0 to 30. Leaving it empty uses 0.",
+      },
+      {
+        key: "delivery.daysAhead",
+        label: "Booking window (days)",
+        type: "number",
+        placeholder: "14",
+        hint: "How many days after the earliest available date a customer can choose. Allowed: 1 to 90. Leaving it empty uses 14.",
+      },
+      {
+        key: "delivery.blackoutDates",
+        label: "Unavailable dates",
+        type: "textarea",
+        rows: 3,
+        placeholder: "2026-11-01, 2026-11-02",
+        hint: "Dates we cannot deliver on, as YYYY-MM-DD, separated by commas, spaces or new lines. Customers cannot pick these, and the earliest date skips them. Anything that is not a real date in that format is rejected when you save. Remove past dates whenever you like; they are ignored once they have passed.",
       },
     ],
   },

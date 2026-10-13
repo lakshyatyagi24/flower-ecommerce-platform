@@ -197,6 +197,8 @@ export type AdminOrder = {
   trackingNumber?: string | null;
   courierName?: string | null;
   adminNotes?: string | null;
+  /** Customer-chosen delivery date: UTC midnight of the India calendar date. Null on older orders. */
+  deliveryDate?: string | null;
   createdAt: string;
   updatedAt: string;
   items: {
@@ -316,6 +318,7 @@ export const adminApi = {
       paymentStatus?: string;
       paymentMethod?: string;
       attention?: string;
+      sort?: 'deliveryDate';
       take?: number;
       skip?: number;
     } = {},
@@ -325,6 +328,7 @@ export const adminApi = {
     if (params.paymentStatus) qs.set('paymentStatus', params.paymentStatus);
     if (params.paymentMethod) qs.set('paymentMethod', params.paymentMethod);
     if (params.attention) qs.set('attention', params.attention);
+    if (params.sort) qs.set('sort', params.sort);
     if (params.take !== undefined) qs.set('take', String(params.take));
     if (params.skip !== undefined) qs.set('skip', String(params.skip));
     const suffix = qs.toString();
