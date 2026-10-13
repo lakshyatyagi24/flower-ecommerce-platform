@@ -34,7 +34,7 @@ type Section = {
 };
 
 // Settings the storefront does not read yet are intentionally NOT listed here (homepage.hero*, seo.*,
-// delivery.cutoffTime / supportedPincodes / leadTimeDays). Their database rows are left untouched: a section save only
+// delivery.cutoffTime / leadTimeDays; supportedPincodes is honoured since Task 4.1). Their database rows are left untouched: a section save only
 // writes the keys listed below. Add them back when the storefront starts honouring them.
 const SECTIONS: Section[] = [
   {
@@ -103,6 +103,14 @@ const SECTIONS: Section[] = [
     fields: [
       { key: "delivery.supportedCities", label: "Supported cities", type: "textarea", rows: 2, placeholder: "Delhi NCR", hint: "The first city is used in product page descriptions (search results and link previews). Comma-separated." },
       { key: "delivery.businessHours", label: "Business hours", placeholder: "Mon–Sun, 8am–9pm" },
+      {
+        key: "delivery.supportedPincodes",
+        label: "Serviceable PIN codes",
+        type: "textarea",
+        rows: 3,
+        placeholder: "110001, 1100*",
+        hint: "Separate with commas, spaces or new lines. Use a full 6-digit PIN (110001) or a prefix ending in * (1100*). Leave empty to deliver everywhere. Orders to other PIN codes are refused at checkout.",
+      },
     ],
   },
   {
