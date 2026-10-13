@@ -1,31 +1,53 @@
-"use client";
+import LegalDocument, { LegalSection } from "@/components/content/LegalDocument";
+import ContactLines from "@/components/content/ContactLines";
+import PolicySummary from "@/components/content/PolicySummary";
+import { LEGAL_UPDATED } from "@/lib/content";
 
-import React from "react";
-import { useSettings } from "@/lib/settings-context";
-
+/**
+ * DRAFT policy wording for owner review (see task-3.7b-report.md). The earlier page quoted fixed windows
+ * (cancel up to 2 hours before the slot, report damage within 4 hours). Those are business decisions nobody
+ * has confirmed, so they are replaced by neutral wording; the owner can state exact windows in the
+ * `policies.returnsSummary` setting, which is shown at the top of this page when set.
+ */
 export default function RefundPolicyPage() {
-  const settings = useSettings();
   return (
-    <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 prose prose-slate">
-      <p className="pill mb-3">Legal</p>
-      <h1 className="text-3xl md:text-4xl font-semibold text-slate-900 tracking-tight mb-2">Refund & Cancellation Policy</h1>
-      <p className="text-sm text-slate-500">Last updated: April 2026</p>
-
-      <h2 className="mt-8 text-xl font-semibold">Cut flowers (purchase products)</h2>
-      <ul className="list-disc pl-5 space-y-1">
-        <li>Cancellations accepted up to 2 hours before the scheduled delivery slot. We will refund the order in full to the original payment method within 5–7 business days.</li>
-        <li>If the flowers arrive damaged or in poor condition, share photos within 4 hours of delivery and we will replace the order or refund.</li>
-        <li>Cut flowers are perishable, so we cannot accept returns once delivered in good condition.</li>
-      </ul>
-
-      <h2 className="mt-6 text-xl font-semibold">Bouquets, arrangements & hampers (enquiry products)</h2>
-      <ul className="list-disc pl-5 space-y-1">
-        <li>Once you confirm an enquiry quote and we begin preparing the order, cancellations may not be possible. Any refund eligibility will be confirmed at the time of quotation.</li>
-        <li>For damaged or incorrect arrangements, contact us within 4 hours of delivery with photos and we will work with you on a replacement or partial refund.</li>
-      </ul>
-
-      <h2 className="mt-6 text-xl font-semibold">How to request</h2>
-      <p>Reach us at {settings.phone || "the phone number on the contact page"} or {settings.email || "the email on the contact page"} with your order ID and reason. We respond within a few hours during business hours.</p>
-    </main>
+    <LegalDocument title="Refund and Cancellation Policy" updated={LEGAL_UPDATED.refund}>
+      <PolicySummary kind="returns" title="From the shop" className="mt-10" />
+      <LegalSection heading="Cut flowers (products you can order online)">
+        <ul>
+          <li>
+            To cancel an order, contact us as soon as possible with your order number. An order that has not yet been
+            prepared or dispatched can usually be cancelled, and we will refund it to the original payment method.
+          </li>
+          <li>
+            If your flowers arrive damaged or in poor condition, contact us promptly with your order number and clear
+            photos. We will look into it and arrange a replacement or refund where it is warranted.
+          </li>
+          <li>Flowers are perishable, so we cannot accept returns of flowers delivered in good condition.</li>
+        </ul>
+      </LegalSection>
+      <LegalSection heading="Bouquets, arrangements and hampers (quoted on enquiry)">
+        <ul>
+          <li>
+            Once you have approved a quote and we have started preparing your order, it may no longer be possible to
+            cancel it. We will tell you where you stand when we send the quote.
+          </li>
+          <li>
+            If an arrangement arrives damaged or is not what was agreed, contact us promptly with photos and we will
+            work out a replacement or partial refund with you.
+          </li>
+        </ul>
+      </LegalSection>
+      <LegalSection heading="How refunds are paid">
+        <p>
+          Approved refunds are returned to the original payment method. The time it takes to reach your account
+          depends on your bank or payment provider.
+        </p>
+      </LegalSection>
+      <LegalSection heading="How to ask for a refund or cancellation">
+        <p>Contact us with your order number and the reason.</p>
+        <ContactLines withName={false} />
+      </LegalSection>
+    </LegalDocument>
   );
 }

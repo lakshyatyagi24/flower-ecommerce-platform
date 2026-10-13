@@ -1,67 +1,44 @@
-"use client";
-import React from "react";
-import Image from "next/image";
-import ContactHero from "./components/ContactHero";
-import ContactForm from "./components/ContactForm";
-import QuickContactDetails from "./components/QuickContactDetails";
-import EventBookingShortcut from "./components/EventBookingShortcut";
-import logo from "../../assets/logo.png";
+import Container from "@/components/ui/Container";
+import Button from "@/components/ui/Button";
+import PageHeader from "@/components/content/PageHeader";
+import ContactDetails from "@/components/content/ContactDetails";
 import FAQSnapshot from "@/components/FAQSnapshot";
-import { useSettings } from "@/lib/settings-context";
+import ContactForm from "./components/ContactForm";
 
 export default function ContactPage() {
-  const settings = useSettings();
-  const mapQuery = encodeURIComponent(settings.address || "Delhi NCR, India");
-
   return (
-    <main className="max-w-screen-xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <ContactHero />
+    <main>
+      <div className="py-14 md:py-20">
+        <Container>
+          <PageHeader
+            eyebrow="Contact"
+            title="Get in touch"
+            intro="Questions about an order, a custom bouquet or an event? Send us a message and we will get back to you."
+          />
 
-      {/* Contact form + map */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <section aria-labelledby="contact-form" className="bg-white rounded-lg shadow-sm p-6">
-          <ContactForm />
-        </section>
+          <div className="mt-14 grid gap-14 lg:grid-cols-[7fr_5fr] lg:gap-20">
+            <section aria-label="Send a message">
+              <ContactForm />
+            </section>
 
-        <section aria-labelledby="map" className="rounded-lg overflow-hidden">
-          <h2 id="map" className="sr-only">Our location</h2>
-
-          <div className="w-full h-80 sm:h-96 relative">
-            <iframe
-              title="Our location"
-              src={`https://www.google.com/maps?q=${mapQuery}&z=11&output=embed`}
-              width="100%"
-              height="100%"
-              loading="lazy"
-              className="border-0"
-            />
-          </div>
-
-          <div className="p-4 bg-white border-t">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-                <Image src={logo} alt="logo" width={40} height={40} className="object-contain" />
-              </div>
+            <aside aria-label="Other ways to reach us" className="space-y-10">
+              <ContactDetails />
               <div>
-                <p className="font-medium">{settings.name}</p>
-                <p className="text-sm text-gray-600">{settings.address || "Delhi NCR — please update via admin settings"}</p>
+                <h2 className="type-h3 text-charcoal">Planning an event?</h2>
+                <p className="mt-3 text-base leading-relaxed text-stone-dark">
+                  Weddings, celebrations and corporate occasions are quoted on request.
+                </p>
+                <div className="mt-5">
+                  <Button href="/corporate" variant="outline">
+                    Event and corporate enquiries
+                  </Button>
+                </div>
               </div>
-            </div>
+            </aside>
           </div>
-        </section>
+        </Container>
       </div>
-
-      {/* Main full-width section: Event shortcut + quick details */}
-      <div className="mt-8">
-        <div className="max-w-screen-xl mx-auto px-4 sm:px-6 lg:px-8">
-              <EventBookingShortcut />
-              <QuickContactDetails />
-        </div>
-      </div>
-      {/* FAQ snapshot (contact-only) */}
-      <div className="mt-8">
-        <FAQSnapshot />
-      </div>
+      <FAQSnapshot />
     </main>
   );
 }

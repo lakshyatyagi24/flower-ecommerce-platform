@@ -1,47 +1,63 @@
-"use client";
+import Link from "next/link";
+import LegalDocument, { LegalSection } from "@/components/content/LegalDocument";
+import ContactLines from "@/components/content/ContactLines";
+import PolicySummary from "@/components/content/PolicySummary";
+import { LEGAL_UPDATED } from "@/lib/content";
 
-import React from "react";
-import { useSettings } from "@/lib/settings-context";
-
+/** DRAFT legal copy for owner review (see task-3.7b-report.md); not a substitute for legal advice. */
 export default function TermsPage() {
-  const settings = useSettings();
   return (
-    <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 prose prose-slate">
-      <p className="pill mb-3">Legal</p>
-      <h1 className="text-3xl md:text-4xl font-semibold text-slate-900 tracking-tight mb-2">Terms of Service</h1>
-      <p className="text-sm text-slate-500">Last updated: April 2026</p>
-
-      <h2 className="mt-8 text-xl font-semibold">1. About</h2>
-      <p>This website is operated by {settings.name}. By placing an order or sending an enquiry, you agree to these terms.</p>
-
-      <h2 className="mt-6 text-xl font-semibold">2. Orders</h2>
-      <ul className="list-disc pl-5 space-y-1">
-        <li>Cut-flower products can be purchased online and are paid via the payment gateway shown at checkout.</li>
-        <li>Bouquets, arrangements, hampers and corporate orders are quoted on enquiry. We will confirm pricing, GST and delivery before confirming the order.</li>
-        <li>Cut flowers are perishable — we ship the freshest stems available on the day. Exact varieties and shades may vary based on mandi availability.</li>
-      </ul>
-
-      <h2 className="mt-6 text-xl font-semibold">3. Pricing & GST</h2>
-      <p>Raw cut flowers are exempt from GST. Bouquets, arrangements and hampers (gift category) attract 5% GST as applicable. The applicable GST is shown on your order summary and invoice.</p>
-
-      <h2 className="mt-6 text-xl font-semibold">4. Delivery</h2>
-      <p>We deliver across Delhi NCR via cab for bulk orders and bike for retail orders. Delivery dates and time windows are confirmed on the order. Risk passes to you on delivery.</p>
-
-      <h2 className="mt-6 text-xl font-semibold">5. Cancellations</h2>
-      <p>Cut-flower orders may be cancelled before they are dispatched. Custom enquiries (bouquets, arrangements, hampers) may not be cancellable once we have started preparing them. Refer to our refund policy for details.</p>
-
-      <h2 className="mt-6 text-xl font-semibold">6. Liability</h2>
-      <p>Our liability is limited to the value of the order. We are not liable for indirect or consequential losses.</p>
-
-      <h2 className="mt-6 text-xl font-semibold">7. Changes</h2>
-      <p>We may update these terms from time to time. Continued use of the site means you accept the updated terms.</p>
-
-      <h2 className="mt-6 text-xl font-semibold">8. Contact</h2>
-      <p>
-        {settings.name}
-        {settings.email ? <><br />Email: <a href={`mailto:${settings.email}`} className="text-olive-green hover:underline">{settings.email}</a></> : null}
-        {settings.phone ? <><br />Phone: <a href={`tel:${settings.phone.replace(/[^\d+]/g, "")}`} className="text-olive-green hover:underline">{settings.phone}</a></> : null}
-      </p>
-    </main>
+    <LegalDocument title="Terms of Service" updated={LEGAL_UPDATED.terms}>
+      <LegalSection heading="1. About">
+        <p>
+          This website is operated by Fresh Petals India. By placing an order or sending an enquiry you agree to these
+          terms.
+        </p>
+      </LegalSection>
+      <LegalSection heading="2. Orders">
+        <ul>
+          <li>Products marked for purchase can be ordered online and paid for with the payment options shown at checkout.</li>
+          <li>
+            Bouquets, arrangements, hampers and corporate orders are quoted on enquiry. We confirm the price, any GST
+            and the delivery details with you before the order is confirmed.
+          </li>
+          <li>
+            Flowers are natural and perishable. Exact varieties, colours and shades can vary with availability, and we
+            will tell you if we need to substitute.
+          </li>
+        </ul>
+      </LegalSection>
+      <LegalSection heading="3. Pricing and GST">
+        <p>Prices are shown in Indian rupees. Where GST applies, it is shown on your order summary and on your invoice.</p>
+      </LegalSection>
+      <LegalSection heading="4. Delivery">
+        <p>
+          We deliver in and around Delhi NCR. Delivery charges and dates are shown at checkout, or confirmed with you
+          for orders quoted on enquiry. Responsibility for the goods passes to you on delivery.
+        </p>
+        <PolicySummary kind="delivery" />
+      </LegalSection>
+      <LegalSection heading="5. Cancellations and refunds">
+        <p>
+          Our <Link href="/refund-policy">Refund and Cancellation Policy</Link> explains when an order can be cancelled
+          and how refunds work. It forms part of these terms.
+        </p>
+      </LegalSection>
+      <LegalSection heading="6. Liability">
+        <p>
+          Our liability for any order is limited to the amount you paid for it. We are not liable for indirect or
+          consequential losses.
+        </p>
+      </LegalSection>
+      <LegalSection heading="7. Changes">
+        <p>
+          We may update these terms from time to time. The date at the top of this page shows when they last changed.
+          Continuing to use the site means you accept the current terms.
+        </p>
+      </LegalSection>
+      <LegalSection heading="8. Contact">
+        <ContactLines />
+      </LegalSection>
+    </LegalDocument>
   );
 }

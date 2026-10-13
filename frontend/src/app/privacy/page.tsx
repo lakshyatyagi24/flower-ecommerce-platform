@@ -1,42 +1,49 @@
-"use client";
+import LegalDocument, { LegalSection } from "@/components/content/LegalDocument";
+import ContactLines from "@/components/content/ContactLines";
+import { LEGAL_UPDATED } from "@/lib/content";
 
-import React from "react";
-import { useSettings } from "@/lib/settings-context";
-
+/** DRAFT legal copy for owner review (see task-3.7b-report.md); not a substitute for legal advice. */
 export default function PrivacyPage() {
-  const settings = useSettings();
   return (
-    <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12 prose prose-slate">
-      <p className="pill mb-3">Legal</p>
-      <h1 className="text-3xl md:text-4xl font-semibold text-slate-900 tracking-tight mb-2">Privacy Policy</h1>
-      <p className="text-sm text-slate-500">Last updated: April 2026</p>
-
-      <h2 className="mt-8 text-xl font-semibold">1. Information we collect</h2>
-      <p>We collect the information you provide when placing an order or sending an enquiry — name, phone number, email, delivery address and any notes about your requirement. We also receive basic device and browser information automatically.</p>
-
-      <h2 className="mt-6 text-xl font-semibold">2. How we use it</h2>
-      <ul className="list-disc pl-5 space-y-1">
-        <li>To process orders and enquiries and arrange delivery.</li>
-        <li>To contact you about your order or enquiry by phone, WhatsApp or email.</li>
-        <li>To improve our products and the website.</li>
-      </ul>
-
-      <h2 className="mt-6 text-xl font-semibold">3. Sharing</h2>
-      <p>We do not sell or rent your personal information. We share details with delivery partners only to the extent needed to fulfil your order. We use a payment gateway to process online payments — they handle card and UPI data directly.</p>
-
-      <h2 className="mt-6 text-xl font-semibold">4. Cookies</h2>
-      <p>We use cookies and local storage to keep your shopping cart and login session working across pages.</p>
-
-      <h2 className="mt-6 text-xl font-semibold">5. Your choices</h2>
-      <p>You can request a copy or deletion of your data by contacting us at the details below. We retain order records as required for accounting and tax compliance.</p>
-
-      <h2 className="mt-6 text-xl font-semibold">6. Contact</h2>
-      <p>
-        {settings.name}
-        {settings.email ? <><br />Email: <a href={`mailto:${settings.email}`} className="text-olive-green hover:underline">{settings.email}</a></> : null}
-        {settings.phone ? <><br />Phone: <a href={`tel:${settings.phone.replace(/[^\d+]/g, "")}`} className="text-olive-green hover:underline">{settings.phone}</a></> : null}
-        {settings.address ? <><br />{settings.address}</> : null}
-      </p>
-    </main>
+    <LegalDocument title="Privacy Policy" updated={LEGAL_UPDATED.privacy}>
+      <LegalSection heading="1. Information we collect">
+        <p>
+          We collect the information you give us when you place an order, create an account, send an enquiry or
+          subscribe to our newsletter: your name, phone number, email address, delivery address and any notes about
+          your requirement. If you write a product review, your name and review are shown on the product page. We
+          also receive basic device and browser information automatically when you use the site.
+        </p>
+      </LegalSection>
+      <LegalSection heading="2. How we use it">
+        <ul>
+          <li>To process orders and enquiries and to arrange delivery.</li>
+          <li>To contact you about your order or enquiry by phone, WhatsApp or email.</li>
+          <li>To send our newsletter, if you subscribed. You can ask us to stop at any time.</li>
+          <li>To keep the website working and to improve it.</li>
+        </ul>
+      </LegalSection>
+      <LegalSection heading="3. Sharing">
+        <p>
+          We do not sell your personal information. We share your details with delivery partners only as far as is
+          needed to deliver your order. Online payments are processed by our payment gateway, which handles your card
+          or UPI details directly; we do not store them.
+        </p>
+      </LegalSection>
+      <LegalSection heading="4. Cookies and local storage">
+        <p>
+          We use cookies and your browser&apos;s local storage to keep your cart and your sign-in working from page to
+          page.
+        </p>
+      </LegalSection>
+      <LegalSection heading="5. Your choices">
+        <p>
+          You can ask us for a copy of the personal information we hold about you, or ask us to correct or delete it,
+          by contacting us using the details below. We may need to keep order records for accounting and tax purposes.
+        </p>
+      </LegalSection>
+      <LegalSection heading="6. Contact">
+        <ContactLines />
+      </LegalSection>
+    </LegalDocument>
   );
 }

@@ -9,19 +9,10 @@ import { describe, it, expect } from 'vitest';
 export const BANNED_PHRASES = ['same-day', 'same day', 'free delivery', 'within a few hours', 'limited time'];
 
 /**
- * Files that still contain a banned phrase and are cleaned up in Task 3.7 (about / FAQ / corporate / refund
- * copy; EnquiryForm and FAQSnapshot, used by /contact, were found by this scan).
- * TO BE EMPTIED IN TASK 3.7. Paths are relative to `src/`, forward slashes.
+ * Files allowed to contain a banned phrase. EMPTY since Task 3.7b: every claim was removed or moved to settings.
+ * Do not add entries; reword the copy or read it from settings instead.
  */
-export const ALLOWLIST: string[] = [
-  'app/about/components/Studio.tsx',
-  'app/about/components/CTA.tsx',
-  'app/faq/faq-data.ts',
-  'app/corporate/page.tsx',
-  'app/refund-policy/page.tsx',
-  'components/EnquiryForm.tsx',
-  'components/FAQSnapshot.tsx',
-];
+export const ALLOWLIST: string[] = [];
 
 const SRC = join(__dirname, '..');
 const ROOTS = ['components', 'app', 'lib'];
