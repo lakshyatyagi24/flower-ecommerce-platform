@@ -30,6 +30,7 @@ describe('api.checkPincode', () => {
       const [url, init] = fetchMock.mock.calls[0];
       expect(String(url)).toMatch(/\/delivery\/check\?pincode=110001$/);
       expect(init.method).toBe('GET');
+      expect(init.signal).toBeDefined(); // 5s timeout signal
     } finally {
       vi.unstubAllGlobals();
     }

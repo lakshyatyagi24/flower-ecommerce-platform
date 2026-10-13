@@ -92,6 +92,8 @@ export default function CheckoutPage() {
   // Serviceability for the PIN last checked. Only an explicit `serviceable:false` blocks; a failed request
   // (`unknown`) never does, because the backend enforces the same rule when the order is created.
   const [pinCheck, setPinCheck] = useState<{ pin: string; status: "ok" | "no" | "unknown"; message: string } | null>(null);
+  const [pinFocusTick, setPinFocusTick] = useState(0);
+  const latestPinRef = useRef("");
   const pinNow = form.postalCode.trim();
   const pinBlocked = pinCheck && pinCheck.pin === pinNow && pinCheck.status === "no" ? pinCheck.message : undefined;
   const fieldError = (k: CheckoutFieldName) =>
@@ -101,21 +103,31 @@ export default function CheckoutPage() {
     let next: { pin: string; status: "ok" | "no" | "unknown"; message: string };
     try {
       const res = await api.checkPincode(pin);
-      next = { pin, status: res.serviceable ? "ok" : "no", message: res.message };
-      if (res.serviceable) storePincode(pin);
+      // Only explicit booleans count; anything else (odd payload, timeout) is "unknown" and never blocks.
+      const status = res?.serviceable === false ? "no" : res?.serviceable === true ? "ok" : "unknown";
+      next = { pin, status, message: res?.message ?? "" };
+      if (status === "ok") storePincode(pin);
     } catch {
       next = { pin, status: "unknown", message: "" };
     }
-    setPinCheck(next);
+    // The shopper may have edited the PIN while this was in flight: a stale answer must not show.
+    if (latestPinRef.current === pin) setPinCheck(next);
     return next;
   };
+  useEffect(() => {
+    latestPinRef.current = form.postalCode.trim();
+  }, [form.postalCode]);
+  // Focus the PIN field only after React has committed aria-invalid / aria-describedby for the new error.
+  useEffect(() => {
+    if (pinFocusTick > 0) document.getElementById(FIELD_IDS.postalCode)?.focus();
+  }, [pinFocusTick]);
   // Prefill the PIN remembered from the product page, only when the field is still empty.
   useEffect(() => {
     const saved = readStoredPincode();
     if (saved) setForm((f) => (f.postalCode ? f : { ...f, postalCode: saved }));
   }, []);
   const summaryItems = attempted
-    ? CHECKOUT_FIELD_ORDER.filter((k) => errors[k]).map((k) => ({ id: FIELD_IDS[k], message: errors[k] as string }))
+    ? CHECKOUT_FIELD_ORDER.filter((k) => fieldError(k)).map((k) => ({ id: FIELD_IDS[k], message: fieldError(k) as string }))
     : [];
   // Move focus to the error summary after a failed submit (validation or server error).
   useEffect(() => {
@@ -414,10 +426,10 @@ export default function CheckoutPage() {
     setSubmitting(true);
     try {
       const pin = form.postalCode.trim();
-      const known = pinCheck && pinCheck.pin === pin ? pinCheck : await checkPin(pin);
+      const known = pinCheck && pinCheck.pin === pin && pinCheck.status !== "unknown" ? pinCheck : await checkPin(pin);
       if (known?.status === "no") {
         setTouched((t) => ({ ...t, postalCode: true }));
-        focusField(FIELD_IDS.postalCode);
+        setPinFocusTick((t) => t + 1);
         return;
       }
       const order = await api.createOrder({
@@ -597,7 +609,9 @@ export default function CheckoutPage() {
                     onChange={(e) => update("postalCode", e.target.value)}
                     onBlur={() => {
                       blur("postalCode")();
-                      void checkPin(form.postalCode.trim());
+                      const pin = form.postalCode.trim();
+                      if (pinCheck && pinCheck.pin === pin && pinCheck.status !== "unknown") return;
+                      void checkPin(pin);
                     }}
                   />
                 </Field>

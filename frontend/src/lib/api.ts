@@ -318,8 +318,14 @@ export const api = {
     apiFetch<ApiOrder>(`/orders/track/${id}?email=${encodeURIComponent(email)}`),
 
   // Delivery
-  checkPincode: (pincode: string) =>
-    apiFetch<{ serviceable: boolean; message: string }>(`/delivery/check?pincode=${encodeURIComponent(pincode)}`),
+  checkPincode: (pincode: string, signal?: AbortSignal) =>
+    apiFetch<{ serviceable: boolean; restricted?: boolean; message: string }>(
+      `/delivery/check?pincode=${encodeURIComponent(pincode)}`,
+      {
+        // A slow check must never hold the shopper up: time out after 5s (callers treat a failure as "unknown").
+        signal: signal ?? (typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal ? AbortSignal.timeout(5000) : undefined),
+      },
+    ),
 
   // Payments (Razorpay)
   getPaymentConfig: () => apiFetch<{ enabled: boolean }>('/payments/razorpay/config'),

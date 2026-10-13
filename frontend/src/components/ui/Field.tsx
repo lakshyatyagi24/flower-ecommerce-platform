@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useContext, useId, type ReactNode } from 'react';
 
-type FieldCtx = { id: string; describedBy?: string; invalid: boolean; optional: boolean };
+type FieldCtx = { id: string; describedBy?: string; invalid: boolean; optional: boolean; quiet: boolean };
 const Ctx = createContext<FieldCtx | null>(null);
 
 type OwnProps = { id?: string; 'aria-describedby'?: string; 'aria-invalid'?: boolean | 'true' | 'false' | 'grammar' | 'spelling' };
@@ -13,7 +13,7 @@ export function useControlProps(own: OwnProps) {
   const id = own.id ?? field?.id ?? fallbackId;
   const describedBy = [own['aria-describedby'], field?.describedBy].filter(Boolean).join(' ') || undefined;
   const invalid = Boolean(field?.invalid) || own['aria-invalid'] === true || own['aria-invalid'] === 'true';
-  const required = field ? !field.optional : undefined;
+  const required = field && !field.quiet ? !field.optional : undefined;
   return { id, 'aria-describedby': describedBy, 'aria-invalid': invalid ? (true as const) : undefined, 'aria-required': required, invalid };
 }
 
@@ -25,6 +25,8 @@ type FieldProps = {
   error?: string | null;
   /** Optional fields say so; required is the default and is announced to screen readers only. */
   optional?: boolean;
+  /** Neither "(required)" nor "(optional)": for standalone lookups where the control is not part of a form to submit. */
+  quiet?: boolean;
   className?: string;
   children: ReactNode;
 };
@@ -33,18 +35,18 @@ type FieldProps = {
  * Label above a control, optional hint, inline error. Hint and error ids are wired into the control's
  * aria-describedby by Input / Textarea / Select placed inside.
  */
-export default function Field({ label, id, hint, error, optional = false, className = '', children }: FieldProps) {
+export default function Field({ label, id, hint, error, optional = false, quiet = false, className = '', children }: FieldProps) {
   const auto = useId();
   const base = id ?? auto;
   const hintId = hint ? `${base}-hint` : undefined;
   const errorId = error ? `${base}-error` : undefined;
   const describedBy = [hintId, errorId].filter(Boolean).join(' ') || undefined;
   return (
-    <Ctx.Provider value={{ id: base, describedBy, invalid: Boolean(error), optional }}>
+    <Ctx.Provider value={{ id: base, describedBy, invalid: Boolean(error), optional, quiet }}>
       <div className={className}>
         <label htmlFor={base} className="mb-2 block text-sm text-charcoal">
           {label}
-          {optional ? <span className="ml-1.5 text-stone-dark">(optional)</span> : <span className="sr-only"> (required)</span>}
+          {quiet ? null : optional ? <span className="ml-1.5 text-stone-dark">(optional)</span> : <span className="sr-only"> (required)</span>}
         </label>
         {children}
         {hint && (

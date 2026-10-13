@@ -104,4 +104,16 @@ describe('ProductBuyBox', () => {
     expect(screen.getByRole('dialog').textContent).toContain('Red Rose');
     expect(add).not.toHaveBeenCalled();
   });
+
+  it('shows the PIN check for purchasable products only', () => {
+    const pin = () => screen.queryByLabelText(/delivery pin code/i);
+    const { unmount } = render(<ProductBuyBox product={product} />);
+    expect(pin()).not.toBeNull();
+    unmount();
+    const enquiry = render(<ProductBuyBox product={{ ...product, saleMode: 'ENQUIRY' }} />);
+    expect(pin()).toBeNull();
+    enquiry.unmount();
+    render(<ProductBuyBox product={{ ...product, stock: 0 }} />);
+    expect(pin()).toBeNull();
+  });
 });

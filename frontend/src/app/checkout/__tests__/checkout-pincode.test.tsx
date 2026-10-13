@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import CheckoutPage from '../page'
 import { api } from '@/lib/api'
@@ -68,7 +68,7 @@ describe('checkout PIN serviceability gate', () => {
     fn(api.checkPincode).mockResolvedValue({ serviceable: false, message: NO })
     const { container } = await fill()
     fireEvent.submit(container.querySelector('form')!)
-    const msg = await screen.findByText(NO)
+    const msg = (await screen.findAllByText(NO)).find((el) => el.id.endsWith('-error'))!
     const pin = screen.getByLabelText(/pin code/i)
     expect(pin).toHaveAttribute('aria-invalid', 'true')
     expect(pin.getAttribute('aria-describedby')).toContain(msg.id)
@@ -122,5 +122,63 @@ describe('checkout PIN serviceability gate', () => {
     const view = render(<CheckoutPage />)
     await waitFor(() => expect(view.container.querySelector('form')).not.toBeNull())
     await waitFor(() => expect((screen.getByLabelText(/pin code/i) as HTMLInputElement).value).toBe('560001'))
+  })
+
+  it('sets aria-invalid and aria-describedby BEFORE focus lands on the PIN field, and lists it in the summary', async () => {
+    fn(api.checkPincode).mockResolvedValue({ serviceable: false, message: NO })
+    const { container } = await fill()
+    const seen: { invalid: string | null; described: string | null }[] = []
+    const orig = HTMLElement.prototype.focus
+    HTMLElement.prototype.focus = function (this: HTMLElement, ...a: []) {
+      if (this.id === 'checkout-pin') {
+        seen.push({ invalid: this.getAttribute('aria-invalid'), described: this.getAttribute('aria-describedby') })
+      }
+      return orig.apply(this, a)
+    }
+    try {
+      fireEvent.submit(container.querySelector('form')!)
+      await screen.findAllByText(NO)
+      await waitFor(() => expect(seen.length).toBeGreaterThan(0))
+    } finally {
+      HTMLElement.prototype.focus = orig
+    }
+    expect(seen[0].invalid).toBe('true')
+    expect(seen[0].described).toBeTruthy()
+    const summary = screen.getAllByRole('alert').find((a) => a.getAttribute('tabindex') === '-1')!
+    expect(summary).toHaveTextContent(NO)
+    expect(fn(api.createOrder)).not.toHaveBeenCalled()
+  })
+
+  it('treats a non-boolean response as unknown and does not block', async () => {
+    fn(api.checkPincode).mockResolvedValue({ message: 'weird' })
+    const { container } = await fill()
+    fireEvent.submit(container.querySelector('form')!)
+    await waitFor(() => expect(fn(api.createOrder)).toHaveBeenCalledTimes(1))
+  })
+
+  it('ignores a blur response for a PIN that is no longer the current one', async () => {
+    let resolve!: (v: unknown) => void
+    fn(api.checkPincode).mockReturnValueOnce(new Promise((r) => (resolve = r)))
+    await fill('411001')
+    fireEvent.blur(screen.getByLabelText(/pin code/i))
+    fireEvent.change(screen.getByLabelText(/pin code/i), { target: { value: '411002' } })
+    await act(async () => {
+      resolve({ serviceable: false, message: NO })
+    })
+    expect(screen.queryByText(NO)).toBeNull()
+    expect(screen.getByLabelText(/pin code/i)).not.toHaveAttribute('aria-invalid')
+  })
+
+  it('does not re-request a PIN that was already checked (blur twice, then submit)', async () => {
+    fn(api.checkPincode).mockResolvedValue({ serviceable: true, message: 'ok' })
+    const { container } = await fill()
+    const pin = screen.getByLabelText(/pin code/i)
+    fireEvent.blur(pin)
+    await waitFor(() => expect(fn(api.checkPincode)).toHaveBeenCalledTimes(1))
+    await act(async () => {})
+    fireEvent.blur(pin)
+    fireEvent.submit(container.querySelector('form')!)
+    await waitFor(() => expect(fn(api.createOrder)).toHaveBeenCalledTimes(1))
+    expect(fn(api.checkPincode)).toHaveBeenCalledTimes(1)
   })
 })

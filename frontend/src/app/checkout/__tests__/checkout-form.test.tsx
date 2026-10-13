@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, within, act } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach } from 'vitest'
 import CheckoutPage from '../page'
 import { api } from '@/lib/api'
@@ -171,7 +171,11 @@ describe('checkout inline errors and summary', () => {
     fireEvent.submit(form)
     await waitFor(() => expect(fn(api.createOrder)).toHaveBeenCalledTimes(1))
     expect(screen.getByRole('button', { name: /placing order/i })).toBeDisabled()
-    resolve({ id: 5, paymentMethod: 'COD' })
+    await act(async () => {
+      resolve({ id: 5, paymentMethod: 'COD' })
+    })
+    await act(async () => {})
+    expect(fn(api.createOrder)).toHaveBeenCalledTimes(1)
   })
 })
 
