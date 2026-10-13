@@ -33,6 +33,9 @@ type Section = {
   fields: Field[];
 };
 
+// Settings the storefront does not read yet are intentionally NOT listed here (homepage.hero*, seo.*,
+// delivery.cutoffTime / supportedPincodes / leadTimeDays). Their database rows are left untouched: a section save only
+// writes the keys listed below. Add them back when the storefront starts honouring them.
 const SECTIONS: Section[] = [
   {
     id: "store",
@@ -79,28 +82,16 @@ const SECTIONS: Section[] = [
     ],
   },
   {
-    id: "homepage",
-    title: "Homepage Hero",
-    description: "Marketing copy that appears at the top of the homepage. Keep it short and punchy.",
-    fields: [
-      { key: "homepage.heroEyebrow", label: "Eyebrow tag", placeholder: "Curated collections" },
-      { key: "homepage.heroTitle", label: "Headline", placeholder: "Mandi-fresh florals, delivered with care" },
-      { key: "homepage.heroSubtitle", label: "Subtitle", type: "textarea", rows: 2, placeholder: "Roses, orchids, lilies and more — sourced direct from farms across India." },
-      { key: "homepage.heroCtaLabel", label: "Primary button text", placeholder: "Shop bouquets" },
-      { key: "homepage.heroCtaHref", label: "Primary button link", placeholder: "/products" },
-    ],
-  },
-  {
     id: "usps",
     title: "USP / Trust Bar",
     description: "Up to four short value propositions shown on the homepage and product pages.",
     fields: [
-      { key: "trust.usp1Title", label: "USP 1 title", placeholder: "Mandi-fresh daily" },
-      { key: "trust.usp1Body", label: "USP 1 body", placeholder: "Hand-picked at dawn from Delhi flower mandi." },
-      { key: "trust.usp2Title", label: "USP 2 title", placeholder: "Same-day delivery" },
-      { key: "trust.usp2Body", label: "USP 2 body", placeholder: "Order before 2 PM for same-day delivery in Delhi NCR." },
-      { key: "trust.usp3Title", label: "USP 3 title", placeholder: "Replacement promise" },
-      { key: "trust.usp3Body", label: "USP 3 body", placeholder: "Anything off? We will replace or refund — no questions asked." },
+      { key: "trust.usp1Title", label: "USP 1 title", placeholder: "Chosen with care" },
+      { key: "trust.usp1Body", label: "USP 1 body", placeholder: "Stems are selected and prepared for your vase." },
+      { key: "trust.usp2Title", label: "USP 2 title", placeholder: "Delivery across Delhi NCR" },
+      { key: "trust.usp2Body", label: "USP 2 body", placeholder: "Only state what you can always deliver." },
+      { key: "trust.usp3Title", label: "USP 3 title", placeholder: "If something is wrong" },
+      { key: "trust.usp3Body", label: "USP 3 body", placeholder: "Tell us and we will make it right (describe your real policy)." },
       { key: "trust.usp4Title", label: "USP 4 title", placeholder: "Made for occasions" },
       { key: "trust.usp4Body", label: "USP 4 body", placeholder: "Birthdays, anniversaries, weddings, sympathy — we craft for every moment." },
     ],
@@ -110,11 +101,8 @@ const SECTIONS: Section[] = [
     title: "Delivery Settings",
     description: "Service area and timing rules shown across the storefront.",
     fields: [
-      { key: "delivery.cutoffTime", label: "Same-day cutoff", placeholder: "14:00", hint: "Time of day after which orders ship the next day." },
-      { key: "delivery.supportedCities", label: "Supported cities", type: "textarea", rows: 2, placeholder: "Delhi, Gurgaon, Noida, Faridabad" },
-      { key: "delivery.supportedPincodes", label: "Supported PIN codes", type: "textarea", rows: 2, placeholder: "Comma-separated. Leave blank to accept any PIN at checkout." },
+      { key: "delivery.supportedCities", label: "Supported cities", type: "textarea", rows: 2, placeholder: "Delhi NCR", hint: "The first city is used in product page descriptions (search results and link previews). Comma-separated." },
       { key: "delivery.businessHours", label: "Business hours", placeholder: "Mon–Sun, 8am–9pm" },
-      { key: "delivery.leadTimeDays", label: "Default lead time (days)", type: "number", placeholder: "1" },
     ],
   },
   {
@@ -133,16 +121,6 @@ const SECTIONS: Section[] = [
     fields: [
       { key: "policies.returnsSummary", label: "Returns / replacement", type: "textarea", rows: 3, placeholder: "We will replace or refund any flowers that arrive less than fresh." },
       { key: "policies.deliverySummary", label: "Delivery promise", type: "textarea", rows: 3, placeholder: "Describe how orders are delivered." },
-    ],
-  },
-  {
-    id: "seo",
-    title: "SEO Defaults",
-    description: "Used as fallback meta tags when a page does not provide its own.",
-    fields: [
-      { key: "seo.metaTitle", label: "Default meta title", placeholder: "Fresh Petals India — Mandi-fresh flowers, daily" },
-      { key: "seo.metaDescription", label: "Default meta description", type: "textarea", rows: 2, placeholder: "Premium fresh-cut roses, orchids and lilies sourced direct from Indian farms." },
-      { key: "seo.ogImage", label: "Social share image URL", type: "url", placeholder: "https://…/og-image.jpg" },
     ],
   },
 ];
