@@ -109,7 +109,7 @@ const SECTIONS: Section[] = [
         type: "textarea",
         rows: 3,
         placeholder: "110001, 1100*",
-        hint: "Separate with commas, spaces or new lines. Use a full 6-digit PIN (110001) or a prefix ending in * (1100*). Leave empty to deliver everywhere. Orders to other PIN codes are refused at checkout.",
+        hint: "Separate with commas, spaces or new lines. Use a full 6-digit PIN (110001) or a prefix ending in * (1100*). Entries are validated when you save: anything that is not a 6-digit PIN or a prefix like 1100* is rejected. Leave empty to deliver everywhere (nothing is restricted). Once a list is set, orders to other PIN codes are refused at checkout.",
       },
     ],
   },
