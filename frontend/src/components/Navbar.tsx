@@ -1,9 +1,10 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Cart from "./Cart";
-import SignInModal from "./SignInModal";
+const SignInModal = dynamic(() => import("./SignInModal"), { ssr: false });
 import AccountMenu from "./chrome/AccountMenu";
 import HeaderSearch from "./chrome/HeaderSearch";
 import { MenuIcon } from "./chrome/icons";

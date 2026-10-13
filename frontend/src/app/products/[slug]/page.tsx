@@ -10,7 +10,7 @@ import Accordion from "@/components/product/Accordion";
 import ProductBuyBox from "@/components/product/ProductBuyBox";
 import ProductGrid from "@/components/product/ProductGrid";
 import Stars from "@/components/product/Stars";
-import ProductReviews from "@/components/ProductReviews";
+import ProductReviews from "@/components/ProductReviewsLazy";
 import { getProduct, getSettings, listProducts } from "@/lib/server-api";
 import { breadcrumbJsonLd, metaDescription, productJsonLd } from "@/lib/seo";
 import { leadText, splitDescription } from "@/lib/description";
