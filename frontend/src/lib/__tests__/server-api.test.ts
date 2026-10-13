@@ -125,6 +125,18 @@ describe('server-api', () => {
     expect(fetchMock.mock.calls[1][1].signal).toBeInstanceOf(AbortSignal);
   });
 
+  it('getLayoutSettings gives up after the cap when the API hangs', async () => {
+    vi.useFakeTimers();
+    const { getLayoutSettings } = await load();
+    fetchMock.mockReturnValue(new Promise(() => {}));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const p = getLayoutSettings();
+    await vi.advanceTimersByTimeAsync(2600);
+    expect(await p).toBeNull();
+    warn.mockRestore();
+    vi.useRealTimers();
+  });
+
   it('dedupes identical requests within a render (React cache) and still sends an abort signal', async () => {
     vi.resetModules();
     vi.doMock('react', async (orig) => {
@@ -146,6 +158,10 @@ describe('server-api', () => {
     expect(fetchMock.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal);
     await getProduct('b');
     expect(fetchMock).toHaveBeenCalledTimes(3);
+    // layout and PDP settings share one cache entry
+    const { getSettings, getLayoutSettings } = await import('../server-api');
+    await Promise.all([getSettings(), getLayoutSettings(), getSettings()]);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
     vi.doUnmock('react');
   });
 });

@@ -33,9 +33,11 @@ export type ProductPage = { items: ApiProduct[]; total: number; page: number; pa
 type Memo = <A extends unknown[], R>(fn: (...a: A) => R) => (...a: A) => R;
 const requestCache: Memo = (React as unknown as { cache?: Memo }).cache ?? ((fn) => fn);
 
-async function fetchJson<T>(path: string, revalidate: number, allow404: boolean, timeoutMs: number): Promise<T | null> {
+const API_TIMEOUT_MS = 5000;
+
+async function fetchJson<T>(path: string, revalidate: number, allow404: boolean): Promise<T | null> {
   // Timeout: a hung API must fail the call (callers degrade) rather than hang the page.
-  const res = await fetch(`${base()}${path}`, { next: { revalidate }, signal: AbortSignal.timeout(timeoutMs) });
+  const res = await fetch(`${base()}${path}`, { next: { revalidate }, signal: AbortSignal.timeout(API_TIMEOUT_MS) });
   if (allow404 && res.status === 404) return null;
   if (!res.ok) throw new Error(`API ${path.split('?')[0]} responded ${res.status}`);
   return (await res.json()) as T;
@@ -43,8 +45,8 @@ async function fetchJson<T>(path: string, revalidate: number, allow404: boolean,
 
 const memoGet = requestCache(fetchJson);
 
-function get<T>(path: string, revalidate = 60, allow404 = false, timeoutMs = 5000): Promise<T | null> {
-  return memoGet(path, revalidate, allow404, timeoutMs) as Promise<T | null>;
+function get<T>(path: string, revalidate = 60, allow404 = false): Promise<T | null> {
+  return memoGet(path, revalidate, allow404) as Promise<T | null>;
 }
 
 /** Returns null when the product does not exist; throws on any other failure. */
@@ -79,17 +81,28 @@ export async function getSettings(): Promise<Record<string, string>> {
   return (await get<Record<string, string>>('/settings', 300))!;
 }
 
+const LAYOUT_SETTINGS_CAP_MS = 2500;
+
 /**
- * Settings for the root layout (announcement bar, footer contact). Never throws and uses a shorter timeout
- * than page data, because every page render waits on it: null means "unavailable", and the client provider
- * then loads the settings itself after mount.
+ * Settings for the root layout (announcement bar, footer contact). Never throws and gives up after 2.5 s,
+ * because every page render waits on it: null means "unavailable", and the client provider then loads the
+ * settings itself after mount. Shares the memoised `getSettings()` request (same cache entry as the PDP), so
+ * one render makes one settings call; the cap only bounds how long the layout waits for it.
  */
 export async function getLayoutSettings(): Promise<Record<string, string> | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    return await get<Record<string, string>>('/settings', 300, false, 2500);
+    return await Promise.race([
+      getSettings(),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('layout settings timed out')), LAYOUT_SETTINGS_CAP_MS);
+      }),
+    ]);
   } catch (err) {
     console.warn('[layout] settings fetch failed, client will load them', err);
     return null;
+  } finally {
+    clearTimeout(timer);
   }
 }
 

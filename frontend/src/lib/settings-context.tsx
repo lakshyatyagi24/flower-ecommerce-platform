@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, ReactNode } from "react";
 import { api } from "./api";
 
 export type StoreUSP = {
@@ -189,6 +189,15 @@ const SettingsContext = createContext<StoreSettings>(FALLBACK);
  */
 export function SettingsProvider({ children, initialRaw }: { children: ReactNode; initialRaw?: Record<string, string> | null }) {
   const [settings, setSettings] = useState<StoreSettings>(() => (initialRaw ? fromRaw(initialRaw) : FALLBACK));
+
+  // A new server payload (layout re-rendered with fresher settings) replaces the state; the first render already used it.
+  const seeded = useRef(initialRaw);
+  useEffect(() => {
+    if (initialRaw && initialRaw !== seeded.current) {
+      seeded.current = initialRaw;
+      setSettings(fromRaw(initialRaw));
+    }
+  }, [initialRaw]);
 
   useEffect(() => {
     if (initialRaw) return;
