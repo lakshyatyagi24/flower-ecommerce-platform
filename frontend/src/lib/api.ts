@@ -317,6 +317,10 @@ export const api = {
   trackOrder: (id: number, email: string) =>
     apiFetch<ApiOrder>(`/orders/track/${id}?email=${encodeURIComponent(email)}`),
 
+  // Delivery
+  checkPincode: (pincode: string) =>
+    apiFetch<{ serviceable: boolean; message: string }>(`/delivery/check?pincode=${encodeURIComponent(pincode)}`),
+
   // Payments (Razorpay)
   getPaymentConfig: () => apiFetch<{ enabled: boolean }>('/payments/razorpay/config'),
   createRazorpayOrder: (orderId: number, email?: string) =>

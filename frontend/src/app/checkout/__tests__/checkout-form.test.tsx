@@ -34,6 +34,7 @@ vi.mock('@/lib/api', () => {
       getPaymentConfig: vi.fn(),
       getProductBySlug: vi.fn(),
       createOrder: vi.fn(),
+      checkPincode: vi.fn(async () => ({ serviceable: true, message: '' })),
       getMyOrder: vi.fn(),
     },
   }
@@ -168,7 +169,7 @@ describe('checkout inline errors and summary', () => {
     const form = container.querySelector('form')!
     fireEvent.submit(form)
     fireEvent.submit(form)
-    expect(fn(api.createOrder)).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(fn(api.createOrder)).toHaveBeenCalledTimes(1))
     expect(screen.getByRole('button', { name: /placing order/i })).toBeDisabled()
     resolve({ id: 5, paymentMethod: 'COD' })
   })

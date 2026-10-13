@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Button from "@/components/ui/Button";
 import EnquiryModal from "@/components/EnquiryModal";
+import PincodeCheck from "@/components/PincodeCheck";
 import { useCart } from "@/lib/cart-context";
 import { availability, minQty, toCartItem } from "@/lib/product-helpers";
 import type { ApiProduct } from "@/lib/api";
@@ -110,6 +111,7 @@ export default function ProductBuyBox({ product }: { product: BuyBoxProduct }) {
           {product.stock <= 10 && <span>Only {product.stock} left.</span>}
         </p>
       )}
+      <PincodeCheck className="mt-6 border-t border-stone-light pt-6" />
     </div>
   );
 }

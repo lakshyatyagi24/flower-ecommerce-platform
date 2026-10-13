@@ -22,6 +22,7 @@ import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
 import RadioCard from "@/components/ui/RadioCard";
 import FormError from "@/components/ui/FormError";
+import { readStoredPincode, storePincode } from "@/lib/pincode-storage";
 import {
   CHECKOUT_FIELD_ORDER,
   PHONE_PATTERN,
@@ -29,6 +30,8 @@ import {
   validateCheckout,
   type CheckoutFieldName,
 } from "@/lib/checkout-validation";
+
+const PIN_RE = new RegExp(`^(?:${PIN_PATTERN})$`);
 
 const FIELD_IDS: Record<CheckoutFieldName, string> = {
   customerName: "checkout-name",
@@ -86,7 +89,31 @@ export default function CheckoutPage() {
   const summaryRef = useRef<HTMLDivElement>(null);
   const submittingRef = useRef(false);
   const errors = useMemo(() => validateCheckout(form), [form]);
-  const fieldError = (k: CheckoutFieldName) => (touched[k] || attempted ? errors[k] : undefined);
+  // Serviceability for the PIN last checked. Only an explicit `serviceable:false` blocks; a failed request
+  // (`unknown`) never does, because the backend enforces the same rule when the order is created.
+  const [pinCheck, setPinCheck] = useState<{ pin: string; status: "ok" | "no" | "unknown"; message: string } | null>(null);
+  const pinNow = form.postalCode.trim();
+  const pinBlocked = pinCheck && pinCheck.pin === pinNow && pinCheck.status === "no" ? pinCheck.message : undefined;
+  const fieldError = (k: CheckoutFieldName) =>
+    touched[k] || attempted ? errors[k] ?? (k === "postalCode" ? pinBlocked : undefined) : undefined;
+  const checkPin = async (pin: string) => {
+    if (!PIN_RE.test(pin)) return null;
+    let next: { pin: string; status: "ok" | "no" | "unknown"; message: string };
+    try {
+      const res = await api.checkPincode(pin);
+      next = { pin, status: res.serviceable ? "ok" : "no", message: res.message };
+      if (res.serviceable) storePincode(pin);
+    } catch {
+      next = { pin, status: "unknown", message: "" };
+    }
+    setPinCheck(next);
+    return next;
+  };
+  // Prefill the PIN remembered from the product page, only when the field is still empty.
+  useEffect(() => {
+    const saved = readStoredPincode();
+    if (saved) setForm((f) => (f.postalCode ? f : { ...f, postalCode: saved }));
+  }, []);
   const summaryItems = attempted
     ? CHECKOUT_FIELD_ORDER.filter((k) => errors[k]).map((k) => ({ id: FIELD_IDS[k], message: errors[k] as string }))
     : [];
@@ -386,6 +413,13 @@ export default function CheckoutPage() {
     submittingRef.current = true;
     setSubmitting(true);
     try {
+      const pin = form.postalCode.trim();
+      const known = pinCheck && pinCheck.pin === pin ? pinCheck : await checkPin(pin);
+      if (known?.status === "no") {
+        setTouched((t) => ({ ...t, postalCode: true }));
+        focusField(FIELD_IDS.postalCode);
+        return;
+      }
       const order = await api.createOrder({
         items: items.map((it) => ({ productId: it.productId, quantity: it.quantity })),
         customerName: form.customerName.trim(),
@@ -561,7 +595,10 @@ export default function CheckoutPage() {
                     title="Enter a valid 6-digit PIN code"
                     value={form.postalCode}
                     onChange={(e) => update("postalCode", e.target.value)}
-                    onBlur={blur("postalCode")}
+                    onBlur={() => {
+                      blur("postalCode")();
+                      void checkPin(form.postalCode.trim());
+                    }}
                   />
                 </Field>
                 <Field id="checkout-notes" label="Notes for delivery" optional className="sm:col-span-2">

@@ -34,6 +34,7 @@ vi.mock('@/lib/api', () => {
       getPaymentConfig: vi.fn().mockResolvedValue({ enabled: true }),
       getProductBySlug: vi.fn().mockResolvedValue({ id: 1, price: 100, gstRate: 0 }),
       createOrder: vi.fn(),
+      checkPincode: vi.fn(async () => ({ serviceable: true, message: '' })),
     },
   }
 })

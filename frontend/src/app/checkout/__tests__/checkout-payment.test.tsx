@@ -35,6 +35,7 @@ vi.mock('@/lib/api', () => {
       getPaymentConfig: vi.fn(),
       getProductBySlug: vi.fn(),
       createOrder: vi.fn(),
+      checkPincode: vi.fn(async () => ({ serviceable: true, message: '' })),
       getMyOrder: vi.fn(),
       setOrderPaymentMethod: vi.fn(),
     },

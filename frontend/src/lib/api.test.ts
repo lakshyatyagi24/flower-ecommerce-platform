@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { extractErrorMessage } from './api';
+import { describe, expect, it, vi } from 'vitest';
+import { api, extractErrorMessage } from './api';
 
 describe('extractErrorMessage', () => {
   it('returns string messages as is', () => {
@@ -13,5 +13,25 @@ describe('extractErrorMessage', () => {
   it('falls back to status', () => {
     expect(extractErrorMessage(null, 500)).toBe('Request failed (500)');
     expect(extractErrorMessage({ message: [] }, 400)).toBe('Request failed (400)');
+  });
+});
+
+describe('api.checkPincode', () => {
+  it('GETs /delivery/check with the encoded pincode and returns the body', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ serviceable: true, message: 'We deliver to this PIN code.' }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      await expect(api.checkPincode('110001')).resolves.toEqual({ serviceable: true, message: 'We deliver to this PIN code.' });
+      const [url, init] = fetchMock.mock.calls[0];
+      expect(String(url)).toMatch(/\/delivery\/check\?pincode=110001$/);
+      expect(init.method).toBe('GET');
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
