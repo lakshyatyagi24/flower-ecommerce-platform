@@ -161,4 +161,68 @@ describe('checkout delivery date field', () => {
     await waitFor(() => expect(fn(api.getDeliveryOptions)).toHaveBeenCalledTimes(2))
     expect(await screen.findByText(/Please choose a delivery date between A and B/)).toBeInTheDocument()
   })
+
+  it('keeps the form mounted and focuses the error summary while the options reload slowly', async () => {
+    fn(api.createOrder).mockRejectedValueOnce(new Error('Please choose a delivery date between A and B'))
+    let resolveReload: (v: unknown) => void = () => {}
+    fn(api.getDeliveryOptions)
+      .mockResolvedValueOnce(OPTIONS)
+      .mockReturnValueOnce(new Promise((r) => (resolveReload = r)))
+    const { container } = await open()
+    const form = container.querySelector('form')!
+    fireEvent.change(screen.getByLabelText(/^address/i), { target: { value: 'Typed address' } })
+    fireEvent.submit(form)
+    const message = await screen.findByText(/Please choose a delivery date between A and B/)
+    // reload is in flight: nothing was torn down, typed values survive, focus sits on the error summary
+    expect(container.querySelector('form')).toBe(form)
+    expect((screen.getByLabelText(/^address/i) as HTMLTextAreaElement).value).toBe('Typed address')
+    expect(document.activeElement).toBe(message.closest('[tabindex]') ?? message.parentElement)
+    expect(screen.queryByRole('button', { name: /try again/i })).toBeNull()
+    resolveReload({ ...OPTIONS, earliest: '2026-10-15' })
+    await waitFor(() => expect(dateInput().min).toBe('2026-10-15'))
+    expect(container.querySelector('form')).toBe(form)
+  })
+
+  it('moves an untouched date to the new earliest after a reload, but keeps a later pick', async () => {
+    fn(api.createOrder).mockRejectedValue(new Error('Please choose a delivery date between A and B'))
+    fn(api.getDeliveryOptions)
+      .mockResolvedValueOnce(OPTIONS)
+      .mockResolvedValueOnce({ ...OPTIONS, earliest: '2026-10-15' })
+      .mockResolvedValueOnce({ ...OPTIONS, earliest: '2026-10-16' })
+    const { container } = await open()
+    expect(dateInput().value).toBe('2026-10-14')
+    fireEvent.submit(container.querySelector('form')!)
+    await waitFor(() => expect(dateInput().value).toBe('2026-10-15'))
+    // a deliberate later pick survives the next reload
+    fireEvent.change(dateInput(), { target: { value: '2026-10-25' } })
+    fireEvent.submit(container.querySelector('form')!)
+    await waitFor(() => expect(dateInput().min).toBe('2026-10-16'))
+    expect(dateInput().value).toBe('2026-10-25')
+  })
+
+  it('moves a date that fell below the new earliest up to it', async () => {
+    fn(api.createOrder).mockRejectedValue(new Error('Please choose a delivery date between A and B'))
+    fn(api.getDeliveryOptions)
+      .mockResolvedValueOnce(OPTIONS)
+      .mockResolvedValueOnce({ ...OPTIONS, earliest: '2026-10-17' })
+    const { container } = await open()
+    fireEvent.change(dateInput(), { target: { value: '2026-10-16' } })
+    fireEvent.submit(container.querySelector('form')!)
+    await waitFor(() => expect(dateInput().min).toBe('2026-10-17'))
+    expect(dateInput().value).toBe('2026-10-17')
+  })
+
+  it('keeps the form with an inline message when the reload itself fails', async () => {
+    fn(api.createOrder).mockRejectedValueOnce(new Error('Please choose a delivery date between A and B'))
+    fn(api.getDeliveryOptions).mockResolvedValueOnce(OPTIONS).mockRejectedValueOnce(new Error('down'))
+    const { container } = await open()
+    const form = container.querySelector('form')!
+    fireEvent.submit(form)
+    const note = await screen.findByText(/couldn't refresh the available dates/i)
+    expect(note.id).toBe(`${dateInput().id}-error`)
+    expect(note.closest('[role="alert"]')).toBeNull()
+    expect(container.querySelector('form')).toBe(form)
+    expect(screen.queryByRole('button', { name: /try again/i })).toBeNull()
+    expect(dateInput().min).toBe('2026-10-14')
+  })
 })

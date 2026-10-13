@@ -155,9 +155,17 @@ export default function CheckoutPage() {
     const saved = readStoredPincode();
     if (saved) setForm((f) => (f.postalCode ? f : { ...f, postalCode: saved }));
   }, []);
-  // Start on the earliest available date; the shopper can move it. Never overwrites a choice already made.
+  // Start on the earliest available date; the shopper can move it. A real choice is kept, but a date still on the
+  // old earliest (never moved) or now before the new earliest (the window advanced) follows the new earliest.
+  const prevEarliestRef = useRef<string | null>(null);
   useEffect(() => {
-    if (deliveryOptions) setForm((f) => (f.deliveryDate ? f : { ...f, deliveryDate: deliveryOptions.earliest }));
+    if (!deliveryOptions) return;
+    const { earliest } = deliveryOptions;
+    const prev = prevEarliestRef.current;
+    prevEarliestRef.current = earliest;
+    setForm((f) =>
+      !f.deliveryDate || f.deliveryDate === prev || f.deliveryDate < earliest ? { ...f, deliveryDate: earliest } : f,
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [optionsRaw]);
   const summaryItems = attempted
@@ -420,7 +428,9 @@ export default function CheckoutPage() {
     );
   }
 
-  if (count > 0 && (optionsError || (!optionsLoading && !deliveryOptions))) {
+  // Full-page states only while there are no options yet. During a reload (e.g. after a rejected date) the previous
+  // window stays on screen so the form, the typed values and the focused error summary are not torn down.
+  if (count > 0 && !deliveryOptions && (optionsError || !optionsLoading)) {
     return (
       <main>
         <Container className="py-12">
@@ -430,7 +440,7 @@ export default function CheckoutPage() {
     );
   }
 
-  if (count > 0 && (settingsLoading || pricesLoading || configLoading || optionsLoading || !settingsData || !pricing || !deliveryOptions)) {
+  if (count > 0 && (settingsLoading || pricesLoading || configLoading || (optionsLoading && !deliveryOptions) || !settingsData || !pricing || !deliveryOptions)) {
     return (
       <main>
         <Container className="py-12 lg:py-16">
@@ -676,7 +686,10 @@ export default function CheckoutPage() {
                   label="Delivery date"
                   className="sm:col-span-2"
                   hint={dateHint(deliveryOptions)}
-                  error={fieldError("deliveryDate")}
+                  error={
+                    fieldError("deliveryDate") ??
+                    (optionsError ? "We couldn't refresh the available dates, so the dates shown may be out of date." : undefined)
+                  }
                 >
                   <Input
                     type="date"
