@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useContext, useId, type ReactNode } from 'react';
 
-type FieldCtx = { id: string; describedBy?: string; invalid: boolean };
+type FieldCtx = { id: string; describedBy?: string; invalid: boolean; optional: boolean };
 const Ctx = createContext<FieldCtx | null>(null);
 
 type OwnProps = { id?: string; 'aria-describedby'?: string; 'aria-invalid'?: boolean | 'true' | 'false' | 'grammar' | 'spelling' };
@@ -13,7 +13,8 @@ export function useControlProps(own: OwnProps) {
   const id = own.id ?? field?.id ?? fallbackId;
   const describedBy = [own['aria-describedby'], field?.describedBy].filter(Boolean).join(' ') || undefined;
   const invalid = Boolean(field?.invalid) || own['aria-invalid'] === true || own['aria-invalid'] === 'true';
-  return { id, 'aria-describedby': describedBy, 'aria-invalid': invalid ? (true as const) : undefined, invalid };
+  const required = field ? !field.optional : undefined;
+  return { id, 'aria-describedby': describedBy, 'aria-invalid': invalid ? (true as const) : undefined, 'aria-required': required, invalid };
 }
 
 type FieldProps = {
@@ -39,7 +40,7 @@ export default function Field({ label, id, hint, error, optional = false, classN
   const errorId = error ? `${base}-error` : undefined;
   const describedBy = [hintId, errorId].filter(Boolean).join(' ') || undefined;
   return (
-    <Ctx.Provider value={{ id: base, describedBy, invalid: Boolean(error) }}>
+    <Ctx.Provider value={{ id: base, describedBy, invalid: Boolean(error), optional }}>
       <div className={className}>
         <label htmlFor={base} className="mb-2 block text-sm text-charcoal">
           {label}
@@ -52,7 +53,7 @@ export default function Field({ label, id, hint, error, optional = false, classN
           </p>
         )}
         {error && (
-          <p id={errorId} role="alert" className="mt-2 text-sm text-danger">
+          <p id={errorId} className="mt-2 text-sm text-danger">
             {error}
           </p>
         )}

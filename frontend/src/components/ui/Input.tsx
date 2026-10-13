@@ -14,6 +14,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input({ classNam
       id={c.id}
       aria-describedby={c['aria-describedby']}
       aria-invalid={c['aria-invalid']}
+      aria-required={c['aria-required']}
       className={`${controlBase} ${controlBorder(c.invalid)} ${className}`.trim()}
     />
   );

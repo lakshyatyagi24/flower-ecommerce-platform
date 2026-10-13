@@ -15,6 +15,7 @@ const Textarea = forwardRef<HTMLTextAreaElement, ComponentPropsWithoutRef<'texta
       id={c.id}
       aria-describedby={c['aria-describedby']}
       aria-invalid={c['aria-invalid']}
+      aria-required={c['aria-required']}
       className={`${controlBase} ${controlBorder(c.invalid)} resize-y py-3 leading-relaxed ${className}`.trim()}
     />
   );

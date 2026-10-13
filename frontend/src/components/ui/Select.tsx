@@ -16,6 +16,7 @@ const Select = forwardRef<HTMLSelectElement, ComponentPropsWithoutRef<'select'>>
       id={c.id}
       aria-describedby={c['aria-describedby']}
       aria-invalid={c['aria-invalid']}
+      aria-required={c['aria-required']}
       className={`${controlBase} ${controlBorder(c.invalid)} pr-10 ${className}`.trim()}
     >
       {children}

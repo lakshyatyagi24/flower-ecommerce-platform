@@ -17,7 +17,7 @@ export default function RadioCard({ title, description, className = '', id, ...r
   return (
     <label
       htmlFor={base}
-      className={`flex min-h-14 cursor-pointer items-start gap-4 rounded-sm border border-stone-light p-4 transition-colors duration-200 hover:border-stone has-[:checked]:border-charcoal has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-moss ${className}`.trim()}
+      className={`flex min-h-14 cursor-pointer items-start gap-4 rounded-sm border border-stone p-4 transition-colors duration-200 hover:border-charcoal has-[:checked]:border-charcoal has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-moss ${className}`.trim()}
     >
       <input {...rest} id={base} type="radio" aria-describedby={descId} className="mt-0.5 h-5 w-5 shrink-0 accent-moss" />
       <span className="block">

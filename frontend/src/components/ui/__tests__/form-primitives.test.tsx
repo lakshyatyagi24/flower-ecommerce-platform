@@ -34,13 +34,15 @@ describe('Field + Input', () => {
     expect(texts).toContain('Enter a valid phone');
   });
 
-  it('renders the error with role=alert and no aria-invalid / describedby when valid', () => {
+  it('links the error via aria-describedby (no live-region role; the summary announces) and clears it when valid', () => {
     const { rerender } = render(
       <Field label="Phone" error="Bad">
         <Input />
       </Field>,
     );
-    expect(screen.getByRole('alert')).toHaveTextContent('Bad');
+    const errId = screen.getByLabelText(/phone/i).getAttribute('aria-describedby')!;
+    expect(document.getElementById(errId)).toHaveTextContent('Bad');
+    expect(screen.queryByRole('alert')).toBeNull();
     rerender(
       <Field label="Phone">
         <Input />
@@ -68,6 +70,17 @@ describe('Field + Input', () => {
     expect(hidden.className).toContain('sr-only');
   });
 
+  it('exposes the required state with aria-required (false for optional fields)', () => {
+    render(
+      <>
+        <Field label="Name"><Input /></Field>
+        <Field label="Notes" optional><Input /></Field>
+      </>,
+    );
+    expect(screen.getByLabelText(/^name/i)).toHaveAttribute('aria-required', 'true');
+    expect(screen.getByLabelText(/^notes/i)).toHaveAttribute('aria-required', 'false');
+  });
+
   it('uses 16px text and a 48px minimum height', () => {
     render(
       <Field label="A">
@@ -78,7 +91,7 @@ describe('Field + Input', () => {
     expect(cls).toContain('text-base');
     expect(cls).toContain('min-h-12');
     expect(cls).toContain('rounded-sm');
-    expect(cls).toContain('border-stone-light');
+    expect(cls).toContain('border-stone');
   });
 
   it('uses the danger border when invalid and passes native attributes through', () => {
