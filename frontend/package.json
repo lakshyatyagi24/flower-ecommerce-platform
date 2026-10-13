@@ -11,7 +11,10 @@
     "lint:colours": "node scripts/check-colours.mjs",
     "check:bundle": "node scripts/check-bundle.mjs",
     "patch:og": "node scripts/patch-og-windows.mjs",
-    "render:og": "node scripts/render-og-default.mjs"
+    "render:og": "node scripts/render-og-default.mjs",
+    "typecheck": "tsc --noEmit",
+    "test:ci": "vitest run",
+    "verify": "npm run lint:colours && npm run typecheck && npm run test:ci && npm run build && npm run check:bundle"
   },
   "overrides": {
     "@types/react": "^18",

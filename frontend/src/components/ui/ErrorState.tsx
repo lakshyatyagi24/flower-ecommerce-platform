@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Container from './Container';
 
 export default function ErrorState({
   message,
@@ -10,7 +11,7 @@ export default function ErrorState({
   link?: { href: string; label: string };
 }) {
   return (
-    <div role="alert" className="section-shell my-10 text-center">
+    <Container role="alert" className="my-10 text-center">
       <p className="text-sm">{message}</p>
       {onRetry && (
         <button type="button" onClick={onRetry} className="mt-4 underline underline-offset-4">
@@ -22,6 +23,6 @@ export default function ErrorState({
           {link.label}
         </Link>
       )}
-    </div>
+    </Container>
   );
 }

@@ -7,7 +7,7 @@
 //   node scripts/check-colours.mjs a.tsx b.tsx           (same; bare args work too)
 //
 // Prints per-file offenders (first 5 each), the first 10 files, and totals.
-// Exit code 1 if anything is found. Expected to FAIL until Task 3.9.
+// Exit code 1 if anything is found. Part of `npm run verify`.
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { findColourHits } from './colour-patterns.mjs';

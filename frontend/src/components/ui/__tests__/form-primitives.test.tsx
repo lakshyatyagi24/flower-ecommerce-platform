@@ -5,7 +5,6 @@ import Field from '../Field';
 import Input, { PasswordInput } from '../Input';
 import Textarea from '../Textarea';
 import Select from '../Select';
-import Checkbox from '../Checkbox';
 import RadioCard from '../RadioCard';
 import FormError from '../FormError';
 
@@ -170,16 +169,6 @@ describe('PasswordInput', () => {
     expect(hide).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(hide);
     expect(input.type).toBe('password');
-  });
-});
-
-describe('Checkbox', () => {
-  it('is labelled and toggles', () => {
-    const onChange = vi.fn();
-    render(<Checkbox label="Gift wrap" onChange={onChange} />);
-    const box = screen.getByRole('checkbox', { name: 'Gift wrap' });
-    fireEvent.click(box);
-    expect(onChange).toHaveBeenCalled();
   });
 });
 

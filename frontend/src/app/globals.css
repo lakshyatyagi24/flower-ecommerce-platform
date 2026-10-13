@@ -17,14 +17,8 @@
   /* Error text and invalid-field borders only (form validation). 6.8:1 on ivory (AA). Not a decorative colour. */
   --color-danger: #8A3B2E;
 
-  /* LEGACY aliases so un-migrated pages keep working; removed in Task 3.9. */
-  --color-olive-green: var(--color-moss);
-  --color-light-brown: var(--color-stone);
-  --color-beige: var(--color-ivory);
-
   --font-display: var(--font-cormorant), ui-serif, Georgia, serif;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--font-display);
 
   --radius-sm: 2px;
   --radius-md: 4px;
@@ -36,8 +30,6 @@
   --foreground: var(--color-charcoal);
   --accent: var(--color-charcoal);
   --accent-muted: var(--color-stone-dark);
-  --pill: var(--color-ivory-deep);
-  --card: var(--color-white);
 }
 
 body {
@@ -63,38 +55,6 @@ h1, h2, h3, .type-display, .type-h1, .type-h2, .type-h3 { text-wrap: balance; }
 .type-h3 { font-family: var(--font-display); font-weight: 500; font-size: clamp(1.5rem, 2.2vw, 1.875rem); line-height: 1.2; }
 .type-body { font-size: 1rem; line-height: 1.7; }
 .type-eyebrow { font-size: 12px; line-height: 1.4; text-transform: uppercase; letter-spacing: 0.16em; color: var(--color-stone-dark); }
-
-/* LEGACY helpers (restyled flat; removed in Task 3.9) */
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--color-ivory-deep);
-  color: var(--color-charcoal);
-  padding: 6px 12px;
-  border-radius: var(--radius-sm);
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  font-size: 11px;
-}
-
-/* LEGACY alias of <Container> width */
-.section-shell {
-  width: 100%;
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0 1.25rem;
-}
-@media (min-width: 768px) {
-  .section-shell { padding: 0 2rem; }
-}
-
-.section-card {
-  background: var(--color-white);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-stone-light);
-}
 
 /* Site is calm: honour reduced motion everywhere */
 @media (prefers-reduced-motion: reduce) {
@@ -126,69 +86,3 @@ h1, h2, h3, .type-display, .type-h1, .type-h2, .type-h3 { text-wrap: balance; }
 @keyframes drawerIn { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
 .chrome-fade { animation: chromeFade 160ms ease-out both; }
 .drawer-in { animation: drawerIn 260ms ease-out both; }
-
-/* Animations and small utilities used by BestInFlowers */
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.focus-ring-olive:focus {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(124,131,90,0.18);
-}
-
-/* small card shadow increase for hover */
-.card-elevate:hover {
-  box-shadow: 0 12px 30px rgba(10,10,10,0.08);
-}
-
-/* Utility to hide scrollbars while preserving scrollability (used for carousels) */
-.no-scrollbar {
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
-}
-.no-scrollbar::-webkit-scrollbar { display: none; } /* Chrome, Safari, Opera */
-
-/* Rustic background vignette used across tracking pages */
-.rustic-vignette {
-  background-image: radial-gradient(circle at 10% 10%, rgba(124,131,90,0.04), transparent 10%), radial-gradient(circle at 90% 90%, rgba(183,155,122,0.03), transparent 18%);
-}
-
-/* Flower/leaf motif gentle float for status transitions */
-@keyframes leafFloat {
-  0% { transform: translateY(0) rotate(-4deg) scale(1); opacity: 0.95; }
-  50% { transform: translateY(-6px) rotate(2deg) scale(1.02); opacity: 1; }
-  100% { transform: translateY(0) rotate(-4deg) scale(1); opacity: 0.95; }
-}
-.leaf-motif {
-  animation: leafFloat 2400ms ease-in-out infinite;
-  will-change: transform, opacity;
-}
-
-/* Respect user's reduced motion preference */
-@media (prefers-reduced-motion: reduce) {
-  .leaf-motif { animation: none; }
-}
-
-/* Micro-illustration bloom for timeline steps */
-@keyframes bloomScale {
-  0% { transform: scale(0.88) translateY(2px); opacity: 0.85; }
-  60% { transform: scale(1.08) translateY(-2px); opacity: 1; }
-  100% { transform: scale(1) translateY(0); opacity: 1; }
-}
-
-@keyframes petalPulse {
-  0% { transform: rotate(-4deg) scale(0.98); }
-  50% { transform: rotate(3deg) scale(1.02); }
-  100% { transform: rotate(-4deg) scale(0.98); }
-}
-
-.step-illustration { display: inline-block; }
-.step-illustration svg { display: block; }
-.bloom { animation: bloomScale 560ms cubic-bezier(.2,.9,.2,1) both; }
-.petal { animation: petalPulse 2200ms ease-in-out infinite; transform-origin: center; }
-
-@media (prefers-reduced-motion: reduce) {
-  .bloom, .petal { animation: none !important; }
-}

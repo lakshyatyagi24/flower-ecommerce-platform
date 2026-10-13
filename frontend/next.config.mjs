@@ -1,3 +1,9 @@
+const OG_ASSETS = [
+  "./src/app/fonts/**",
+  "./node_modules/next/dist/compiled/@vercel/og/*.wasm",
+  "./node_modules/next/dist/compiled/@vercel/og/*.ttf",
+];
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
@@ -25,11 +31,13 @@ const nextConfig = {
     formats: ["image/avif", "image/webp"],
   },
   experimental: {
-    // The generated OG images read the Cormorant TTF with fs at request time; make sure
-    // the standalone output (Docker) contains it.
+    // The generated OG images read the Cormorant TTF with fs at request time, and next/og loads
+    // yoga.wasm / resvg.wasm / the default Noto font next to its own bundle via a runtime-built
+    // file URL that the file tracer cannot follow. List them all so the standalone output
+    // (Docker) is guaranteed to contain them.
     outputFileTracingIncludes: {
-      "/products/[slug]/opengraph-image": ["./src/app/fonts/**"],
-      "/products/[slug]/twitter-image": ["./src/app/fonts/**"],
+      "/products/[slug]/opengraph-image": OG_ASSETS,
+      "/products/[slug]/twitter-image": OG_ASSETS,
     },
   },
 };
