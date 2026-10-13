@@ -137,3 +137,25 @@ describe('Track order results', () => {
 beforeEach(() => {
   trackOrder.mockResolvedValue(order)
 })
+
+describe('Track order results delivery date', () => {
+  it('shows the delivery date read-only in the delivery details', async () => {
+    search = '?orderId=12'
+    setTrackEmail('a@b.co')
+    trackOrder.mockResolvedValue({ ...order, deliveryDate: '2026-10-14T00:00:00.000Z' })
+    render(<TrackOrderResults />)
+    await screen.findByRole('heading', { name: 'Order #12' })
+    const label = screen.getByText('Delivery date')
+    expect(label.parentElement).toHaveTextContent('Wednesday, 14 October 2026')
+    expect(label.closest('section')).toHaveTextContent('12 Rose Street')
+  })
+
+  it('omits it for orders without one', async () => {
+    search = '?orderId=12'
+    setTrackEmail('a@b.co')
+    trackOrder.mockResolvedValue({ ...order, deliveryDate: null })
+    render(<TrackOrderResults />)
+    await screen.findByRole('heading', { name: 'Order #12' })
+    expect(screen.queryByText('Delivery date')).toBeNull()
+  })
+})

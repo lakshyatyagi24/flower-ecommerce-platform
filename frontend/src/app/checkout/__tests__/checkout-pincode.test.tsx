@@ -28,6 +28,7 @@ vi.mock('@/lib/api', () => {
     api: {
       getSettings: vi.fn(),
       getPaymentConfig: vi.fn(),
+      getDeliveryOptions: vi.fn(async () => ({ earliest: '2026-10-14', latest: '2026-10-28', blackoutDates: [] })),
       getProductBySlug: vi.fn(),
       createOrder: vi.fn(),
       getMyOrder: vi.fn(),

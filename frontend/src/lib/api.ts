@@ -248,6 +248,8 @@ export type ApiOrder = {
   notes: string | null;
   trackingNumber?: string | null;
   courierName?: string | null;
+  /** Chosen delivery date: UTC midnight of the IST calendar date (null for orders placed before dates existed). */
+  deliveryDate?: string | null;
   createdAt: string;
   updatedAt: string;
   items: ApiOrderItem2[];
@@ -305,6 +307,8 @@ export const api = {
     postalCode: string;
     notes?: string;
     paymentMethod?: 'COD' | 'RAZORPAY';
+    /** `YYYY-MM-DD` (India calendar date), required by the backend. */
+    deliveryDate: string;
   }) => apiFetch<ApiOrder>('/orders', { method: 'POST', body, auth: true }),
   listMyOrders: () => apiFetch<ApiOrder[]>('/orders/mine', { auth: true }),
   getMyOrder: (id: number) => apiFetch<ApiOrder>(`/orders/mine/${id}`, { auth: true }),
@@ -326,6 +330,10 @@ export const api = {
         signal: signal ?? (typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal ? AbortSignal.timeout(5000) : undefined),
       },
     ),
+
+  /** Selectable delivery window and unavailable dates, computed server-side in India time. */
+  getDeliveryOptions: () =>
+    apiFetch<{ earliest: string; latest: string; blackoutDates: string[] }>('/delivery/options', { cache: 'no-store' }),
 
   // Payments (Razorpay)
   getPaymentConfig: () => apiFetch<{ enabled: boolean }>('/payments/razorpay/config'),

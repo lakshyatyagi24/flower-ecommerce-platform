@@ -36,3 +36,22 @@ describe('api.checkPincode', () => {
     }
   });
 });
+
+describe('api.getDeliveryOptions', () => {
+  it('GETs /delivery/options without caching and returns the window', async () => {
+    const body = { earliest: '2026-10-14', latest: '2026-10-28', blackoutDates: ['2026-10-20'] };
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(body), { status: 200, headers: { 'content-type': 'application/json' } }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      await expect(api.getDeliveryOptions()).resolves.toEqual(body);
+      const [url, init] = fetchMock.mock.calls[0];
+      expect(String(url)).toMatch(/\/delivery\/options$/);
+      expect(init.method).toBe('GET');
+      expect(init.cache).toBe('no-store');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});

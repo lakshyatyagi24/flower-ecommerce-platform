@@ -9,6 +9,7 @@ import { setTrackEmail } from "@/lib/track-order-session";
 import { usePayForOrder } from "@/lib/use-pay-for-order";
 import PaymentActions from "@/components/PaymentActions";
 import { canPayNow, paymentLabel } from "@/lib/order-labels";
+import { formatDeliveryDate } from "@/lib/delivery-date";
 import Container from "@/components/ui/Container";
 import Button from "@/components/ui/Button";
 import Skeleton from "@/components/ui/Skeleton";
@@ -98,6 +99,9 @@ export default function MyOrdersPage() {
                       <p className="mt-1 text-sm text-stone-dark">
                         {new Date(o.createdAt).toLocaleDateString(undefined, { dateStyle: "medium" })} · {units} {units === 1 ? "item" : "items"}
                       </p>
+                      {o.deliveryDate && formatDeliveryDate(o.deliveryDate) && (
+                        <p className="mt-1 text-sm text-charcoal">Delivery date: {formatDeliveryDate(o.deliveryDate)}</p>
+                      )}
                     </div>
                     <div className="md:text-right">
                       <p className="text-xs font-medium tracking-[0.16em] text-charcoal">{o.status}</p>

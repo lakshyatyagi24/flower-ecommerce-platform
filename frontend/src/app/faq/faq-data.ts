@@ -45,7 +45,7 @@ export const categories: FaqCategory[] = [
       },
       {
         q: "How much does delivery cost, and can I choose a date?",
-        a: "Delivery charges are shown at checkout before you pay. If you need flowers on a particular date, add it to the delivery notes or contact us before ordering and we will tell you honestly what is possible.",
+        a: "Delivery charges are shown at checkout before you pay. Yes, you choose your delivery date at checkout from the dates we offer; the earliest available date and any days we cannot deliver on are shown beside the date field. If you need something the calendar does not offer, contact us before ordering and we will tell you honestly what is possible.",
         snapshot: true,
       },
       {

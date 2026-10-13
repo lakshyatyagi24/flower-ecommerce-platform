@@ -10,6 +10,7 @@ import { formatINR } from "@/lib/cart-context";
 import { clearTrackEmail, getTrackEmail } from "@/lib/track-order-session";
 import { productImage } from "@/lib/product-image";
 import { paymentLine } from "@/lib/order-labels";
+import { formatDeliveryDate } from "@/lib/delivery-date";
 import Container from "@/components/ui/Container";
 import Button from "@/components/ui/Button";
 import Skeleton from "@/components/ui/Skeleton";
@@ -190,6 +191,12 @@ function TrackOrderResultsView() {
               <h2 id="delivery-heading" className={`${label} mb-3`}>
                 Delivery details
               </h2>
+              {formatDeliveryDate(order.deliveryDate) && (
+                <p className="mb-3 text-base text-charcoal">
+                  <span className="block text-xs font-medium uppercase tracking-[0.16em] text-stone-dark">Delivery date</span>
+                  <span className="mt-1 block">{formatDeliveryDate(order.deliveryDate)}</span>
+                </p>
+              )}
               <div className="text-base leading-relaxed text-charcoal">
                 {order.customerName && <div>{order.customerName}</div>}
                 {order.customerPhone && <div>{order.customerPhone}</div>}

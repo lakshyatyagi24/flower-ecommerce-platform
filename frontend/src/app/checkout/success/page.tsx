@@ -17,6 +17,7 @@ import Skeleton from "@/components/ui/Skeleton";
 import Image from "next/image";
 import { productImage } from "@/lib/product-image";
 import { paymentLine } from "@/lib/order-labels";
+import { formatDeliveryDate } from "@/lib/delivery-date";
 import { textLink } from "@/components/ui/form-styles";
 
 
@@ -107,6 +108,7 @@ function OrderSummary({ orderId }: { orderId: number }) {
     body = <p className="mt-3">Your order #{order.id} is being processed.</p>;
   }
 
+  const deliveryDate = formatDeliveryDate(order.deliveryDate);
   const hasAddress = Boolean(order.shippingAddress || order.city || order.postalCode);
   const cityLine = [order.city, order.postalCode].filter(Boolean).join(order.city && order.postalCode ? ", " : "");
 
@@ -124,6 +126,12 @@ function OrderSummary({ orderId }: { orderId: number }) {
           <dt className="text-xs font-medium uppercase tracking-[0.16em] text-stone-dark">Payment</dt>
           <dd className="mt-2 text-base text-charcoal">{paymentLine(order)}</dd>
         </div>
+        {deliveryDate && (
+          <div className="sm:col-span-2">
+            <dt className="text-xs font-medium uppercase tracking-[0.16em] text-stone-dark">Delivery date</dt>
+            <dd className="mt-2 text-base text-charcoal">{deliveryDate}</dd>
+          </div>
+        )}
         {hasAddress && (
           <div className="sm:col-span-2">
             <dt className="text-xs font-medium uppercase tracking-[0.16em] text-stone-dark">Delivering to</dt>

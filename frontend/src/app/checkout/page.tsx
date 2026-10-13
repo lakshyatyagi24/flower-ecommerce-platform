@@ -23,6 +23,7 @@ import Textarea from "@/components/ui/Textarea";
 import RadioCard from "@/components/ui/RadioCard";
 import FormError from "@/components/ui/FormError";
 import { readStoredPincode, storePincode } from "@/lib/pincode-storage";
+import { formatDeliveryDate, isDeliveryOptions, validateDeliveryDate, type DeliveryOptions } from "@/lib/delivery-date";
 import {
   CHECKOUT_FIELD_ORDER,
   PHONE_PATTERN,
@@ -33,13 +34,18 @@ import {
 
 const PIN_RE = new RegExp(`^(?:${PIN_PATTERN})$`);
 
-const FIELD_IDS: Record<CheckoutFieldName, string> = {
+// The delivery date is validated against the server-provided window, so it lives beside the shared field rules.
+type FieldName = CheckoutFieldName | "deliveryDate";
+const ALL_FIELD_ORDER: FieldName[] = [...CHECKOUT_FIELD_ORDER, "deliveryDate"];
+
+const FIELD_IDS: Record<FieldName, string> = {
   customerName: "checkout-name",
   customerEmail: "checkout-email",
   customerPhone: "checkout-phone",
   shippingAddress: "checkout-address",
   city: "checkout-city",
   postalCode: "checkout-pin",
+  deliveryDate: "checkout-delivery-date",
 };
 
 const Chevron = ({ open }: { open: boolean }) => (
@@ -57,6 +63,12 @@ function SectionLegend({ n, children }: { n: number; children: React.ReactNode }
       <span className="font-display text-2xl text-charcoal md:text-3xl">{children}</span>
     </legend>
   );
+}
+
+function dateHint(o: DeliveryOptions): string {
+  const base = `Available from ${formatDeliveryDate(o.earliest)} to ${formatDeliveryDate(o.latest)}.`;
+  if (o.blackoutDates.length === 0) return base;
+  return `${base} We can't deliver on: ${o.blackoutDates.map(formatDeliveryDate).join("; ")}.`;
 }
 
 export default function CheckoutPage() {
@@ -77,18 +89,35 @@ export default function CheckoutPage() {
     shippingAddress: "",
     city: "",
     postalCode: "",
+    deliveryDate: "",
     notes: "",
     paymentMethod: "RAZORPAY" as "COD" | "RAZORPAY",
   });
 
+  // Selectable delivery window (and unavailable dates) from the server, in India time. The date is required,
+  // so a failed load blocks the form with a retry instead of letting an order go out without one.
+  const {
+    data: optionsRaw,
+    error: optionsError,
+    loading: optionsLoading,
+    reload: reloadOptions,
+  } = useApi(() => api.getDeliveryOptions(), []);
+  const deliveryOptions: DeliveryOptions | null = isDeliveryOptions(optionsRaw) ? optionsRaw : null;
+
   // Inline validation: a field shows its error once it was blurred or a submit was attempted.
-  const [touched, setTouched] = useState<Partial<Record<CheckoutFieldName, boolean>>>({});
+  const [touched, setTouched] = useState<Partial<Record<FieldName, boolean>>>({});
   const [attempted, setAttempted] = useState(false);
   const [focusTick, setFocusTick] = useState(0);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const summaryRef = useRef<HTMLDivElement>(null);
   const submittingRef = useRef(false);
-  const errors = useMemo(() => validateCheckout(form), [form]);
+  const errors = useMemo(() => {
+    const e: Partial<Record<FieldName, string>> = validateCheckout(form);
+    const dateError = deliveryOptions ? validateDeliveryDate(form.deliveryDate, deliveryOptions) : "Choose a delivery date";
+    if (dateError) e.deliveryDate = dateError;
+    return e;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form, optionsRaw]);
   // Serviceability for the PIN last checked. Only an explicit `serviceable:false` blocks; a failed request
   // (`unknown`) never does, because the backend enforces the same rule when the order is created.
   const [pinCheck, setPinCheck] = useState<{ pin: string; status: "ok" | "no" | "unknown"; message: string } | null>(null);
@@ -96,7 +125,7 @@ export default function CheckoutPage() {
   const latestPinRef = useRef("");
   const pinNow = form.postalCode.trim();
   const pinBlocked = pinCheck && pinCheck.pin === pinNow && pinCheck.status === "no" ? pinCheck.message : undefined;
-  const fieldError = (k: CheckoutFieldName) =>
+  const fieldError = (k: FieldName) =>
     touched[k] || attempted ? errors[k] ?? (k === "postalCode" ? pinBlocked : undefined) : undefined;
   const checkPin = async (pin: string) => {
     if (!PIN_RE.test(pin)) return null;
@@ -126,8 +155,13 @@ export default function CheckoutPage() {
     const saved = readStoredPincode();
     if (saved) setForm((f) => (f.postalCode ? f : { ...f, postalCode: saved }));
   }, []);
+  // Start on the earliest available date; the shopper can move it. Never overwrites a choice already made.
+  useEffect(() => {
+    if (deliveryOptions) setForm((f) => (f.deliveryDate ? f : { ...f, deliveryDate: deliveryOptions.earliest }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [optionsRaw]);
   const summaryItems = attempted
-    ? CHECKOUT_FIELD_ORDER.filter((k) => fieldError(k)).map((k) => ({ id: FIELD_IDS[k], message: fieldError(k) as string }))
+    ? ALL_FIELD_ORDER.filter((k) => fieldError(k)).map((k) => ({ id: FIELD_IDS[k], message: fieldError(k) as string }))
     : [];
   // Move focus to the error summary after a failed submit (validation or server error).
   useEffect(() => {
@@ -386,7 +420,17 @@ export default function CheckoutPage() {
     );
   }
 
-  if (count > 0 && (settingsLoading || pricesLoading || configLoading || !settingsData || !pricing)) {
+  if (count > 0 && (optionsError || (!optionsLoading && !deliveryOptions))) {
+    return (
+      <main>
+        <Container className="py-12">
+          <ErrorState message="We couldn't load the available delivery dates. Please try again." onRetry={reloadOptions} />
+        </Container>
+      </main>
+    );
+  }
+
+  if (count > 0 && (settingsLoading || pricesLoading || configLoading || optionsLoading || !settingsData || !pricing || !deliveryOptions)) {
     return (
       <main>
         <Container className="py-12 lg:py-16">
@@ -412,6 +456,9 @@ export default function CheckoutPage() {
       </main>
     );
   }
+
+  // Unreachable once the guards above pass (a missing window renders the retry state); narrows the type.
+  if (!deliveryOptions) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -440,6 +487,7 @@ export default function CheckoutPage() {
         shippingAddress: form.shippingAddress.trim(),
         city: form.city.trim(),
         postalCode: form.postalCode.trim(),
+        deliveryDate: form.deliveryDate,
         notes: form.notes.trim() || undefined,
         paymentMethod,
       });
@@ -455,6 +503,8 @@ export default function CheckoutPage() {
     } catch (err) {
       const message = err instanceof ApiError ? err.message : err instanceof Error ? err.message : "Could not place order";
       setError(message);
+      // The window moves with the clock (cut-off time): after a date rejection, re-read it so the field shows the new range.
+      if (/delivery date|deliver on that date/i.test(message)) reloadOptions();
       setFocusTick((t) => t + 1);
     } finally {
       submittingRef.current = false;
@@ -463,7 +513,7 @@ export default function CheckoutPage() {
   };
 
   const update = (key: keyof typeof form, value: string) => setForm((f) => ({ ...f, [key]: value }));
-  const blur = (k: CheckoutFieldName) => () => setTouched((t) => (t[k] ? t : { ...t, [k]: true }));
+  const blur = (k: FieldName) => () => setTouched((t) => (t[k] ? t : { ...t, [k]: true }));
   const focusField = (id: string) => document.getElementById(id)?.focus();
 
   const itemsLabel = `${count} ${count === 1 ? "item" : "items"}`;
@@ -514,6 +564,12 @@ export default function CheckoutPage() {
                 </p>
               )}
               <dl className="mt-6 space-y-3 border-t border-stone-light pt-6 text-sm text-charcoal">
+                {!errors.deliveryDate && (
+                  <div className="flex justify-between gap-4">
+                    <dt>Delivery date</dt>
+                    <dd className="text-right">{formatDeliveryDate(form.deliveryDate)}</dd>
+                  </div>
+                )}
                 <div className="flex justify-between gap-4">
                   <dt>Subtotal</dt>
                   <dd>{formatINR(liveSubtotal)}</dd>
@@ -613,6 +669,22 @@ export default function CheckoutPage() {
                       if (pinCheck && pinCheck.pin === pin && pinCheck.status !== "unknown") return;
                       void checkPin(pin);
                     }}
+                  />
+                </Field>
+                <Field
+                  id={FIELD_IDS.deliveryDate}
+                  label="Delivery date"
+                  className="sm:col-span-2"
+                  hint={dateHint(deliveryOptions)}
+                  error={fieldError("deliveryDate")}
+                >
+                  <Input
+                    type="date"
+                    min={deliveryOptions.earliest}
+                    max={deliveryOptions.latest}
+                    value={form.deliveryDate}
+                    onChange={(e) => update("deliveryDate", e.target.value)}
+                    onBlur={blur("deliveryDate")}
                   />
                 </Field>
                 <Field id="checkout-notes" label="Notes for delivery" optional className="sm:col-span-2">

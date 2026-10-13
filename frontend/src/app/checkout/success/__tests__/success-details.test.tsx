@@ -70,3 +70,19 @@ describe('paymentLine', () => {
     expect(paymentLine(o as never)).toBe(label)
   })
 })
+
+describe('Checkout success delivery date', () => {
+  it('shows the chosen delivery date as a long date', async () => {
+    getMyOrder.mockResolvedValue({ ...order, deliveryDate: '2026-10-14T00:00:00.000Z' })
+    render(<CheckoutSuccessPage />)
+    await screen.findByText(/payment received/i)
+    expect(screen.getByText('Delivery date').nextSibling).toHaveTextContent('Wednesday, 14 October 2026')
+  })
+
+  it('omits the row for older orders without a delivery date', async () => {
+    getMyOrder.mockResolvedValue({ ...order, deliveryDate: null })
+    render(<CheckoutSuccessPage />)
+    await screen.findByText(/payment received/i)
+    expect(screen.queryByText('Delivery date')).toBeNull()
+  })
+})

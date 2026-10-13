@@ -31,10 +31,18 @@ async function renderIn(ui: React.ReactElement) {
   })
 }
 
-describe('copy accuracy (checkout has no delivery-date picker)', () => {
-  it('faq-data and terms never say dates are shown at checkout', () => {
-    expect(read('faq/faq-data.ts')).not.toMatch(/dates are shown at checkout|available delivery dates/i)
-    expect(read('terms/page.tsx')).not.toMatch(/dates are shown at checkout|charges and dates/i)
+describe('copy accuracy (checkout has a delivery-date picker, Task 4.2)', () => {
+  it('faq-data and terms say the shopper chooses a delivery date at checkout', () => {
+    expect(read('faq/faq-data.ts')).toMatch(/you choose your delivery date at checkout/i)
+    expect(read('terms/page.tsx')).toMatch(/you choose your delivery date there/i)
+  })
+
+  it('does not promise a delivery time or a fixed cut-off in static copy (those come from settings only)', () => {
+    for (const file of ['faq/faq-data.ts', 'terms/page.tsx']) {
+      const text = read(file)
+      expect(text).not.toMatch(/same[- ]day|next[- ]day|\bby \d{1,2}(:\d{2})?\s?(am|pm)\b|cut-?off (time )?(is|of) \d/i)
+      expect(text).not.toMatch(/dates are shown at checkout|charges and dates/i)
+    }
   })
 })
 

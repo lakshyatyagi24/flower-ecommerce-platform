@@ -62,3 +62,21 @@ describe('My orders rows', () => {
     expect(list).toHaveBeenCalledTimes(2)
   })
 })
+
+describe('My orders delivery date', () => {
+  const base = {
+    subtotal: 100, shipping: 0, total: 100, createdAt: '2026-10-01T10:00:00Z', customerEmail: 'a@b.co',
+    status: 'PAID', paymentMethod: 'COD', paymentStatus: 'UNPAID', items: [{ id: 1, productName: 'Rose', quantity: 1, unitPrice: 100 }],
+  }
+  it('shows the delivery date on rows that have one and nothing on older rows', async () => {
+    list.mockResolvedValue([
+      { ...base, id: 8, deliveryDate: '2026-10-14T00:00:00.000Z' },
+      { ...base, id: 9, deliveryDate: null },
+    ])
+    render(<MyOrdersPage />)
+    const withDate = (await screen.findByRole('heading', { name: 'Order #8' })).closest('article') as HTMLElement
+    const without = screen.getByRole('heading', { name: 'Order #9' }).closest('article') as HTMLElement
+    expect(withDate).toHaveTextContent('Delivery date: Wednesday, 14 October 2026')
+    expect(without).not.toHaveTextContent('Delivery date')
+  })
+})

@@ -32,6 +32,7 @@ vi.mock('@/lib/api', () => {
     api: {
       getSettings: vi.fn().mockRejectedValue(new Error('settings down')),
       getPaymentConfig: vi.fn().mockResolvedValue({ enabled: true }),
+      getDeliveryOptions: vi.fn(async () => ({ earliest: '2026-10-14', latest: '2026-10-28', blackoutDates: [] })),
       getProductBySlug: vi.fn().mockResolvedValue({ id: 1, price: 100, gstRate: 0 }),
       createOrder: vi.fn(),
       checkPincode: vi.fn(async () => ({ serviceable: true, message: '' })),

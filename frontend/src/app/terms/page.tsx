@@ -32,8 +32,8 @@ export default function TermsPage() {
       </LegalSection>
       <LegalSection heading="4. Delivery">
         <p>
-          We deliver in and around Delhi NCR. Delivery charges are shown at checkout; delivery timing is confirmed with
-          you. Responsibility for the goods passes to you on delivery.
+          We deliver in and around Delhi NCR. Delivery charges are shown at checkout, and you choose your delivery date
+          there from the dates we offer. Responsibility for the goods passes to you on delivery.
         </p>
         <PolicySummary kind="delivery" />
       </LegalSection>
