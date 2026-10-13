@@ -1,11 +1,14 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import { useCart, formatINR, type CartItem } from "@/lib/cart-context";
+import { fetchFreshProducts } from "@/lib/fresh-products";
+import { bunchCopy } from "@/lib/product-helpers";
 import { productImage } from "@/lib/product-image";
+import { linesChanged, reconcileCart, type CartNotice } from "@/lib/reconcile-cart";
 import { useSettings } from "@/lib/settings-context";
 import { CloseIcon } from "./chrome/icons";
 import { focusRing, iconButton } from "./chrome/styles";
@@ -21,11 +24,16 @@ function freeShippingThreshold(raw: Record<string, string> | undefined): number 
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-function Line({ it }: { it: CartItem }) {
+function Line({ it, notices }: { it: CartItem; notices: CartNotice[] }) {
   const { setQuantity, remove, close } = useCart();
   const min = it.minOrderQty && it.minOrderQty > 0 ? it.minOrderQty : 1;
-  const atMin = it.quantity <= min;
-  const atMax = typeof it.stock === "number" && it.stock > 0 && it.quantity >= it.stock;
+  // Quantity moves in bunches of the minimum order and never passes stock.
+  const step = min;
+  const atMin = it.quantity - step < min;
+  const atMax = typeof it.stock === "number" && it.stock > 0 && it.quantity + step > it.stock;
+  const blocked = notices.some((n) => n.blocking);
+  const bunch = bunchCopy(min, it.unit);
+  const noticeId = `cart-notice-${it.productId}`;
   return (
     <li className="flex gap-4 border-b border-stone-light py-5">
       <Link href={`/products/${it.slug}`} onClick={close} className={`relative block aspect-[4/5] w-[72px] shrink-0 overflow-hidden border border-stone-light bg-ivory-deep ${focusRing}`} tabIndex={-1} aria-hidden>
@@ -39,8 +47,18 @@ function Line({ it }: { it: CartItem }) {
           <span className="shrink-0 pt-0.5 text-[15px] text-charcoal">{formatINR(it.price * it.quantity)}</span>
         </div>
         <p className="mt-1 text-[13px] text-stone-dark">
-          {formatINR(it.price)} each{min > 1 ? ` · minimum order ${min}` : ""}
+          {formatINR(it.price)} each{bunch ? ` · ${bunch}` : ""}
         </p>
+        {notices.length > 0 && (
+          <div id={noticeId} data-testid="line-notice">
+            {notices.map((n) => (
+              <p key={n.kind} className="mt-1 text-[13px] text-charcoal">
+                {n.message}
+                {n.blocking ? " Remove it to check out." : ""}
+              </p>
+            ))}
+          </div>
+        )}
         <div className="mt-auto flex items-center justify-between pt-3">
           <div className="flex items-center border border-stone-light">
             <button
@@ -48,7 +66,7 @@ function Line({ it }: { it: CartItem }) {
               className={stepButton}
               aria-disabled={atMin ? "true" : undefined}
               aria-label={`Decrease quantity of ${it.name}`}
-              onClick={() => !atMin && setQuantity(it.productId, it.quantity - 1)}
+              onClick={() => !atMin && setQuantity(it.productId, Math.max(min, it.quantity - step))}
             >
               −
             </button>
@@ -60,7 +78,7 @@ function Line({ it }: { it: CartItem }) {
               className={stepButton}
               aria-disabled={atMax ? "true" : undefined}
               aria-label={`Increase quantity of ${it.name}`}
-              onClick={() => !atMax && setQuantity(it.productId, it.quantity + 1)}
+              onClick={() => !atMax && setQuantity(it.productId, it.quantity + step)}
             >
               +
             </button>
@@ -68,6 +86,7 @@ function Line({ it }: { it: CartItem }) {
           <button
             type="button"
             aria-label={`Remove ${it.name}`}
+            aria-describedby={notices.length > 0 ? noticeId : undefined}
             data-remove
             onClick={(e) => {
               // The focused button is about to unmount: hand focus to the next line's Remove button, else the
@@ -81,7 +100,7 @@ function Line({ it }: { it: CartItem }) {
               target?.focus();
               remove(it.productId);
             }}
-            className={`min-h-[44px] px-1 text-[13px] text-stone-dark underline underline-offset-4 hover:text-charcoal ${focusRing}`}
+            className={`min-h-[44px] px-1 text-[13px] underline underline-offset-4 hover:text-charcoal ${blocked ? "font-medium text-charcoal" : "text-stone-dark"} ${focusRing}`}
           >
             Remove
           </button>
@@ -92,10 +111,40 @@ function Line({ it }: { it: CartItem }) {
 }
 
 function Drawer() {
-  const { items, close, count, subtotal, gstTotal } = useCart();
+  const { items, close, count, subtotal, gstTotal, replaceItems } = useCart();
   const settings = useSettings();
   const ref = useRef<HTMLDivElement>(null);
   useModal(true, ref, close);
+
+  // Revalidate the bag against current product data each time the drawer opens (it mounts on open). Requests are
+  // deduplicated and limited in parallel, and a failed lookup never blocks anything: that line just stays as it is.
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+  const [notices, setNotices] = useState<CartNotice[]>([]);
+  useEffect(() => {
+    const started = itemsRef.current;
+    if (started.length === 0) return;
+    let cancelled = false;
+    fetchFreshProducts(started)
+      .then(({ fresh, unverified }) => {
+        if (cancelled) return;
+        const latest = itemsRef.current;
+        const asked = new Set(started.map((l) => l.productId));
+        // A line added while the lookup was running was never asked about: leave it alone.
+        const skip = [...unverified, ...latest.filter((l) => !asked.has(l.productId)).map((l) => l.productId)];
+        const result = reconcileCart(latest, fresh, { unverified: skip });
+        if (linesChanged(latest, result.lines)) replaceItems(result.lines);
+        setNotices(result.notices);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const liveNotices = notices.filter((n) => items.some((i) => i.productId === n.productId));
+  const noticesFor = (id: number) => liveNotices.filter((n) => n.productId === id);
+  const blockedCount = new Set(liveNotices.filter((n) => n.blocking).map((n) => n.productId)).size;
 
   const threshold = freeShippingThreshold(settings.raw);
   const remaining = threshold !== null ? Math.max(0, threshold - subtotal) : 0;
@@ -130,9 +179,13 @@ function Drawer() {
           </div>
         ) : (
           <>
+            {/* Always mounted so a screen reader announces notices that arrive after the lookup finishes. */}
+            <div role="status" aria-live="polite" aria-atomic="true" className="sr-only" data-testid="cart-notices-live">
+              {liveNotices.map((n) => `${n.name}: ${n.message}`).join(" ")}
+            </div>
             <ul className="flex-1 overflow-y-auto px-5 sm:px-6">
               {items.map((it) => (
-                <Line key={it.productId} it={it} />
+                <Line key={it.productId} it={it} notices={noticesFor(it.productId)} />
               ))}
             </ul>
 
@@ -162,6 +215,11 @@ function Drawer() {
                 )}
               </dl>
               <p className="mt-2 text-[13px] text-stone-dark">Shipping is calculated at checkout.</p>
+              {blockedCount > 0 && (
+                <p className="mt-2 text-[13px] text-charcoal">
+                  {blockedCount === 1 ? "One item in your bag" : `${blockedCount} items in your bag`} can&apos;t be ordered right now. Remove {blockedCount === 1 ? "it" : "them"} to check out.
+                </p>
+              )}
               <Button href="/checkout" onClick={close} size="lg" className="mt-5 w-full">
                 Checkout
               </Button>

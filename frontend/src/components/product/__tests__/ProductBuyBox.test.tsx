@@ -19,22 +19,32 @@ const qty = () => screen.getByTestId('qty').textContent;
 describe('ProductBuyBox', () => {
   beforeEach(() => add.mockReset());
 
-  it('starts at the minimum order quantity, steps by 1 and cannot go below it', () => {
+  it('starts at the minimum order quantity, steps by it and cannot go below it', () => {
     render(<ProductBuyBox product={{ ...product, minOrderQty: 5 }} />);
     expect(qty()).toBe('5');
-    expect(screen.getByText(/minimum order: 5 stem/i)).toBeTruthy();
-    expect(screen.queryByText(/bunches/i)).toBeNull();
+    expect(screen.getByText(/sold in bunches of 5 stems/i)).toBeTruthy();
+    expect(screen.queryByText(/minimum order/i)).toBeNull();
     const dec = screen.getByRole('button', { name: /decrease quantity/i }) as HTMLButtonElement;
     expect(dec.disabled).toBe(true);
     fireEvent.click(screen.getByRole('button', { name: /increase quantity/i }));
-    expect(qty()).toBe('6');
+    expect(qty()).toBe('10');
     fireEvent.click(screen.getByRole('button', { name: /increase quantity/i }));
-    expect(qty()).toBe('7');
-    fireEvent.click(dec);
+    expect(qty()).toBe('15');
     fireEvent.click(dec);
     fireEvent.click(dec);
     expect(qty()).toBe('5');
     expect(dec.disabled).toBe(true);
+  });
+
+  it('uses the product unit word for the bunch copy, and none when the unit is a bunch word or missing', () => {
+    const { unmount } = render(<ProductBuyBox product={{ ...product, minOrderQty: 10, unit: 'piece' }} />);
+    expect(screen.getByText(/sold in bunches of 10 pieces/i)).toBeTruthy();
+    unmount();
+    const b = render(<ProductBuyBox product={{ ...product, minOrderQty: 10, unit: 'bunch' }} />);
+    expect(screen.getByText(/^sold in bunches of 10\.\s*$/i)).toBeTruthy();
+    b.unmount();
+    render(<ProductBuyBox product={{ ...product, minOrderQty: 10, unit: undefined }} />);
+    expect(screen.getByText(/^sold in bunches of 10\.\s*$/i)).toBeTruthy();
   });
 
   it('shows no minimum note when the minimum is 1', () => {
@@ -53,14 +63,32 @@ describe('ProductBuyBox', () => {
     expect(inc.disabled).toBe(true);
   });
 
-  it('caps at stock when a minimum is set', () => {
-    render(<ProductBuyBox product={{ ...product, minOrderQty: 4, stock: 6 }} />);
+  it('never steps past stock when a minimum is set', () => {
+    render(<ProductBuyBox product={{ ...product, minOrderQty: 4, stock: 10 }} />);
     const inc = screen.getByRole('button', { name: /increase quantity/i }) as HTMLButtonElement;
     fireEvent.click(inc);
+    expect(qty()).toBe('8');
+    expect(inc.disabled).toBe(true); // 12 would exceed the 10 in stock
     fireEvent.click(inc);
-    fireEvent.click(inc);
+    expect(qty()).toBe('8');
+    expect(screen.getByText(/only 10 left/i)).toBeTruthy();
+  });
+
+  it('with a minimum equal to stock the stepper cannot move at all', () => {
+    render(<ProductBuyBox product={{ ...product, minOrderQty: 6, stock: 6 }} />);
+    expect((screen.getByRole('button', { name: /increase quantity/i }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole('button', { name: /decrease quantity/i }) as HTMLButtonElement).disabled).toBe(true);
     expect(qty()).toBe('6');
-    expect(inc.disabled).toBe(true);
+  });
+
+  it.each([
+    [10, true],
+    [1, true],
+    [11, false],
+    [20, false],
+  ])('stock %i: "Only N left" shown is %s (honest, only up to 10 units)', (stock, shown) => {
+    render(<ProductBuyBox product={{ ...product, stock }} />);
+    expect(!!screen.queryByText(new RegExp(`only ${stock} left`, 'i'))).toBe(shown);
   });
 
   it('treats stock below the minimum order as out of stock', () => {

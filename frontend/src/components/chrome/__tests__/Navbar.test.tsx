@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderToString } from 'react-dom/server';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -31,6 +31,7 @@ vi.mock('@/components/SignInModal', () => ({
 import Navbar from '../../Navbar';
 import { OCCASIONS } from '@/lib/occasions';
 import { resetChromeMocks, auth, cart, push, nav } from './helpers';
+import { requestSignIn } from '@/lib/sign-in-request';
 
 beforeEach(() => resetChromeMocks());
 
@@ -127,5 +128,26 @@ describe('Navbar', () => {
     expect(trigger).not.toHaveAttribute('aria-controls');
     await userEvent.click(trigger);
     expect(trigger).toHaveAttribute('aria-controls');
+  });
+
+  it('opens the sign-in dialog when a page asks for it (checkout), without navigating', async () => {
+    render(<Navbar />);
+    expect(screen.queryByRole('dialog', { name: 'Sign in modal' })).toBeNull();
+    const from = document.createElement('button');
+    document.body.appendChild(from);
+    act(() => requestSignIn(from));
+    expect(await screen.findByRole('dialog', { name: 'Sign in modal' })).toBeInTheDocument();
+    expect(push).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByText('close modal'));
+    expect(screen.queryByRole('dialog', { name: 'Sign in modal' })).toBeNull();
+    await waitFor(() => expect(from).toHaveFocus());
+    from.remove();
+  });
+
+  it('stops listening for sign-in requests once unmounted', () => {
+    const { unmount } = render(<Navbar />);
+    unmount();
+    expect(() => act(() => requestSignIn())).not.toThrow();
+    expect(screen.queryByRole('dialog', { name: 'Sign in modal' })).toBeNull();
   });
 });

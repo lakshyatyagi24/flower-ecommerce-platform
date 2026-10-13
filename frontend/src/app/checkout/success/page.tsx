@@ -1,14 +1,14 @@
 "use client";
 
-import React, { Suspense, useEffect } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { api } from "@/lib/api";
 import { EXPIRED_COPY, expiredKindOf, usePayForOrder } from "@/lib/use-pay-for-order";
 import PaymentActions from "@/components/PaymentActions";
 import { useApi } from "@/lib/use-api";
-import { safeRedirect } from "@/lib/safe-redirect";
+import { clearLastOrderEmail, getLastOrderEmail } from "@/lib/guest-order";
 import { formatINR } from "@/lib/cart-context";
 import ErrorState from "@/components/ui/ErrorState";
 import Container from "@/components/ui/Container";
@@ -23,8 +23,29 @@ import { textLink } from "@/components/ui/form-styles";
 
 const RESERVED_NOTE = "Your order is reserved for 30 minutes from when it was placed. After that it is cancelled automatically.";
 
-function OrderSummary({ orderId }: { orderId: number }) {
-  const { data: order, error, loading, reload } = useApi(() => api.getMyOrder(orderId), [orderId]);
+const GUEST_LOOKUP_COPY =
+  "We couldn't show your order details here, but if you completed checkout your order was placed. Check your confirmation email, or look it up with your order number and the email you ordered with.";
+
+/**
+ * Signed-in customers read the order through their account. A guest reads it with the order's email, handed over
+ * in sessionStorage by checkout (never the URL) and removed again once the order is shown in a final state.
+ */
+function OrderSummary({ orderId, guestEmail }: { orderId: number; guestEmail: string | null }) {
+  const { user } = useAuth();
+  const { data: order, error, loading, reload } = useApi(
+    () => (user || !guestEmail ? api.getMyOrder(orderId) : api.trackOrder(orderId, guestEmail)),
+    [orderId],
+  );
+  // The email has done its job once the order is displayed, unless the shopper still has to pay: then Pay now,
+  // Check status and Switch to COD need it (and so does the reload after they resolve).
+  useEffect(() => {
+    if (user || !order) return;
+    const stillPayable =
+      order.paymentMethod === "RAZORPAY" &&
+      order.status === "PENDING" &&
+      (order.paymentStatus === "UNPAID" || order.paymentStatus === "FAILED");
+    if (!stillPayable) clearLastOrderEmail();
+  }, [user, order]);
   // Every resolution (paid / refund due / switched to COD / expired) clears the
   // cart and a matching pending key inside the hook; we just reload the order.
   const pay = usePayForOrder({ orderId, onResolved: () => reload() });
@@ -38,9 +59,13 @@ function OrderSummary({ orderId }: { orderId: number }) {
   if (error || !order) {
     return (
       <ErrorState
-        message="We couldn't load your order details, but your order was placed. You can find it in your orders."
+        message={
+          user
+            ? "We couldn't load your order details, but your order was placed. You can find it in your orders."
+            : "We couldn't load your order details, but your order was placed. Check your confirmation email, or track it with your order number and email."
+        }
         onRetry={reload}
-        link={{ href: "/account/orders", label: "View my orders" }}
+        link={user ? { href: "/account/orders", label: "View my orders" } : { href: "/track-order", label: "Track an order" }}
       />
     );
   }
@@ -168,21 +193,20 @@ function OrderSummary({ orderId }: { orderId: number }) {
 }
 
 function CheckoutSuccessView() {
-  const router = useRouter();
   const params = useSearchParams();
   const rawId = params?.get("orderId");
   const orderId = rawId && /^\d+$/.test(rawId) ? Number(rawId) : null;
   const { user, loading: authLoading } = useAuth();
 
-  // The order is loaded through the authenticated /orders/mine endpoint; guests
-  // are sent to login with a safe callback back to this page.
+  // Read the guest's email once, after mount, and keep it in memory: storage is cleared once the order is shown,
+  // but a later reload (after paying) still needs it. `undefined` = not read yet.
+  const [guestEmail, setGuestEmail] = useState<string | null | undefined>(undefined);
   useEffect(() => {
     if (authLoading || user) return;
-    const back = safeRedirect(orderId ? `/checkout/success?orderId=${orderId}` : "/account/orders") || "/account/orders";
-    router.replace(`/account/login?callbackUrl=${encodeURIComponent(back)}`);
-  }, [authLoading, user, orderId, router]);
+    setGuestEmail((prev) => (prev === undefined ? getLastOrderEmail() : prev));
+  }, [authLoading, user]);
 
-  if (authLoading || !user) {
+  if (authLoading || (!user && guestEmail === undefined)) {
     return (
       <main>
         <Container className="py-16" aria-busy="true">
@@ -192,23 +216,30 @@ function CheckoutSuccessView() {
     );
   }
 
+  const guest = !user;
   return (
     <main>
       <Container className="py-12 lg:py-20">
         <div className="max-w-2xl">
           <h1 className="type-h1">Your order</h1>
-          {orderId ? (
-            <OrderSummary orderId={orderId} />
+          {orderId && (user || guestEmail) ? (
+            <OrderSummary orderId={orderId} guestEmail={guestEmail ?? null} />
           ) : (
             <ErrorState
-              message="We couldn't find that order."
-              link={{ href: "/account/orders", label: "View my orders" }}
+              message={orderId ? GUEST_LOOKUP_COPY : "We couldn't find that order."}
+              link={guest ? { href: "/track-order", label: "Track an order" } : { href: "/account/orders", label: "View my orders" }}
             />
           )}
           <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Button href="/account/orders" className="w-full sm:w-auto">
-              View my orders
-            </Button>
+            {guest ? (
+              <Button href="/track-order" className="w-full sm:w-auto">
+                Track an order
+              </Button>
+            ) : (
+              <Button href="/account/orders" className="w-full sm:w-auto">
+                View my orders
+              </Button>
+            )}
             <Button href="/products" variant="ghost">
               Continue shopping
             </Button>

@@ -15,6 +15,7 @@ import OccasionsMenu from "./chrome/OccasionsMenu";
 import { iconButton, navLink } from "./chrome/styles";
 import { useCloseOnRouteChange } from "./chrome/use-route-change";
 import Wordmark from "./chrome/Wordmark";
+import { OPEN_SIGN_IN_EVENT } from "@/lib/sign-in-request";
 
 /**
  * Sticky site header: 56px on mobile, 64px from lg. A normal sticky element, so there is no spacer and no
@@ -43,6 +44,17 @@ export default function Navbar() {
     signInFrom.current = trigger;
     setSignInOpen(true);
   };
+
+  // Pages (checkout) can ask for the sign-in dialog without navigating away, so what the shopper typed survives.
+  useEffect(() => {
+    const onRequest = (e: Event) => {
+      const trigger = (e as CustomEvent<{ trigger?: HTMLElement | null }>).detail?.trigger ?? null;
+      void loadSignIn();
+      openSignIn(trigger);
+    };
+    window.addEventListener(OPEN_SIGN_IN_EVENT, onRequest);
+    return () => window.removeEventListener(OPEN_SIGN_IN_EVENT, onRequest);
+  }, []);
 
   const [first, ...rest] = PRIMARY_LINKS;
   const current = (href: string) => (pathname === href || pathname?.startsWith(`${href}/`) ? "page" : undefined);

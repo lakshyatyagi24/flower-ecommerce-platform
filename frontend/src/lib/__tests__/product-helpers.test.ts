@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { availability, toCartItem, minQty, careCopy, uspsFromSettings } from '../product-helpers';
+import { availability, toCartItem, minQty, careCopy, uspsFromSettings, bunchCopy, isLowStock, LOW_STOCK_MAX } from '../product-helpers';
 import { splitDescription, leadText } from '../description';
 import type { ApiProduct } from '../api';
 
@@ -73,5 +73,39 @@ describe('uspsFromSettings', () => {
   it('falls back to a generic claim with no same-day promise', () => {
     const out = uspsFromSettings({});
     expect(out).toEqual([{ title: 'Chosen with care', body: '' }]);
+  });
+});
+
+describe('bunchCopy', () => {
+  it('is null when there is no minimum above 1', () => {
+    expect(bunchCopy(1, 'stem')).toBeNull();
+    expect(bunchCopy(0, 'stem')).toBeNull();
+    expect(bunchCopy(undefined as unknown as number, 'stem')).toBeNull();
+  });
+  it('uses the product unit word, pluralised, only when the data says so', () => {
+    expect(bunchCopy(10, 'stem')).toBe('Sold in bunches of 10 stems');
+    expect(bunchCopy(6, 'Piece')).toBe('Sold in bunches of 6 pieces');
+    expect(bunchCopy(4, 'box')).toBe('Sold in bunches of 4 boxes');
+    expect(bunchCopy(3, 'bouquet')).toBe('Sold in bunches of 3 bouquets');
+    expect(bunchCopy(3, 'berry')).toBe('Sold in bunches of 3 berries');
+    expect(bunchCopy(5, 'stems')).toBe('Sold in bunches of 5 stems');
+  });
+  it('never invents a unit: missing, blank or bunch-like units leave the noun off', () => {
+    expect(bunchCopy(10)).toBe('Sold in bunches of 10');
+    expect(bunchCopy(10, null)).toBe('Sold in bunches of 10');
+    expect(bunchCopy(10, '  ')).toBe('Sold in bunches of 10');
+    expect(bunchCopy(10, 'bunch')).toBe('Sold in bunches of 10');
+    expect(bunchCopy(10, 'Bundle')).toBe('Sold in bunches of 10');
+  });
+});
+
+describe('isLowStock', () => {
+  it('is true from 1 up to and including the limit, never at zero or above it', () => {
+    expect(LOW_STOCK_MAX).toBe(10);
+    expect(isLowStock({ stock: 0 })).toBe(false);
+    expect(isLowStock({ stock: -1 })).toBe(false);
+    expect(isLowStock({ stock: 1 })).toBe(true);
+    expect(isLowStock({ stock: 10 })).toBe(true);
+    expect(isLowStock({ stock: 11 })).toBe(false);
   });
 });

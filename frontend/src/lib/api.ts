@@ -318,8 +318,9 @@ export const api = {
       body: { paymentMethod: 'COD', email },
       auth: true,
     }),
+  // The email goes in the POST body, never the query string, so it stays out of access logs and history.
   trackOrder: (id: number, email: string) =>
-    apiFetch<ApiOrder>(`/orders/track/${id}?email=${encodeURIComponent(email)}`),
+    apiFetch<ApiOrder>(`/orders/track/${id}`, { method: 'POST', body: { email } }),
 
   // Delivery
   checkPincode: (pincode: string, signal?: AbortSignal) =>

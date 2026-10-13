@@ -22,7 +22,8 @@ export const UNAVAILABLE_COPY =
 // (A payment.failed event keeps the modal open for retry, so it does NOT release.)
 let inFlight = false;
 
-export async function payForOrder(orderId: number, h: PayHandlers): Promise<void> {
+/** `guestEmail`: the email on a guest's order (omitted for a signed-in customer, who is identified by the token). */
+export async function payForOrder(orderId: number, h: PayHandlers, guestEmail?: string): Promise<void> {
   if (inFlight) return;
   inFlight = true;
   let settled = false; // a payment succeeded; ignore the modal's trailing dismiss
@@ -30,7 +31,7 @@ export async function payForOrder(orderId: number, h: PayHandlers): Promise<void
     inFlight = false;
   };
   try {
-    const o = await api.createRazorpayOrder(orderId);
+    const o = guestEmail ? await api.createRazorpayOrder(orderId, guestEmail) : await api.createRazorpayOrder(orderId);
     await openCheckout({
       keyId: o.keyId,
       razorpayOrderId: o.razorpayOrderId,

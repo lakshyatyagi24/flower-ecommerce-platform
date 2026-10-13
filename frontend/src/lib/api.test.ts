@@ -55,3 +55,23 @@ describe('api.getDeliveryOptions', () => {
     }
   });
 });
+
+describe('api.trackOrder', () => {
+  it('POSTs the email in the body and never puts it in the URL', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ id: 12 }), { status: 200, headers: { 'content-type': 'application/json' } }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    try {
+      await expect(api.trackOrder(12, 'Guest+tag@example.com')).resolves.toEqual({ id: 12 });
+      const [url, init] = fetchMock.mock.calls[0];
+      expect(String(url)).toMatch(/\/orders\/track\/12$/);
+      expect(String(url)).not.toContain('example.com');
+      expect(String(url)).not.toContain('?');
+      expect(init.method).toBe('POST');
+      expect(JSON.parse(init.body)).toEqual({ email: 'Guest+tag@example.com' });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});

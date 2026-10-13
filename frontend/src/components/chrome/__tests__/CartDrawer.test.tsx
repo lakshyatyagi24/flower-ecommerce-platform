@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, within, fireEvent } from '@testing-library/react';
+import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -13,6 +13,9 @@ vi.mock('@/lib/settings-context', async (orig) => {
   const h = await import('./helpers');
   return { ...real, useSettings: () => ({ ...real.useSettings(), raw: h.settingsRaw }) };
 });
+
+const fetchFresh = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/fresh-products', () => ({ fetchFreshProducts: fetchFresh }));
 
 import CartDrawer from '../../CartDrawer';
 import { cart, resetChromeMocks, settingsRaw } from './helpers';
@@ -39,6 +42,12 @@ function setCart(items: ReturnType<typeof item>[]) {
 beforeEach(() => {
   resetChromeMocks();
   document.body.style.overflow = '';
+  // Default: the lookup could not verify anything, so the bag is left exactly as it is.
+  fetchFresh.mockReset().mockImplementation(async (lines: { productId: number }[]) => ({
+    fresh: [],
+    unverified: lines.map((l) => l.productId),
+    failed: true,
+  }));
 });
 
 describe('CartDrawer', () => {
@@ -62,6 +71,7 @@ describe('CartDrawer', () => {
     expect(screen.getByRole('heading', { name: 'Your bag (3)' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Red Roses' })).toHaveAttribute('href', '/products/red-roses');
     expect(screen.getByText(/₹500 each/)).toBeInTheDocument();
+    expect(screen.getByText(/sold in bunches of 3/i)).toBeInTheDocument();
   });
 
   it('honours minOrderQty and stock in the stepper', async () => {
@@ -73,14 +83,14 @@ describe('CartDrawer', () => {
     await userEvent.click(dec);
     expect(cart.setQuantity).not.toHaveBeenCalled(); // no-op at the bound
     await userEvent.click(screen.getByRole('button', { name: 'Increase quantity of Red Roses' }));
-    expect(cart.setQuantity).toHaveBeenCalledWith(1, 4);
+    expect(cart.setQuantity).toHaveBeenCalledWith(1, 6); // steps by the minimum order
 
-    setCart([item({ quantity: 5, minOrderQty: 3, stock: 10 })]);
+    setCart([item({ quantity: 9, minOrderQty: 3, stock: 10 })]);
     rerender(<CartDrawer />);
     await userEvent.click(screen.getByRole('button', { name: 'Decrease quantity of Red Roses' }));
-    expect(cart.setQuantity).toHaveBeenCalledWith(1, 4);
+    expect(cart.setQuantity).toHaveBeenCalledWith(1, 6);
 
-    setCart([item({ quantity: 10, minOrderQty: 3, stock: 10 })]);
+    setCart([item({ quantity: 9, minOrderQty: 3, stock: 10 })]);
     rerender(<CartDrawer />);
     const inc = screen.getByRole('button', { name: 'Increase quantity of Red Roses' });
     expect(inc).toHaveAttribute('aria-disabled', 'true');
@@ -195,5 +205,85 @@ describe('CartDrawer', () => {
     expect(fill.className).toContain('bg-moss');
     expect(fill.parentElement!.className).toContain('bg-stone-light');
     expect(fill.parentElement!.className).toContain('h-1');
+  });
+
+  describe('revalidation on open', () => {
+    const fresh = (over: Record<string, unknown> = {}) => ({
+      id: 1, name: 'Red Roses', slug: 'red-roses', price: 500, stock: 10, active: true, saleMode: 'PURCHASE',
+      gstRate: 0, minOrderQty: 3, ...over,
+    });
+    const answer = (products: ReturnType<typeof fresh>[]) =>
+      fetchFresh.mockResolvedValue({ fresh: products, unverified: [], failed: false });
+
+    it('asks once for the lines in the bag when it opens', async () => {
+      setCart([item(), item({ productId: 2, slug: 'tulips', name: 'Tulips' })]);
+      render(<CartDrawer />);
+      await waitFor(() => expect(fetchFresh).toHaveBeenCalledTimes(1));
+      expect(fetchFresh.mock.calls[0][0].map((l: { slug: string }) => l.slug)).toEqual(['red-roses', 'tulips']);
+    });
+
+    it('flags an out-of-stock line with a one-line notice, keeps the line and points at Remove', async () => {
+      setCart([item()]);
+      answer([fresh({ stock: 0 })]);
+      render(<CartDrawer />);
+      expect(await screen.findByText('Out of stock. Remove it to check out.')).toBeInTheDocument();
+      expect(cart.replaceItems).not.toHaveBeenCalled(); // nothing is deleted or rewritten for the shopper
+      const remove = screen.getByRole('button', { name: 'Remove Red Roses' });
+      expect(remove).toHaveAccessibleDescription(/out of stock/i);
+      expect(screen.getByText(/can.t be ordered right now/i)).toBeInTheDocument();
+    });
+
+    it('announces notices politely through a region that was already on screen', async () => {
+      setCart([item()]);
+      answer([fresh({ stock: 0 })]);
+      render(<CartDrawer />);
+      const live = screen.getByTestId('cart-notices-live');
+      expect(live).toHaveAttribute('role', 'status');
+      expect(live).toHaveAttribute('aria-live', 'polite');
+      expect(live).toHaveTextContent('');
+      await waitFor(() => expect(live).toHaveTextContent('Red Roses: Out of stock.'));
+      expect(screen.queryByRole('alert')).toBeNull();
+    });
+
+    it('updates a changed price in the bag and says so', async () => {
+      setCart([item({ price: 500 })]);
+      answer([fresh({ price: 550 })]);
+      render(<CartDrawer />);
+      expect(await screen.findByText('Price changed from ₹500 to ₹550 each.')).toBeInTheDocument();
+      expect(cart.replaceItems).toHaveBeenCalledTimes(1);
+      expect(cart.replaceItems.mock.calls[0][0][0]).toMatchObject({ productId: 1, price: 550 });
+      expect(screen.queryByText(/remove it to check out/i)).toBeNull(); // not blocking
+    });
+
+    it('lowers a quantity above the remaining stock and says so', async () => {
+      setCart([item({ quantity: 9, stock: 10 })]);
+      answer([fresh({ stock: 6 })]);
+      render(<CartDrawer />);
+      expect(await screen.findByText('Only 6 left. Quantity lowered from 9 to 6.')).toBeInTheDocument();
+      expect(cart.replaceItems.mock.calls[0][0][0]).toMatchObject({ quantity: 6, stock: 6 });
+    });
+
+    it('tolerates a failed lookup: no notices, bag untouched, nothing blocked', async () => {
+      setCart([item()]);
+      fetchFresh.mockRejectedValue(new Error('network'));
+      render(<CartDrawer />);
+      await waitFor(() => expect(fetchFresh).toHaveBeenCalled());
+      expect(cart.replaceItems).not.toHaveBeenCalled();
+      expect(screen.queryByTestId('line-notice')).toBeNull();
+      expect(screen.getByRole('link', { name: 'Checkout' })).toBeInTheDocument();
+    });
+
+    it('does not touch a line that was added while the lookup was in flight', async () => {
+      setCart([item()]);
+      let resolve!: (v: unknown) => void;
+      fetchFresh.mockReturnValue(new Promise((r) => (resolve = r)));
+      const { rerender } = render(<CartDrawer />);
+      setCart([item(), item({ productId: 2, slug: 'tulips', name: 'Tulips' })]);
+      rerender(<CartDrawer />);
+      resolve({ fresh: [fresh()], unverified: [], failed: false });
+      await waitFor(() => expect(fetchFresh).toHaveBeenCalled());
+      await new Promise((r) => setTimeout(r, 0));
+      expect(screen.queryByText('No longer available.')).toBeNull();
+    });
   });
 });

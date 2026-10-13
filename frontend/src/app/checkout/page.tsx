@@ -8,10 +8,20 @@ import { useRouter } from "next/navigation";
 import { useCart, formatINR } from "@/lib/cart-context";
 import { productImage } from "@/lib/product-image";
 import { useAuth } from "@/lib/auth-context";
-import { ApiError, api } from "@/lib/api";
+import { ApiError, api, type ApiProduct } from "@/lib/api";
 import { useApi } from "@/lib/use-api";
 import ErrorState from "@/components/ui/ErrorState";
 import { clearPendingOrder, readPendingOrderId, savePendingOrder } from "@/lib/pending-order";
+import { clearLastOrderEmail, getLastOrderEmail, setLastOrderEmail } from "@/lib/guest-order";
+import { fetchFreshProducts } from "@/lib/fresh-products";
+import {
+  adjustmentNotices,
+  blockingNotices,
+  linesChanged,
+  reconcileCart,
+  type CartNotice,
+} from "@/lib/reconcile-cart";
+import { requestSignIn } from "@/lib/sign-in-request";
 import { EXPIRED_COPY, reservedMessage, usePayForOrder, type ExpiredKind } from "@/lib/use-pay-for-order";
 import PaymentActions from "@/components/PaymentActions";
 import Container from "@/components/ui/Container";
@@ -22,6 +32,7 @@ import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
 import RadioCard from "@/components/ui/RadioCard";
 import FormError from "@/components/ui/FormError";
+import { focusRing, textLink } from "@/components/ui/form-styles";
 import { readStoredPincode, storePincode } from "@/lib/pincode-storage";
 import { formatDeliveryDate, isDeliveryOptions, validateDeliveryDate, type DeliveryOptions } from "@/lib/delivery-date";
 import {
@@ -73,7 +84,7 @@ function dateHint(o: DeliveryOptions): string {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, count, clear } = useCart();
+  const { items, count, clear, remove, replaceItems } = useCart();
   const { user, loading: authLoading } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -207,20 +218,25 @@ export default function CheckoutPage() {
 
   // After auth is known: if a recent unpaid online order is remembered, show its
   // pending panel instead of the form (a refresh must not lead to a second order).
+  // A signed-in customer reloads it through their account; a guest through the order id + the email kept in
+  // sessionStorage (never the URL). Without that email a guest order cannot be read, so the form is shown.
   useEffect(() => {
     if (authLoading) return;
-    if (!user) {
-      setRestoring(false);
-      return;
-    }
+    // Already showing the pending panel for this page view (e.g. the shopper signed in meanwhile): keep it.
+    if (pendingId !== null) return;
     const id = readPendingOrderId();
     if (id === null) {
       setRestoring(false);
       return;
     }
+    const guestEmail = user ? null : getLastOrderEmail();
+    if (!user && !guestEmail) {
+      clearPendingOrder();
+      setRestoring(false);
+      return;
+    }
     let cancelled = false;
-    api
-      .getMyOrder(id)
+    (user ? api.getMyOrder(id) : api.trackOrder(id, guestEmail as string))
       .then((o) => {
         if (cancelled) return;
         if (o.paymentStatus === "PAID" || o.paymentMethod === "COD") {
@@ -239,12 +255,14 @@ export default function CheckoutPage() {
           setRestoring(false);
         } else {
           clearPendingOrder();
+          if (!user) clearLastOrderEmail();
           setRestoring(false);
         }
       })
       .catch(() => {
         if (cancelled) return;
         clearPendingOrder();
+        if (!user) clearLastOrderEmail();
         setRestoring(false);
       });
     return () => {
@@ -252,15 +270,6 @@ export default function CheckoutPage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user]);
-
-  // Login is required to place an order. Send guests to /account/login with a
-  // callback so they bounce back here once authenticated.
-  useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
-      router.replace(`/account/login?callbackUrl=${encodeURIComponent("/checkout")}`);
-    }
-  }, [authLoading, user, router]);
 
   // Shipping settings and live prices are hard prerequisites: if either fails to
   // load we render an ErrorState instead of the form, so an order can never be
@@ -279,7 +288,9 @@ export default function CheckoutPage() {
   const onlineEnabled = paymentConfig?.enabled === true;
   const paymentMethod: "COD" | "RAZORPAY" = onlineEnabled ? form.paymentMethod : "COD";
 
-  // Re-fetch live prices whenever the set of products in the cart changes.
+  // Re-fetch live prices whenever the set of products in the cart changes. A product that no longer exists (404)
+  // is simply absent from `fresh` (reconcileCart flags it); any other failure aborts, so an order can never be
+  // submitted against stale prices.
   const productKey = items.map((i) => i.productId).sort((a, b) => a - b).join(",");
   const {
     data: pricing,
@@ -287,28 +298,47 @@ export default function CheckoutPage() {
     loading: pricesLoading,
     reload: reloadPrices,
   } = useApi(async () => {
-    const snapshot = items;
-    const results = await Promise.all(
-      snapshot.map((it) =>
-        // A product that no longer exists (404) is skipped here; the backend
-        // rejects the order with a readable message. Any other failure aborts.
-        api.getProductBySlug(it.slug).catch((e: unknown) => {
-          if (e instanceof ApiError && e.status === 404) return null;
-          throw e;
-        }),
-      ),
-    );
+    const res = await fetchFreshProducts(items, { maxAgeMs: 0 });
+    if (res.failed) throw new Error("Could not load current prices");
     const map: Record<number, { price: number; gstRate: number }> = {};
-    let changed = false;
-    results.forEach((p, idx) => {
-      if (!p) return;
-      map[p.id] = { price: p.price, gstRate: p.gstRate ?? 0 };
-      if (Math.abs((p.price ?? 0) - snapshot[idx].price) > 0.001) changed = true;
-    });
-    return { map, changed };
+    for (const p of res.fresh) map[p.id] = { price: p.price, gstRate: p.gstRate ?? 0 };
+    return { map, fresh: res.fresh };
   }, [productKey]);
   const freshPrices = pricing?.map ?? {};
-  const priceChanged = pricing?.changed ?? false;
+
+  // Same reconcile as the cart drawer. Fixable differences (lower stock, new price) are applied to the bag and
+  // listed for the shopper to accept before paying; blocking ones (gone / out of stock) must be removed.
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+  const [adjustments, setAdjustments] = useState<CartNotice[]>([]);
+  const noteAdjustments = (found: CartNotice[]) => {
+    if (found.length === 0) return;
+    setAdjustments((prev) => [
+      ...prev.filter((p) => !found.some((f) => f.productId === p.productId && f.kind === p.kind)),
+      ...found,
+    ]);
+  };
+  const applyFresh = (fresh: ApiProduct[]) => {
+    const latest = itemsRef.current;
+    const result = reconcileCart(latest, fresh);
+    if (linesChanged(latest, result.lines)) replaceItems(result.lines);
+    noteAdjustments(adjustmentNotices(result.notices));
+  };
+  useEffect(() => {
+    if (pricing) applyFresh(pricing.fresh);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pricing]);
+  const blocking = useMemo(
+    () => (pricing ? blockingNotices(reconcileCart(items, pricing.fresh).notices) : []),
+    [items, pricing],
+  );
+  const shownAdjustments = adjustments.filter((a) => items.some((i) => i.productId === a.productId));
+  const gateMessage =
+    blocking.length > 0
+      ? "Remove the items that can't be ordered right now to continue."
+      : shownAdjustments.length > 0
+        ? "Please review and accept the changes to your order to continue."
+        : null;
 
   const priceOf = (it: (typeof items)[number]) => freshPrices[it.productId]?.price ?? it.price;
   const gstRateOf = (it: (typeof items)[number]) => freshPrices[it.productId]?.gstRate ?? it.gstRate ?? 0;
@@ -328,7 +358,8 @@ export default function CheckoutPage() {
       setForm((f) => ({
         ...f,
         customerName: f.customerName || user.name || "",
-        customerEmail: f.customerEmail || user.email,
+        // A guest who signs in mid-form: the order is tied to the account email, so show that one.
+        customerEmail: user.email,
         customerPhone: f.customerPhone || user.phone || "",
       }));
     }
@@ -343,8 +374,7 @@ export default function CheckoutPage() {
   }, [liveSubtotal, count, flatRate, freeThreshold]);
   const total = liveSubtotal + shipping + liveGstTotal;
 
-  // Don't render the form for guests — they're being redirected to /account/login.
-  if (authLoading || !user) {
+  if (authLoading) {
     return (
       <main>
         <Container className="py-12 lg:py-16">
@@ -440,7 +470,7 @@ export default function CheckoutPage() {
     );
   }
 
-  if (count > 0 && (settingsLoading || pricesLoading || configLoading || (optionsLoading && !deliveryOptions) || !settingsData || !pricing || !deliveryOptions)) {
+  if (count > 0 && (settingsLoading || (pricesLoading && !pricing) || configLoading || (optionsLoading && !deliveryOptions) || !settingsData || !pricing || !deliveryOptions)) {
     return (
       <main>
         <Container className="py-12 lg:py-16">
@@ -479,6 +509,11 @@ export default function CheckoutPage() {
       setFocusTick((t) => t + 1);
       return;
     }
+    if (gateMessage) {
+      setError(gateMessage);
+      setFocusTick((t) => t + 1);
+      return;
+    }
     submittingRef.current = true;
     setSubmitting(true);
     try {
@@ -488,6 +523,26 @@ export default function CheckoutPage() {
         setTouched((t) => ({ ...t, postalCode: true }));
         setPinFocusTick((t) => t + 1);
         return;
+      }
+      // Last look before money moves: prices and stock may have changed while the form was open. Anything that
+      // changed is shown for the shopper to accept first; the server still computes the real total.
+      const latest = await fetchFreshProducts(items, { maxAgeMs: 0 });
+      if (!latest.failed) {
+        const result = reconcileCart(items, latest.fresh);
+        const newBlocking = blockingNotices(result.notices);
+        const newAdjustments = adjustmentNotices(result.notices);
+        if (linesChanged(items, result.lines)) replaceItems(result.lines);
+        noteAdjustments(newAdjustments);
+        if (newBlocking.length > 0 || newAdjustments.length > 0) {
+          reloadPrices();
+          setError(
+            newBlocking.length > 0
+              ? "Some items in your bag can't be ordered right now. Remove them to continue."
+              : "Some prices or quantities changed while you were checking out. Review the changes and accept them to continue.",
+          );
+          setFocusTick((t) => t + 1);
+          return;
+        }
       }
       const order = await api.createOrder({
         items: items.map((it) => ({ productId: it.productId, quantity: it.quantity })),
@@ -501,6 +556,8 @@ export default function CheckoutPage() {
         notes: form.notes.trim() || undefined,
         paymentMethod,
       });
+      // A guest finds their order again (pay, switch, success page) with the email they ordered with.
+      if (!user) setLastOrderEmail(form.customerEmail.trim());
       if (paymentMethod === "COD") {
         goToSuccess(order.id);
       } else {
@@ -515,6 +572,11 @@ export default function CheckoutPage() {
       setError(message);
       // The window moves with the clock (cut-off time): after a date rejection, re-read it so the field shows the new range.
       if (/delivery date|deliver on that date/i.test(message)) reloadOptions();
+      // Stock / availability rejected by the server: re-read the bag against current data so the shopper sees
+      // exactly which lines to fix instead of retrying the same order.
+      if (err instanceof ApiError && err.status === 400 && /stock|available|minimum order|enquiry|adjust your cart/i.test(message)) {
+        reloadPrices();
+      }
       setFocusTick((t) => t + 1);
     } finally {
       submittingRef.current = false;
@@ -531,7 +593,9 @@ export default function CheckoutPage() {
   return (
     <main>
       <Container className="py-10 lg:py-16">
-        <h1 className="type-h1">Checkout</h1>
+        <h1 id="checkout-heading" tabIndex={-1} className="type-h1 outline-none">
+          Checkout
+        </h1>
         <p className="mt-4 max-w-xl text-base leading-relaxed text-stone-dark">
           Choose how you would like to pay. Online orders are held for 30 minutes while you complete payment.
         </p>
@@ -568,8 +632,8 @@ export default function CheckoutPage() {
                   </li>
                 ))}
               </ul>
-              {priceChanged && (
-                <p className="mt-6 border border-stone-light px-4 py-3 text-sm text-charcoal" role="status">
+              {shownAdjustments.some((a) => a.kind === "price-changed") && (
+                <p className="mt-6 border border-stone-light px-4 py-3 text-sm text-charcoal">
                   Some prices were updated since you added these items. The total below reflects current pricing.
                 </p>
               )}
@@ -603,6 +667,69 @@ export default function CheckoutPage() {
           </aside>
 
           <form onSubmit={handleSubmit} noValidate className="space-y-12 lg:col-span-7 lg:row-start-1">
+            {/* Persistent polite region: changes that arrive after the page is up (submit-time re-check) are announced. */}
+            <div role="status" aria-live="polite" aria-atomic="false" data-testid="checkout-changes">
+              {(blocking.length > 0 || shownAdjustments.length > 0) && (
+                <section aria-labelledby="checkout-changes-title" className="border border-charcoal px-5 py-4 text-sm text-charcoal">
+                  <h2 id="checkout-changes-title" className="font-display text-xl">
+                    {blocking.length > 0 ? "Some items need attention" : "Your order changed"}
+                  </h2>
+                  <ul className="mt-3 space-y-3">
+                    {blocking.map((n) => (
+                      <li key={`${n.productId}-${n.kind}`} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+                        <span>
+                          <strong className="font-medium">{n.name}</strong>: {n.message}
+                        </span>
+                        <button
+                          type="button"
+                          data-checkout-remove
+                          aria-label={`Remove ${n.name} from your bag`}
+                          onClick={(e) => {
+                            const all = Array.from(document.querySelectorAll<HTMLElement>("[data-checkout-remove]"));
+                            const i = all.indexOf(e.currentTarget);
+                            (all[i + 1] ?? all[i - 1] ?? document.getElementById("checkout-heading"))?.focus();
+                            remove(n.productId);
+                          }}
+                          className={`min-h-[44px] px-1 underline underline-offset-4 hover:text-moss ${focusRing}`}
+                        >
+                          Remove
+                        </button>
+                      </li>
+                    ))}
+                    {shownAdjustments.map((n) => (
+                      <li key={`${n.productId}-${n.kind}`}>
+                        <strong className="font-medium">{n.name}</strong>: {n.message}
+                      </li>
+                    ))}
+                  </ul>
+                  {blocking.length === 0 && (
+                    <Button type="button" variant="outline" className="mt-4" onClick={() => setAdjustments([])}>
+                      Accept changes
+                    </Button>
+                  )}
+                </section>
+              )}
+            </div>
+
+            {!user && (
+              <section aria-labelledby="guest-checkout-title" className="border border-stone-light px-5 py-4">
+                <h2 id="guest-checkout-title" className="font-display text-xl text-charcoal">
+                  Checkout as guest
+                </h2>
+                <p className="mt-2 text-sm text-stone-dark">
+                  No account needed. We&apos;ll email your order confirmation to the address below. Have an account?{" "}
+                  <button
+                    type="button"
+                    aria-label="Sign in to your account"
+                    onClick={(e) => requestSignIn(e.currentTarget)}
+                    className={`text-charcoal ${textLink}`}
+                  >
+                    Sign in
+                  </button>
+                </p>
+              </section>
+            )}
+
             <FormError
               ref={summaryRef}
               title={summaryItems.length > 0 ? "Please check the following" : undefined}
@@ -623,7 +750,12 @@ export default function CheckoutPage() {
                     onBlur={blur("customerName")}
                   />
                 </Field>
-                <Field id={FIELD_IDS.customerEmail} label="Email" error={fieldError("customerEmail")}>
+                <Field
+                  id={FIELD_IDS.customerEmail}
+                  label="Email"
+                  hint={user ? undefined : "Your confirmation and tracking details are sent here."}
+                  error={fieldError("customerEmail")}
+                >
                   <Input
                     type="email"
                     autoComplete="email"
@@ -738,9 +870,20 @@ export default function CheckoutPage() {
             </div>
 
             <div>
-              <Button type="submit" size="lg" disabled={submitting} className="w-full">
+              <Button
+                type="submit"
+                size="lg"
+                disabled={submitting || Boolean(gateMessage)}
+                aria-describedby={gateMessage ? "checkout-gate" : undefined}
+                className="w-full"
+              >
                 {submitting ? "Placing order…" : paymentMethod === "RAZORPAY" ? "Place order & pay" : "Place order"}
               </Button>
+              {gateMessage && (
+                <p id="checkout-gate" className="mt-3 text-sm text-charcoal">
+                  {gateMessage}
+                </p>
+              )}
               <ul className="mt-4 space-y-1 text-left text-sm text-stone-dark">
                 {paymentMethod === "RAZORPAY" && <li>Secure payment via Razorpay.</li>}
                 <li>We&apos;ll email your order confirmation.</li>

@@ -13,6 +13,8 @@ export interface CartItem {
   gstRate?: number;
   minOrderQty?: number;
   stock?: number;
+  /** The product's own unit word ("stem"), only used for the "Sold in bunches of N" copy. */
+  unit?: string;
 }
 
 // Clamp a requested quantity into the product's [minOrderQty, stock] window so
@@ -33,6 +35,8 @@ interface CartState {
   setQuantity: (productId: number, quantity: number) => void;
   remove: (productId: number) => void;
   clear: () => void;
+  /** Swaps in lines produced by reconcileCart (fresh price, stock and clamped quantity). */
+  replaceItems: (items: CartItem[]) => void;
   isOpen: boolean;
   open: () => void;
   close: () => void;
@@ -108,6 +112,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const clear = useCallback(() => setItems([]), []);
+  const replaceItems = useCallback((next: CartItem[]) => setItems(next), []);
 
   const count = useMemo(() => items.reduce((sum, i) => sum + i.quantity, 0), [items]);
   const subtotal = useMemo(() => items.reduce((sum, i) => sum + i.quantity * i.price, 0), [items]);
@@ -130,12 +135,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setQuantity,
       remove,
       clear,
+      replaceItems,
       isOpen,
       open: () => setIsOpen(true),
       close: () => setIsOpen(false),
       toggle: () => setIsOpen((v) => !v),
     }),
-    [items, count, subtotal, gstTotal, add, setQuantity, remove, clear, isOpen],
+    [items, count, subtotal, gstTotal, add, setQuantity, remove, clear, replaceItems, isOpen],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

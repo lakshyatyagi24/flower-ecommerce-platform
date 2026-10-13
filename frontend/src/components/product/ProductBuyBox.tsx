@@ -5,7 +5,7 @@ import Button from "@/components/ui/Button";
 import EnquiryModal from "@/components/EnquiryModal";
 import PincodeCheck from "@/components/PincodeCheck";
 import { useCart } from "@/lib/cart-context";
-import { availability, minQty, toCartItem } from "@/lib/product-helpers";
+import { availability, bunchCopy, isLowStock, minQty, toCartItem } from "@/lib/product-helpers";
 import type { ApiProduct } from "@/lib/api";
 
 type BuyBoxProduct = Pick<
@@ -28,10 +28,12 @@ export default function ProductBuyBox({ product }: { product: BuyBoxProduct }) {
   const status = availability(product);
   const isEnquiry = status === "enquiry";
   const outOfStock = status === "out-of-stock";
-  // Quantity runs from the minimum order up to stock, one at a time (same rule as the cart drawer).
+  // Quantity moves in bunches: it starts at the minimum order, steps by it and never passes stock
+  // (same rule as the cart drawer).
+  const step = min;
   const max = product.stock > 0 ? product.stock : Infinity;
-  const canDecrease = quantity > min;
-  const canIncrease = quantity < max;
+  const canDecrease = quantity - step >= min;
+  const canIncrease = quantity + step <= max;
 
   if (isEnquiry) {
     return (
@@ -74,7 +76,7 @@ export default function ProductBuyBox({ product }: { product: BuyBoxProduct }) {
             className={stepBtn}
             aria-label="Decrease quantity"
             disabled={!canDecrease}
-            onClick={() => setQuantity((q) => Math.max(min, q - 1))}
+            onClick={() => setQuantity((q) => Math.max(min, q - step))}
           >
             −
           </button>
@@ -86,7 +88,7 @@ export default function ProductBuyBox({ product }: { product: BuyBoxProduct }) {
             className={stepBtn}
             aria-label="Increase quantity"
             disabled={!canIncrease}
-            onClick={() => setQuantity((q) => Math.min(max, q + 1))}
+            onClick={() => setQuantity((q) => (q + step <= max ? q + step : q))}
           >
             +
           </button>
@@ -101,14 +103,10 @@ export default function ProductBuyBox({ product }: { product: BuyBoxProduct }) {
           Add to bag
         </Button>
       </div>
-      {(min > 1 || product.stock <= 10) && (
+      {(min > 1 || isLowStock(product)) && (
         <p className="mt-3 text-sm text-stone-dark">
-          {min > 1 && (
-            <span>
-              Minimum order: {min} {product.unit || "units"}.{" "}
-            </span>
-          )}
-          {product.stock <= 10 && <span>Only {product.stock} left.</span>}
+          {min > 1 && <span>{bunchCopy(min, product.unit)}. </span>}
+          {isLowStock(product) && <span>Only {product.stock} left.</span>}
         </p>
       )}
       <PincodeCheck className="mt-6 border-t border-stone-light pt-6" />

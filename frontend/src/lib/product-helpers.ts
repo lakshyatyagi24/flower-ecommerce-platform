@@ -13,10 +13,36 @@ export function availability(p: Pick<ApiProduct, 'saleMode' | 'stock' | 'minOrde
   return 'in-stock';
 }
 
+/** "Only N left" is shown up to this many units in stock (and never at zero). Honest, from the API stock. */
+export const LOW_STOCK_MAX = 10;
+
+export function isLowStock(p: { stock: number }): boolean {
+  return p.stock > 0 && p.stock <= LOW_STOCK_MAX;
+}
+
+/** Plural of the product's own unit word ("stem" -> "stems"). Already-plural words are left alone. */
+function pluralUnit(unit: string): string {
+  if (/s$/.test(unit)) return unit;
+  if (/(x|z|ch|sh)$/.test(unit)) return `${unit}es`;
+  if (/[^aeiou]y$/.test(unit)) return `${unit.slice(0, -1)}ies`;
+  return `${unit}s`;
+}
+
+/**
+ * "Sold in bunches of 5 stems", or null when there is no minimum. The noun comes only from the product's own
+ * `unit` field; a unit that is itself a bunch word, or none, leaves it off.
+ */
+export function bunchCopy(min: number, unit?: string | null): string | null {
+  if (!(min > 1)) return null;
+  const u = (unit ?? '').trim().toLowerCase();
+  const noun = !u || /^(bunch|bunches|bundle|bundles)$/.test(u) ? '' : ` ${pluralUnit(u)}`;
+  return `Sold in bunches of ${min}${noun}`;
+}
+
 export type CartItemInput = Pick<
   ApiProduct,
   'id' | 'slug' | 'name' | 'price' | 'image' | 'stock' | 'saleMode' | 'gstRate' | 'minOrderQty'
->;
+> & { unit?: string };
 
 /** The one place the cart-item shape is built from a product. */
 export function toCartItem(p: CartItemInput) {
@@ -30,6 +56,7 @@ export function toCartItem(p: CartItemInput) {
     gstRate: p.gstRate,
     minOrderQty: p.minOrderQty,
     stock: p.stock,
+    unit: p.unit,
   };
 }
 

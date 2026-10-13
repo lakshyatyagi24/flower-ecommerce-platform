@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { ApiError, api, type ApiOrder } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useCart } from "@/lib/cart-context";
+import { getLastOrderEmail } from "@/lib/guest-order";
 import { resolveOrderLocally } from "@/lib/pending-order";
 import { payForOrder, type PayHandlers } from "@/lib/razorpay-flow";
 
@@ -16,6 +17,9 @@ export const SWITCHED_REFUND_COPY =
 
 export const reservedMessage = (id: number) =>
   `If you completed the payment in your UPI or banking app, wait a minute and press Check status before switching. Your order #${id} is reserved for 30 minutes.`;
+
+export const GUEST_NO_EMAIL_COPY =
+  "We can't look up this order from here any more. Use Track order with your order number and the email you ordered with.";
 
 export const EXPIRED_COPY: Record<ExpiredKind, string> = {
   unpaid: "This order expired because payment was not completed. Nothing was charged.",
@@ -53,6 +57,14 @@ export function usePayForOrder({ orderId, onResolved }: UsePayForOrderOptions) {
   const cb = useRef(onResolved);
   cb.current = onResolved;
   const idOf = (id?: number) => (id ?? orderId) as number;
+  // A guest is identified by the email on the order (kept in sessionStorage, never the URL); a signed-in customer by token.
+  const guestEmail = (): string | undefined => (user ? undefined : getLastOrderEmail() ?? undefined);
+  const fetchOrder = async (oid: number): Promise<ApiOrder> => {
+    if (user) return api.getMyOrder(oid);
+    const email = guestEmail();
+    if (!email) throw new Error(GUEST_NO_EMAIL_COPY);
+    return api.trackOrder(oid, email);
+  };
 
   const resolve = (id: number, kind: "paid" | "refund" | "cod") => {
     clear();
@@ -120,7 +132,7 @@ export function usePayForOrder({ orderId, onResolved }: UsePayForOrderOptions) {
     const oid = idOf(id);
     setNotice(null);
     setConfirming(false);
-    return payForOrder(oid, handlers(oid));
+    return payForOrder(oid, handlers(oid), guestEmail());
   };
 
   const checkStatus = async (id?: number) => {
@@ -128,7 +140,7 @@ export function usePayForOrder({ orderId, onResolved }: UsePayForOrderOptions) {
     if (busy) return;
     setBusy(true);
     try {
-      const o = await api.getMyOrder(oid);
+      const o = await fetchOrder(oid);
       if (!applyOrder(o)) {
         setNotice({
           text: `Your order #${oid} is still pending and has not been paid yet. It is reserved for 30 minutes.`,
@@ -149,9 +161,9 @@ export function usePayForOrder({ orderId, onResolved }: UsePayForOrderOptions) {
     setConfirming(false);
     try {
       // Re-check first: a payment may have completed while the modal was closed.
-      const o = await api.getMyOrder(oid);
+      const o = await fetchOrder(oid);
       if (applyOrder(o)) return;
-      await api.setOrderPaymentMethod(oid, user?.email);
+      await api.setOrderPaymentMethod(oid, user ? user.email : guestEmail());
       resolve(oid, "cod");
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
