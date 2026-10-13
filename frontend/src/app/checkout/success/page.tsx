@@ -17,8 +17,8 @@ import Skeleton from "@/components/ui/Skeleton";
 import Image from "next/image";
 import { productImage } from "@/lib/product-image";
 import { paymentLine } from "@/lib/order-labels";
+import { textLink } from "@/components/ui/form-styles";
 
-const textLink = "underline underline-offset-4 decoration-stone hover:decoration-charcoal";
 
 const RESERVED_NOTE = "Your order is reserved for 30 minutes from when it was placed. After that it is cancelled automatically.";
 

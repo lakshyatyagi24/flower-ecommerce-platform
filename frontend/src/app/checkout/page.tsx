@@ -457,7 +457,7 @@ export default function CheckoutPage() {
                       <div className="text-sm text-charcoal">{it.name}</div>
                       <div className="mt-1 text-sm text-stone-dark">Qty {it.quantity}</div>
                     </div>
-                    <div className="text-sm text-charcoal">{formatINR(priceOf(it) * it.quantity)}</div>
+                    <div className="shrink-0 whitespace-nowrap text-sm text-charcoal">{formatINR(priceOf(it) * it.quantity)}</div>
                   </li>
                 ))}
               </ul>
@@ -604,7 +604,7 @@ export default function CheckoutPage() {
               <Button type="submit" size="lg" disabled={submitting} className="w-full">
                 {submitting ? "Placing order…" : paymentMethod === "RAZORPAY" ? "Place order & pay" : "Place order"}
               </Button>
-              <ul className="mt-4 space-y-1 text-center text-sm text-stone-dark">
+              <ul className="mt-4 space-y-1 text-left text-sm text-stone-dark">
                 {paymentMethod === "RAZORPAY" && <li>Secure payment via Razorpay.</li>}
                 <li>We&apos;ll email your order confirmation.</li>
               </ul>

@@ -111,7 +111,7 @@ export default function MyOrdersPage() {
                         <span>
                           {it.quantity} × {it.productName}
                         </span>
-                        <span>{formatINR(it.unitPrice * it.quantity)}</span>
+                        <span className="shrink-0 whitespace-nowrap">{formatINR(it.unitPrice * it.quantity)}</span>
                       </li>
                     ))}
                   </ul>
