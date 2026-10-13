@@ -4,7 +4,8 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Cart from "./Cart";
-const SignInModal = dynamic(() => import("./SignInModal"), { ssr: false });
+const loadSignIn = () => import("./SignInModal");
+const SignInModal = dynamic(loadSignIn, { ssr: false });
 import AccountMenu from "./chrome/AccountMenu";
 import HeaderSearch from "./chrome/HeaderSearch";
 import { MenuIcon } from "./chrome/icons";
@@ -87,7 +88,7 @@ export default function Navbar() {
           <div className="col-start-3 row-start-1 flex items-center justify-self-end lg:-mr-3">
             <HeaderSearch />
             <div className="hidden lg:block">
-              <AccountMenu onSignIn={openSignIn} />
+              <AccountMenu onSignIn={openSignIn} onIntent={() => void loadSignIn()} />
             </div>
             <Cart />
           </div>

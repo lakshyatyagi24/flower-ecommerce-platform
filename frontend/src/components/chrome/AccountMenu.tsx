@@ -13,7 +13,7 @@ const item = `flex min-h-[44px] w-full items-center px-4 text-left text-sm text-
  * Account control. Guests: an icon button that asks the parent to open the sign-in modal.
  * Signed in: an initial that opens a small hairline menu (My orders, Track order, Sign out).
  */
-export default function AccountMenu({ onSignIn }: { onSignIn: (trigger: HTMLElement | null) => void }) {
+export default function AccountMenu({ onSignIn, onIntent }: { onSignIn: (trigger: HTMLElement | null) => void; onIntent?: () => void }) {
   const { user, logout } = useAuth();
   const menuId = useId();
   const [open, setOpen] = useState(false);
@@ -36,6 +36,8 @@ export default function AccountMenu({ onSignIn }: { onSignIn: (trigger: HTMLElem
         aria-label="Sign in"
         aria-haspopup="dialog"
         onClick={() => onSignIn(triggerRef.current)}
+        onPointerEnter={onIntent}
+        onFocus={onIntent}
         className={iconButton}
       >
         <UserIcon />
