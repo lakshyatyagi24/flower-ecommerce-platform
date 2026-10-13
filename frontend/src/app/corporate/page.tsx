@@ -57,8 +57,8 @@ export default function CorporatePage() {
               </h2>
               <ol className="mt-6 space-y-4">
                 {steps.map((s, i) => (
-                  <li key={s} className="grid grid-cols-[2rem_1fr] text-base leading-relaxed text-charcoal">
-                    <span className="font-display text-xl text-stone-dark">{i + 1}</span>
+                  <li key={s} className="grid grid-cols-[2.5rem_1fr] text-base leading-relaxed text-charcoal">
+                    <span className="text-sm text-stone-dark">{String(i + 1).padStart(2, "0")}</span>
                     <span>{s}</span>
                   </li>
                 ))}
