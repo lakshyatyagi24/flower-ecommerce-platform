@@ -25,9 +25,11 @@ describe('PromoStrip (announcement bar)', () => {
     expect(document.body.textContent).toBe('');
   });
 
-  it('renders nothing on the server even when set (no hydration mismatch)', () => {
+  it('is server-rendered when set, so the bar does not shift the page in after hydration (CLS)', () => {
     settingsRaw['homepage.announcement'] = 'Closed on Sunday';
-    expect(renderToString(<PromoStrip />)).toBe('');
+    const html = renderToString(<PromoStrip />);
+    expect(html).toContain('Closed on Sunday');
+    expect(html).toContain('min-h-[44px]');
   });
 
   it('shows the announcement text after mount, as a plain line without href', () => {

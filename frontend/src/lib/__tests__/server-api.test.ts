@@ -113,4 +113,39 @@ describe('server-api', () => {
     const { getProduct } = await load();
     expect(await getProduct('nope')).toBeNull();
   });
+
+  it('getLayoutSettings never throws and uses the short timeout', async () => {
+    const { getLayoutSettings } = await load();
+    fetchMock.mockRejectedValueOnce(new Error('ECONNREFUSED'));
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    expect(await getLayoutSettings()).toBeNull();
+    warn.mockRestore();
+    fetchMock.mockResolvedValueOnce(ok({ 'store.name': 'X' }));
+    expect(await getLayoutSettings()).toEqual({ 'store.name': 'X' });
+    expect(fetchMock.mock.calls[1][1].signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('dedupes identical requests within a render (React cache) and still sends an abort signal', async () => {
+    vi.resetModules();
+    vi.doMock('react', async (orig) => {
+      const real = await orig<typeof import('react')>();
+      const memo = <A extends unknown[], R>(fn: (...a: A) => R) => {
+        const seen = new Map<string, R>();
+        return (...a: A) => {
+          const k = JSON.stringify(a);
+          if (!seen.has(k)) seen.set(k, fn(...a));
+          return seen.get(k)!;
+        };
+      };
+      return { ...real, default: { ...real, cache: memo }, cache: memo };
+    });
+    const { getProduct, listCategories } = await import('../server-api');
+    fetchMock.mockImplementation(async () => ok({ id: 1 }));
+    await Promise.all([getProduct('a'), getProduct('a'), listCategories(), listCategories()]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal);
+    await getProduct('b');
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    vi.doUnmock('react');
+  });
 });

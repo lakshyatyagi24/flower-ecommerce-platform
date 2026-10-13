@@ -182,10 +182,16 @@ function fromRaw(raw: Record<string, string>): StoreSettings {
 
 const SettingsContext = createContext<StoreSettings>(FALLBACK);
 
-export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<StoreSettings>(FALLBACK);
+/**
+ * `initialRaw` is the settings map fetched on the server (root layout). When present the first paint already
+ * has the real announcement bar and footer (no layout shift) and the client does not refetch; when null/absent
+ * the client loads them after mount as before.
+ */
+export function SettingsProvider({ children, initialRaw }: { children: ReactNode; initialRaw?: Record<string, string> | null }) {
+  const [settings, setSettings] = useState<StoreSettings>(() => (initialRaw ? fromRaw(initialRaw) : FALLBACK));
 
   useEffect(() => {
+    if (initialRaw) return;
     let cancelled = false;
     api.getSettings()
       .then((raw) => {
@@ -198,7 +204,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialRaw]);
 
   const value = useMemo(() => settings, [settings]);
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;

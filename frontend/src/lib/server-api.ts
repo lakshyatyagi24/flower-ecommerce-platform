@@ -1,4 +1,5 @@
 import 'server-only';
+import * as React from 'react';
 import type { ApiCategory, ApiProduct, ProductSort } from './api';
 import { HERO_FALLBACK, pickHero, type HeroContent } from './hero';
 
@@ -23,12 +24,27 @@ export type ListParams = {
 
 export type ProductPage = { items: ApiProduct[]; total: number; page: number; pages: number; take: number };
 
-async function get<T>(path: string, revalidate = 60, allow404 = false): Promise<T | null> {
-  // 5s timeout: a hung API must fail the call (callers degrade) rather than hang the page.
-  const res = await fetch(`${base()}${path}`, { next: { revalidate }, signal: AbortSignal.timeout(5000) });
+/**
+ * Per-request memoisation. React's automatic fetch dedupe is skipped for requests that carry an abort
+ * `signal`, so layout + page + generateMetadata would each hit the data cache separately. `cache()` keys on
+ * the (primitive) arguments and lives for one render pass. It is a no-op outside the Next server runtime
+ * (tests, scripts), where React 18 does not export it.
+ */
+type Memo = <A extends unknown[], R>(fn: (...a: A) => R) => (...a: A) => R;
+const requestCache: Memo = (React as unknown as { cache?: Memo }).cache ?? ((fn) => fn);
+
+async function fetchJson<T>(path: string, revalidate: number, allow404: boolean, timeoutMs: number): Promise<T | null> {
+  // Timeout: a hung API must fail the call (callers degrade) rather than hang the page.
+  const res = await fetch(`${base()}${path}`, { next: { revalidate }, signal: AbortSignal.timeout(timeoutMs) });
   if (allow404 && res.status === 404) return null;
   if (!res.ok) throw new Error(`API ${path.split('?')[0]} responded ${res.status}`);
   return (await res.json()) as T;
+}
+
+const memoGet = requestCache(fetchJson);
+
+function get<T>(path: string, revalidate = 60, allow404 = false, timeoutMs = 5000): Promise<T | null> {
+  return memoGet(path, revalidate, allow404, timeoutMs) as Promise<T | null>;
 }
 
 /** Returns null when the product does not exist; throws on any other failure. */
@@ -61,6 +77,20 @@ export async function listCategories(): Promise<ApiCategory[]> {
 
 export async function getSettings(): Promise<Record<string, string>> {
   return (await get<Record<string, string>>('/settings', 300))!;
+}
+
+/**
+ * Settings for the root layout (announcement bar, footer contact). Never throws and uses a shorter timeout
+ * than page data, because every page render waits on it: null means "unavailable", and the client provider
+ * then loads the settings itself after mount.
+ */
+export async function getLayoutSettings(): Promise<Record<string, string> | null> {
+  try {
+    return await get<Record<string, string>>('/settings', 300, false, 2500);
+  } catch (err) {
+    console.warn('[layout] settings fetch failed, client will load them', err);
+    return null;
+  }
 }
 
 /**

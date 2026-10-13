@@ -4,12 +4,13 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import PromoStrip from "@/components/PromoStrip";
 import Footer from "@/components/Footer";
-import CartDrawer from "@/components/CartDrawer";
+import CartDrawer from "@/components/CartDrawerLazy";
 import WhatsAppButton from "@/components/WhatsAppButton";
 import { AuthProvider } from "@/lib/auth-context";
 import { CartProvider } from "@/lib/cart-context";
 import { SettingsProvider } from "@/lib/settings-context";
 import JsonLd from "@/components/JsonLd";
+import { getLayoutSettings } from "@/lib/server-api";
 import { SITE, organizationJsonLd, websiteJsonLd } from "@/lib/seo";
 
 const inter = Inter({
@@ -20,11 +21,15 @@ const inter = Inter({
 
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  style: ["normal", "italic"],
+  // 400 body/headings, 500 wordmark + h3. No 600 or italic is used anywhere (each unused face is a blocking-ish font file).
+  weight: ["400", "500"],
   variable: "--font-cormorant",
   display: "swap",
 });
+
+// Statically prerendered pages are rebuilt at most every 5 minutes, so settings that were unreachable at build
+// time (no API in the Docker build) are picked up on the first request after that instead of never.
+export const revalidate = 300;
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
@@ -59,17 +64,18 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const initialSettings = await getLayoutSettings();
   return (
     <html lang="en" className={`${inter.variable} ${cormorant.variable}`}>
       <body className="antialiased">
         <JsonLd data={organizationJsonLd()} />
         <JsonLd data={websiteJsonLd()} />
-        <SettingsProvider>
+        <SettingsProvider initialRaw={initialSettings}>
           <AuthProvider>
             <CartProvider>
               <a href="#main" className="skip-link">

@@ -9,12 +9,12 @@ const KEY = "fp_announcement_dismissed";
 
 /**
  * Optional announcement bar. Driven entirely by settings: `homepage.announcement` (text) and
- * `homepage.announcementHref` (relative path). Hidden when empty or dismissed for the session. Renders
- * nothing until mounted so the server HTML and the first client render always agree.
+ * `homepage.announcementHref` (relative path). Hidden when empty or dismissed for the session. It is
+ * server-rendered when the settings are known (the layout fetches them), so there is no layout shift; the
+ * session dismissal is applied after mount, so the server HTML and the first client render always agree.
  */
 export default function PromoStrip() {
   const settings = useSettings();
-  const [mounted, setMounted] = useState(false);
   const [dismissed, setDismissed] = useState<string | null>(null);
 
   useEffect(() => {
@@ -23,11 +23,10 @@ export default function PromoStrip() {
     } catch {
       /* storage unavailable: show the bar */
     }
-    setMounted(true);
   }, []);
 
   const text = settings.raw?.["homepage.announcement"]?.trim();
-  if (!mounted || isPlaceholderSetting(text) || dismissed === text) return null;
+  if (isPlaceholderSetting(text) || dismissed === text) return null;
 
   const rawHref = settings.raw["homepage.announcementHref"]?.trim();
   // An unsafe or non-relative link is rejected by safeHref (it answers /products): show plain text instead.
