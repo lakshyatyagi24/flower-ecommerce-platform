@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useId, useRef } from "react";
 import EnquiryForm, { EnquiryFormDefaults } from "./EnquiryForm";
+import { useModal } from "@/components/chrome/use-modal";
 
 type EnquiryModalProps = EnquiryFormDefaults & {
   open: boolean;
@@ -17,52 +18,56 @@ export default function EnquiryModal({
   description,
   ...defaults
 }: EnquiryModalProps) {
-  React.useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-    };
-  }, [open, onClose]);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const pressedOnBackdrop = useRef(false);
+  const titleId = useId();
+  useModal(open, dialogRef, onClose);
 
   if (!open) return null;
 
   return (
     <div
-      role="dialog"
-      aria-modal="true"
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40"
+      className="fixed inset-0 z-[60] flex items-end justify-center bg-charcoal/50 sm:items-center sm:p-6"
+      // Close only when the press AND the release both land on the backdrop, so a text-selection drag that
+      // ends outside the dialog does not dismiss it.
+      onMouseDown={(e) => {
+        pressedOnBackdrop.current = e.target === e.currentTarget;
+      }}
       onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        if (pressedOnBackdrop.current && e.target === e.currentTarget) onClose();
+        pressedOnBackdrop.current = false;
       }}
     >
-      <div className="bg-white w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-xl">
-        <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-olive-green">{heading}</h2>
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        className="max-h-[100dvh] w-full overflow-y-auto border border-stone-light bg-ivory px-5 pb-8 pt-4 outline-none sm:max-h-[calc(100dvh-3rem)] sm:max-w-2xl sm:rounded-sm sm:px-10 sm:pb-10 sm:pt-6"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <h2 id={titleId} className="type-h3 pt-2 text-charcoal">
+            {heading}
+          </h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close enquiry form"
-            className="p-2 rounded-md hover:bg-gray-100 text-gray-500"
+            className="-mr-3 inline-flex h-11 w-11 shrink-0 items-center justify-center text-charcoal hover:text-moss focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-moss"
           >
-            <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6L6 18" />
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path d="M2 2l12 12M14 2L2 14" stroke="currentColor" strokeWidth="1.2" />
             </svg>
           </button>
         </div>
-        <div className="px-6 py-5">
-          <EnquiryForm
-            {...defaults}
-            heading=""
-            description={description || "Share your requirement — we'll call you back to confirm."}
-            variant="inline"
-          />
-        </div>
+        <EnquiryForm
+          {...defaults}
+          heading=""
+          description={description || "Share your requirement and we will get back to you to confirm."}
+          variant="inline"
+          autoFocusFirst
+        />
       </div>
     </div>
   );
