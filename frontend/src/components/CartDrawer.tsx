@@ -6,9 +6,9 @@ import Link from "next/link";
 import Button from "@/components/ui/Button";
 import { useCart, formatINR, type CartItem } from "@/lib/cart-context";
 import { fetchFreshProducts } from "@/lib/fresh-products";
-import { bunchCopy } from "@/lib/product-helpers";
+import { minOrderCopy, stepDown, stepUp } from "@/lib/product-helpers";
 import { productImage } from "@/lib/product-image";
-import { linesChanged, reconcileCart, type CartNotice } from "@/lib/reconcile-cart";
+import { applyReconciled, linesChanged, reconcileCart, type CartNotice } from "@/lib/reconcile-cart";
 import { useSettings } from "@/lib/settings-context";
 import { CloseIcon } from "./chrome/icons";
 import { focusRing, iconButton } from "./chrome/styles";
@@ -24,15 +24,15 @@ function freeShippingThreshold(raw: Record<string, string> | undefined): number 
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-function Line({ it, notices }: { it: CartItem; notices: CartNotice[] }) {
-  const { setQuantity, remove, close } = useCart();
+function Line({ it, notices, onQuantity }: { it: CartItem; notices: CartNotice[]; onQuantity: (productId: number, quantity: number) => void }) {
+  const { remove, close } = useCart();
   const min = it.minOrderQty && it.minOrderQty > 0 ? it.minOrderQty : 1;
-  // Quantity moves in bunches of the minimum order and never passes stock.
-  const step = min;
-  const atMin = it.quantity - step < min;
-  const atMax = typeof it.stock === "number" && it.stock > 0 && it.quantity + step > it.stock;
+  // Steps by the minimum order; the last step up lands exactly on stock (the server enforces only min..stock).
+  const stock = typeof it.stock === "number" && it.stock > 0 ? it.stock : 0;
+  const atMin = it.quantity <= min;
+  const atMax = stock > 0 && it.quantity >= stock;
   const blocked = notices.some((n) => n.blocking);
-  const bunch = bunchCopy(min, it.unit);
+  const bunch = minOrderCopy(min, it.unit);
   const noticeId = `cart-notice-${it.productId}`;
   return (
     <li className="flex gap-4 border-b border-stone-light py-5">
@@ -66,7 +66,7 @@ function Line({ it, notices }: { it: CartItem; notices: CartNotice[] }) {
               className={stepButton}
               aria-disabled={atMin ? "true" : undefined}
               aria-label={`Decrease quantity of ${it.name}`}
-              onClick={() => !atMin && setQuantity(it.productId, Math.max(min, it.quantity - step))}
+              onClick={() => !atMin && onQuantity(it.productId, stepDown(it.quantity, min))}
             >
               −
             </button>
@@ -78,7 +78,7 @@ function Line({ it, notices }: { it: CartItem; notices: CartNotice[] }) {
               className={stepButton}
               aria-disabled={atMax ? "true" : undefined}
               aria-label={`Increase quantity of ${it.name}`}
-              onClick={() => !atMax && setQuantity(it.productId, it.quantity + step)}
+              onClick={() => !atMax && onQuantity(it.productId, stepUp(it.quantity, min, stock))}
             >
               +
             </button>
@@ -111,13 +111,15 @@ function Line({ it, notices }: { it: CartItem; notices: CartNotice[] }) {
 }
 
 function Drawer() {
-  const { items, close, count, subtotal, gstTotal, replaceItems } = useCart();
+  const { items, close, count, subtotal, gstTotal, replaceWith, setQuantity } = useCart();
   const settings = useSettings();
   const ref = useRef<HTMLDivElement>(null);
   useModal(true, ref, close);
 
-  // Revalidate the bag against current product data each time the drawer opens (it mounts on open). Requests are
-  // deduplicated and limited in parallel, and a failed lookup never blocks anything: that line just stays as it is.
+  // Revalidate the bag against current product data each time the drawer opens (it mounts on open). This also
+  // runs when cart.add opens the drawer; that re-fetch is cheap because fetchFreshProducts dedupes slugs, limits
+  // parallelism to 3 and serves answers younger than 15s from a cache. A failed lookup never blocks anything:
+  // that line just stays as it is.
   const itemsRef = useRef(items);
   itemsRef.current = items;
   const [notices, setNotices] = useState<CartNotice[]>([]);
@@ -133,7 +135,7 @@ function Drawer() {
         // A line added while the lookup was running was never asked about: leave it alone.
         const skip = [...unverified, ...latest.filter((l) => !asked.has(l.productId)).map((l) => l.productId)];
         const result = reconcileCart(latest, fresh, { unverified: skip });
-        if (linesChanged(latest, result.lines)) replaceItems(result.lines);
+        if (linesChanged(latest, result.lines)) replaceWith((prev) => applyReconciled(prev, latest, result.lines));
         setNotices(result.notices);
       })
       .catch(() => undefined);
@@ -142,6 +144,11 @@ function Drawer() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  // Changing a quantity answers the adjustment notice for that line (it described the old quantity).
+  const changeQuantity = (productId: number, quantity: number) => {
+    setNotices((prev) => prev.filter((n) => n.productId !== productId || n.blocking));
+    setQuantity(productId, quantity);
+  };
   const liveNotices = notices.filter((n) => items.some((i) => i.productId === n.productId));
   const noticesFor = (id: number) => liveNotices.filter((n) => n.productId === id);
   const blockedCount = new Set(liveNotices.filter((n) => n.blocking).map((n) => n.productId)).size;
@@ -185,7 +192,7 @@ function Drawer() {
             </div>
             <ul className="flex-1 overflow-y-auto px-5 sm:px-6">
               {items.map((it) => (
-                <Line key={it.productId} it={it} notices={noticesFor(it.productId)} />
+                <Line key={it.productId} it={it} notices={noticesFor(it.productId)} onQuantity={changeQuantity} />
               ))}
             </ul>
 

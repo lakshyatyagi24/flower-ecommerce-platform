@@ -206,7 +206,7 @@ describe('success page: signed in (unchanged)', () => {
     auth.user = { id: 1, email: 'acct@example.com', name: 'Asha', phone: '' }
   })
 
-  it('reads the order through the account and leaves the guest key alone', async () => {
+  it('reads an account order through the account and leaves an unrelated guest key alone', async () => {
     getMyOrder.mockResolvedValue(base)
     render(<CheckoutSuccessPage />)
     await screen.findByText(/pay on delivery/i)
@@ -216,10 +216,48 @@ describe('success page: signed in (unchanged)', () => {
     expect(screen.getByRole('link', { name: /view my orders/i })).toHaveAttribute('href', '/account/orders')
   })
 
-  it('Pay now passes no guest email', async () => {
+  it('Pay now passes no email when this browser holds no guest key', async () => {
+    window.sessionStorage.removeItem(EMAIL_KEY)
     getMyOrder.mockResolvedValue(online)
     render(<CheckoutSuccessPage />)
     fireEvent.click(await screen.findByRole('button', { name: /pay now/i }))
     expect(pay.mock.calls[0][2]).toBeUndefined()
+  })
+
+  it('signed in after placing a guest order: the account lookup 403s, so it is read with the guest email, which Pay now also uses', async () => {
+    getMyOrder.mockRejectedValue(new ApiError('Not your order', 403, null))
+    trackOrder.mockResolvedValue(online)
+    render(<CheckoutSuccessPage />)
+    fireEvent.click(await screen.findByRole('button', { name: /pay now/i }))
+    expect(getMyOrder).toHaveBeenCalledWith(9)
+    expect(trackOrder).toHaveBeenCalledWith(9, GUEST)
+    expect(pay.mock.calls[0][2]).toBe(GUEST)
+  })
+
+  it('signed in: a guest order read through the email is spent once final (key cleared)', async () => {
+    getMyOrder.mockRejectedValue(new ApiError('Not found', 404, null))
+    trackOrder.mockResolvedValue(base)
+    render(<CheckoutSuccessPage />)
+    await screen.findByText(/pay on delivery/i)
+    await waitFor(() => expect(window.sessionStorage.getItem(EMAIL_KEY)).toBeNull())
+  })
+
+  it('signed in: a failure other than 403/404 is not retried through the email', async () => {
+    getMyOrder.mockRejectedValue(new ApiError('boom', 500, null))
+    render(<CheckoutSuccessPage />)
+    await screen.findByText(/couldn.t load your order details/i)
+    expect(trackOrder).not.toHaveBeenCalled()
+  })
+
+  it('signed in: Switch to COD sends the guest email for a guest order', async () => {
+    getMyOrder.mockRejectedValue(new ApiError('Not your order', 403, null))
+    trackOrder.mockResolvedValueOnce(online).mockResolvedValueOnce(online)
+    setMethod.mockResolvedValue({ ...online, paymentMethod: 'COD' })
+    render(<CheckoutSuccessPage />)
+    fireEvent.click(await screen.findByRole('button', { name: /switch to cash on delivery/i }))
+    trackOrder.mockResolvedValue(base)
+    fireEvent.click(screen.getByRole('button', { name: /yes, switch/i }))
+    await screen.findByText(/pay on delivery/i)
+    expect(setMethod).toHaveBeenCalledWith(9, GUEST)
   })
 })

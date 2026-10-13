@@ -17,7 +17,7 @@ export const cart = {
   close: vi.fn(),
   setQuantity: vi.fn(),
   remove: vi.fn(),
-  replaceItems: vi.fn(),
+  replaceWith: vi.fn(),
 };
 export const listCategories = vi.fn();
 export const settingsRaw: Record<string, string> = {};
@@ -37,7 +37,7 @@ export function resetChromeMocks() {
   cart.close = vi.fn();
   cart.setQuantity = vi.fn();
   cart.remove = vi.fn();
-  cart.replaceItems = vi.fn();
+  cart.replaceWith = vi.fn();
   listCategories.mockReset();
   for (const k of Object.keys(settingsRaw)) delete settingsRaw[k];
 }

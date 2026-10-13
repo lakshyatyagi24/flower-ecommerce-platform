@@ -71,32 +71,61 @@ describe('CartDrawer', () => {
     expect(screen.getByRole('heading', { name: 'Your bag (3)' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Red Roses' })).toHaveAttribute('href', '/products/red-roses');
     expect(screen.getByText(/₹500 each/)).toBeInTheDocument();
-    expect(screen.getByText(/sold in bunches of 3/i)).toBeInTheDocument();
+    expect(screen.getByText(/minimum order: 3/i)).toBeInTheDocument();
   });
 
-  it('honours minOrderQty and stock in the stepper', async () => {
+  it('steps by the minimum order, never below it, and the last step up lands on stock', async () => {
+    const dec = () => screen.getByRole('button', { name: 'Decrease quantity of Red Roses' });
+    const inc = () => screen.getByRole('button', { name: 'Increase quantity of Red Roses' });
+
     setCart([item({ quantity: 3, minOrderQty: 3, stock: 10 })]);
     const { rerender } = render(<CartDrawer />);
-    const dec = screen.getByRole('button', { name: 'Decrease quantity of Red Roses' });
-    expect(dec).toHaveAttribute('aria-disabled', 'true');
-    expect(dec).not.toBeDisabled(); // stays focusable
-    await userEvent.click(dec);
+    expect(dec()).toHaveAttribute('aria-disabled', 'true');
+    expect(dec()).not.toBeDisabled(); // stays focusable
+    await userEvent.click(dec());
     expect(cart.setQuantity).not.toHaveBeenCalled(); // no-op at the bound
-    await userEvent.click(screen.getByRole('button', { name: 'Increase quantity of Red Roses' }));
-    expect(cart.setQuantity).toHaveBeenCalledWith(1, 6); // steps by the minimum order
+    await userEvent.click(inc());
+    expect(cart.setQuantity).toHaveBeenLastCalledWith(1, 6);
+
+    // The original case: 5 in the bag with a minimum of 3 can go down (to the minimum) and up.
+    setCart([item({ quantity: 5, minOrderQty: 3, stock: 10 })]);
+    rerender(<CartDrawer />);
+    expect(dec()).not.toHaveAttribute('aria-disabled');
+    await userEvent.click(dec());
+    expect(cart.setQuantity).toHaveBeenLastCalledWith(1, 3);
+    await userEvent.click(inc());
+    expect(cart.setQuantity).toHaveBeenLastCalledWith(1, 8);
 
     setCart([item({ quantity: 9, minOrderQty: 3, stock: 10 })]);
     rerender(<CartDrawer />);
-    await userEvent.click(screen.getByRole('button', { name: 'Decrease quantity of Red Roses' }));
-    expect(cart.setQuantity).toHaveBeenCalledWith(1, 6);
+    await userEvent.click(inc());
+    expect(cart.setQuantity).toHaveBeenLastCalledWith(1, 10); // lands on stock, not 12
+    await userEvent.click(dec());
+    expect(cart.setQuantity).toHaveBeenLastCalledWith(1, 6);
 
-    setCart([item({ quantity: 9, minOrderQty: 3, stock: 10 })]);
+    setCart([item({ quantity: 10, minOrderQty: 3, stock: 10 })]);
     rerender(<CartDrawer />);
-    const inc = screen.getByRole('button', { name: 'Increase quantity of Red Roses' });
-    expect(inc).toHaveAttribute('aria-disabled', 'true');
+    expect(inc()).toHaveAttribute('aria-disabled', 'true');
     cart.setQuantity.mockClear();
-    await userEvent.click(inc);
+    await userEvent.click(inc());
     expect(cart.setQuantity).not.toHaveBeenCalled();
+    expect(dec()).not.toHaveAttribute('aria-disabled');
+  });
+
+  it('min 4 with 6 in stock: both buttons work and neither is ever stuck', async () => {
+    const dec = () => screen.getByRole('button', { name: 'Decrease quantity of Red Roses' });
+    const inc = () => screen.getByRole('button', { name: 'Increase quantity of Red Roses' });
+    setCart([item({ quantity: 4, minOrderQty: 4, stock: 6 })]);
+    const { rerender } = render(<CartDrawer />);
+    expect(inc()).not.toHaveAttribute('aria-disabled');
+    await userEvent.click(inc());
+    expect(cart.setQuantity).toHaveBeenLastCalledWith(1, 6);
+    setCart([item({ quantity: 6, minOrderQty: 4, stock: 6 })]);
+    rerender(<CartDrawer />);
+    expect(inc()).toHaveAttribute('aria-disabled', 'true');
+    expect(dec()).not.toHaveAttribute('aria-disabled');
+    await userEvent.click(dec());
+    expect(cart.setQuantity).toHaveBeenLastCalledWith(1, 4);
   });
 
   it('keeps focus on a stepper button that reaches its bound', async () => {
@@ -215,6 +244,32 @@ describe('CartDrawer', () => {
     const answer = (products: ReturnType<typeof fresh>[]) =>
       fetchFresh.mockResolvedValue({ fresh: products, unverified: [], failed: false });
 
+    // The drawer applies reconcile results through a functional update; run it against the bag as it is.
+    const applied = () => cart.replaceWith.mock.calls[0][0](cart.items);
+
+    it('a slow lookup never overwrites a quantity the shopper changed meanwhile', async () => {
+      const original = item({ price: 500, quantity: 3 });
+      setCart([original]);
+      let resolve!: (v: unknown) => void;
+      fetchFresh.mockReturnValue(new Promise((r) => (resolve = r)));
+      render(<CartDrawer />);
+      resolve({ fresh: [fresh({ price: 550 })], unverified: [], failed: false });
+      await waitFor(() => expect(cart.replaceWith).toHaveBeenCalled());
+      const edited = { ...original, quantity: 6 }; // the click landed before the update ran
+      const out = cart.replaceWith.mock.calls[0][0]([edited]);
+      expect(out[0]).toBe(edited);
+    });
+
+    it('changing a quantity clears that line adjustment notice but keeps blocking ones', async () => {
+      setCart([item({ quantity: 9, stock: 10 })]);
+      answer([fresh({ stock: 6 })]);
+      render(<CartDrawer />);
+      expect(await screen.findByText('Only 6 left. Quantity lowered from 9 to 6.')).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'Decrease quantity of Red Roses' }));
+      expect(screen.queryByText(/quantity lowered/i)).toBeNull();
+      expect(screen.getByTestId('cart-notices-live')).toHaveTextContent('');
+    });
+
     it('asks once for the lines in the bag when it opens', async () => {
       setCart([item(), item({ productId: 2, slug: 'tulips', name: 'Tulips' })]);
       render(<CartDrawer />);
@@ -227,7 +282,7 @@ describe('CartDrawer', () => {
       answer([fresh({ stock: 0 })]);
       render(<CartDrawer />);
       expect(await screen.findByText('Out of stock. Remove it to check out.')).toBeInTheDocument();
-      expect(cart.replaceItems).not.toHaveBeenCalled(); // nothing is deleted or rewritten for the shopper
+      expect(cart.replaceWith).not.toHaveBeenCalled(); // nothing is deleted or rewritten for the shopper
       const remove = screen.getByRole('button', { name: 'Remove Red Roses' });
       expect(remove).toHaveAccessibleDescription(/out of stock/i);
       expect(screen.getByText(/can.t be ordered right now/i)).toBeInTheDocument();
@@ -250,8 +305,8 @@ describe('CartDrawer', () => {
       answer([fresh({ price: 550 })]);
       render(<CartDrawer />);
       expect(await screen.findByText('Price changed from ₹500 to ₹550 each.')).toBeInTheDocument();
-      expect(cart.replaceItems).toHaveBeenCalledTimes(1);
-      expect(cart.replaceItems.mock.calls[0][0][0]).toMatchObject({ productId: 1, price: 550 });
+      expect(cart.replaceWith).toHaveBeenCalledTimes(1);
+      expect(applied()[0]).toMatchObject({ productId: 1, price: 550 });
       expect(screen.queryByText(/remove it to check out/i)).toBeNull(); // not blocking
     });
 
@@ -260,7 +315,7 @@ describe('CartDrawer', () => {
       answer([fresh({ stock: 6 })]);
       render(<CartDrawer />);
       expect(await screen.findByText('Only 6 left. Quantity lowered from 9 to 6.')).toBeInTheDocument();
-      expect(cart.replaceItems.mock.calls[0][0][0]).toMatchObject({ quantity: 6, stock: 6 });
+      expect(applied()[0]).toMatchObject({ quantity: 6, stock: 6 });
     });
 
     it('tolerates a failed lookup: no notices, bag untouched, nothing blocked', async () => {
@@ -268,7 +323,7 @@ describe('CartDrawer', () => {
       fetchFresh.mockRejectedValue(new Error('network'));
       render(<CartDrawer />);
       await waitFor(() => expect(fetchFresh).toHaveBeenCalled());
-      expect(cart.replaceItems).not.toHaveBeenCalled();
+      expect(cart.replaceWith).not.toHaveBeenCalled();
       expect(screen.queryByTestId('line-notice')).toBeNull();
       expect(screen.getByRole('link', { name: 'Checkout' })).toBeInTheDocument();
     });

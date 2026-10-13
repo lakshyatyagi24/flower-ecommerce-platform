@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   adjustmentNotices,
   blockingNotices,
+  applyReconciled,
   linesChanged,
   reconcileCart,
   type FreshProduct,
@@ -283,5 +284,43 @@ describe('reconcileCart: combinations and unverified lines', () => {
     expect(linesChanged([a], [a])).toBe(false);
     expect(linesChanged([a], [{ ...a }])).toBe(true);
     expect(linesChanged([a], [])).toBe(true);
+  });
+});
+
+describe('reconcileCart: unusable price data', () => {
+  it.each([[NaN], [Infinity], [undefined as unknown as number], ['12' as unknown as number]])(
+    'a non-finite or non-numeric price (%s) leaves the line as it is: no NaN written, no notice',
+    (price) => {
+      const l = line();
+      const out = reconcileCart([l], [fresh({ price })]);
+      expect(out.lines[0]).toBe(l);
+      expect(out.notices).toEqual([]);
+    },
+  );
+});
+
+describe('reconcileCart: minimum-only semantics (R23)', () => {
+  it('never invents multiples: clamps only to [minimum, stock]', () => {
+    const out = reconcileCart([line({ quantity: 9, minOrderQty: 4 })], [fresh({ minOrderQty: 4, stock: 7 })]);
+    expect(out.lines[0].quantity).toBe(7); // 7 is not a multiple of 4 and that is fine
+  });
+});
+
+describe('applyReconciled', () => {
+  it('replaces only lines that are still the objects the reconcile started from', () => {
+    const a = line();
+    const b = line({ productId: 2, slug: 'b', name: 'B' });
+    const before = [a, b];
+    const after = [{ ...a, price: 120 }, { ...b, price: 7 }];
+    const editedB = { ...b, quantity: 5 }; // the shopper clicked + on B while the lookup ran
+    const out = applyReconciled([a, editedB], before, after);
+    expect(out[0]).toBe(after[0]);
+    expect(out[1]).toBe(editedB);
+  });
+  it('keeps lines added meanwhile and does not resurrect removed ones', () => {
+    const a = line();
+    const added = line({ productId: 3, slug: 'c', name: 'C' });
+    const out = applyReconciled([added], [a], [{ ...a, price: 1 }]);
+    expect(out).toEqual([added]);
   });
 });

@@ -2,7 +2,7 @@ import React from 'react'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import CheckoutPage from '../page'
-import { api } from '@/lib/api'
+import { api, ApiError } from '@/lib/api'
 import { payForOrder } from '@/lib/razorpay-flow'
 import { OPEN_SIGN_IN_EVENT } from '@/lib/sign-in-request'
 
@@ -13,7 +13,7 @@ const cart = {
   count: 1,
   clear: vi.fn(),
   remove: vi.fn(),
-  replaceItems: vi.fn(),
+  replaceWith: vi.fn(),
 }
 const auth: { user: null | { id: number; email: string; name: string; phone: string }; loading: boolean } = {
   user: null,
@@ -69,7 +69,7 @@ beforeEach(() => {
   router.replace.mockReset()
   cart.clear.mockReset()
   cart.remove.mockReset()
-  cart.replaceItems.mockReset()
+  cart.replaceWith.mockReset()
   createOrder.mockReset()
   getMyOrder.mockReset()
   trackOrder.mockReset()
@@ -334,6 +334,7 @@ describe('guest checkout: pending panel actions', () => {
     fireEvent.click(await screen.findByRole('button', { name: /check status/i }))
     await screen.findByRole('heading', { name: /order expired/i })
     expect(window.sessionStorage.getItem(PENDING_KEY)).toBeNull()
+    expect(window.sessionStorage.getItem(EMAIL_KEY)).toBeNull() // the guest key is spent
   })
 
   it('if the email was lost, Check status says how to look the order up instead of failing silently', async () => {
@@ -342,5 +343,50 @@ describe('guest checkout: pending panel actions', () => {
     window.sessionStorage.removeItem(EMAIL_KEY)
     fireEvent.click(screen.getByRole('button', { name: /check status/i }))
     expect((await screen.findByRole('alert')).textContent).toMatch(/track order/i)
+  })
+})
+
+describe('guest checkout: signing in with a pending guest order', () => {
+  it('restores the guest order through its email when the account lookup says it is not theirs', async () => {
+    auth.user = { id: 1, email: 'acct@example.com', name: 'Asha', phone: '' }
+    window.sessionStorage.setItem(PENDING_KEY, JSON.stringify({ id: 42, createdAt: Date.now() }))
+    window.sessionStorage.setItem(EMAIL_KEY, GUEST)
+    getMyOrder.mockRejectedValue(new ApiError('Not your order', 403, null))
+    trackOrder.mockResolvedValue(order)
+    render(<CheckoutPage />)
+    await screen.findByRole('heading', { name: /payment pending/i })
+    expect(trackOrder).toHaveBeenCalledWith(42, GUEST)
+    fireEvent.click(screen.getByRole('button', { name: /pay now/i }))
+    expect(pay.mock.calls[0][2]).toBe(GUEST) // still the guest email, token or not
+  })
+
+  it('signing in while the pending panel is up does not tear it down', async () => {
+    window.sessionStorage.setItem(PENDING_KEY, JSON.stringify({ id: 42, createdAt: Date.now() }))
+    window.sessionStorage.setItem(EMAIL_KEY, GUEST)
+    trackOrder.mockResolvedValue(order)
+    const view = render(<CheckoutPage />)
+    await screen.findByRole('heading', { name: /payment pending/i })
+    getMyOrder.mockRejectedValue(new ApiError('Not your order', 403, null))
+    auth.user = { id: 1, email: 'acct@example.com', name: 'Asha', phone: '' }
+    view.rerender(<CheckoutPage />)
+    expect(screen.getByRole('heading', { name: /payment pending/i })).toBeInTheDocument()
+    expect(window.sessionStorage.getItem(PENDING_KEY)).not.toBeNull()
+  })
+})
+
+describe('guest checkout: minimum-order rejection from the server', () => {
+  it('shows the minimum in plain words, keeps the typed form, and re-reads the product', async () => {
+    fn(api.getProductBySlug).mockResolvedValue({ id: 1, price: 100, gstRate: 0, stock: 10, active: true, minOrderQty: 1 })
+    createOrder.mockRejectedValue(new ApiError('"Rose" has a minimum order of 5', 400, null))
+    const { container } = await renderForm()
+    fillRest(container)
+    fireEvent.click(screen.getByRole('radio', { name: /cash on delivery/i }))
+    const before = fn(api.getProductBySlug).mock.calls.length
+    fireEvent.submit(container.querySelector('form')!)
+    expect((await screen.findAllByText(/has a minimum order of 5/i)).length).toBeGreaterThan(0)
+    expect(window.sessionStorage.getItem(EMAIL_KEY)).toBeNull() // nothing was placed
+    await waitFor(() => expect(fn(api.getProductBySlug).mock.calls.length).toBeGreaterThan(before + 1))
+    expect((screen.getByLabelText(/full name/i) as HTMLInputElement).value).toBe('Guest Buyer')
+    expect(router.push).not.toHaveBeenCalled()
   })
 })

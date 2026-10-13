@@ -5,7 +5,7 @@ import Button from "@/components/ui/Button";
 import EnquiryModal from "@/components/EnquiryModal";
 import PincodeCheck from "@/components/PincodeCheck";
 import { useCart } from "@/lib/cart-context";
-import { availability, bunchCopy, isLowStock, minQty, toCartItem } from "@/lib/product-helpers";
+import { availability, isLowStock, minOrderCopy, minQty, stepDown, stepUp, toCartItem } from "@/lib/product-helpers";
 import type { ApiProduct } from "@/lib/api";
 
 type BuyBoxProduct = Pick<
@@ -28,12 +28,11 @@ export default function ProductBuyBox({ product }: { product: BuyBoxProduct }) {
   const status = availability(product);
   const isEnquiry = status === "enquiry";
   const outOfStock = status === "out-of-stock";
-  // Quantity moves in bunches: it starts at the minimum order, steps by it and never passes stock
-  // (same rule as the cart drawer).
-  const step = min;
+  // Starts at the minimum order and steps by it; the last step up lands exactly on stock, so every quantity the
+  // server accepts (minimum..stock) is reachable and neither button is ever stuck mid-range (same as the cart drawer).
   const max = product.stock > 0 ? product.stock : Infinity;
-  const canDecrease = quantity - step >= min;
-  const canIncrease = quantity + step <= max;
+  const canDecrease = quantity > min;
+  const canIncrease = quantity < max;
 
   if (isEnquiry) {
     return (
@@ -76,7 +75,7 @@ export default function ProductBuyBox({ product }: { product: BuyBoxProduct }) {
             className={stepBtn}
             aria-label="Decrease quantity"
             disabled={!canDecrease}
-            onClick={() => setQuantity((q) => Math.max(min, q - step))}
+            onClick={() => setQuantity((q) => stepDown(q, min))}
           >
             −
           </button>
@@ -88,7 +87,7 @@ export default function ProductBuyBox({ product }: { product: BuyBoxProduct }) {
             className={stepBtn}
             aria-label="Increase quantity"
             disabled={!canIncrease}
-            onClick={() => setQuantity((q) => (q + step <= max ? q + step : q))}
+            onClick={() => setQuantity((q) => stepUp(q, min, product.stock))}
           >
             +
           </button>
@@ -105,7 +104,7 @@ export default function ProductBuyBox({ product }: { product: BuyBoxProduct }) {
       </div>
       {(min > 1 || isLowStock(product)) && (
         <p className="mt-3 text-sm text-stone-dark">
-          {min > 1 && <span>{bunchCopy(min, product.unit)}. </span>}
+          {min > 1 && <span>{minOrderCopy(min, product.unit)}. </span>}
           {isLowStock(product) && <span>Only {product.stock} left.</span>}
         </p>
       )}

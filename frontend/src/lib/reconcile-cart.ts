@@ -76,6 +76,9 @@ export function reconcileCart(
       return line;
     }
 
+    // A payload without a usable price is not data we can act on: leave the line as it is, write no NaN.
+    if (typeof p.price !== 'number' || !Number.isFinite(p.price)) return line;
+
     const min = minQty(p);
     // A payload without a numeric stock says nothing about availability: do not guess.
     const stock = typeof p.stock === 'number' && Number.isFinite(p.stock) ? p.stock : null;
@@ -125,6 +128,17 @@ export function reconcileCart(
   });
 
   return { lines: out, notices };
+}
+
+/**
+ * Applies a reconcile result to the bag as it is NOW. A line is replaced only if it is still the very object the
+ * reconcile started from; a line the shopper changed meanwhile (quantity click, removal, new line) is kept as is,
+ * so a slow lookup can never overwrite a click.
+ */
+export function applyReconciled(current: readonly CartItem[], before: readonly CartItem[], after: readonly CartItem[]): CartItem[] {
+  const next = new Map<CartItem, CartItem>();
+  before.forEach((b, i) => next.set(b, after[i]));
+  return current.map((c) => next.get(c) ?? c);
 }
 
 /** True when at least one line object differs (by reference) from the input. */

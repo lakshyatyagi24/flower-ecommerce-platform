@@ -1,10 +1,10 @@
 "use client";
 
-import React, { Suspense, useEffect, useState } from "react";
+import React, { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { api } from "@/lib/api";
+import { ApiError, api } from "@/lib/api";
 import { EXPIRED_COPY, expiredKindOf, usePayForOrder } from "@/lib/use-pay-for-order";
 import PaymentActions from "@/components/PaymentActions";
 import { useApi } from "@/lib/use-api";
@@ -32,14 +32,24 @@ const GUEST_LOOKUP_COPY =
  */
 function OrderSummary({ orderId, guestEmail }: { orderId: number; guestEmail: string | null }) {
   const { user } = useAuth();
-  const { data: order, error, loading, reload } = useApi(
-    () => (user || !guestEmail ? api.getMyOrder(orderId) : api.trackOrder(orderId, guestEmail)),
-    [orderId],
-  );
+  // Set when the order had to be read with the email (a guest order viewed after signing in): its key is spent too.
+  const viaEmail = useRef(false);
+  const { data: order, error, loading, reload } = useApi(async () => {
+    if (!user && guestEmail) return api.trackOrder(orderId, guestEmail);
+    try {
+      return await api.getMyOrder(orderId);
+    } catch (e) {
+      if (guestEmail && e instanceof ApiError && (e.status === 403 || e.status === 404)) {
+        viaEmail.current = true;
+        return api.trackOrder(orderId, guestEmail);
+      }
+      throw e;
+    }
+  }, [orderId]);
   // The email has done its job once the order is displayed, unless the shopper still has to pay: then Pay now,
   // Check status and Switch to COD need it (and so does the reload after they resolve).
   useEffect(() => {
-    if (user || !order) return;
+    if ((user && !viaEmail.current) || !order) return;
     const stillPayable =
       order.paymentMethod === "RAZORPAY" &&
       order.status === "PENDING" &&
@@ -202,11 +212,11 @@ function CheckoutSuccessView() {
   // but a later reload (after paying) still needs it. `undefined` = not read yet.
   const [guestEmail, setGuestEmail] = useState<string | null | undefined>(undefined);
   useEffect(() => {
-    if (authLoading || user) return;
+    if (authLoading) return;
     setGuestEmail((prev) => (prev === undefined ? getLastOrderEmail() : prev));
-  }, [authLoading, user]);
+  }, [authLoading]);
 
-  if (authLoading || (!user && guestEmail === undefined)) {
+  if (authLoading || guestEmail === undefined) {
     return (
       <main>
         <Container className="py-16" aria-busy="true">

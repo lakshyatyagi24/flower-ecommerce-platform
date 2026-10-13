@@ -29,14 +29,26 @@ function pluralUnit(unit: string): string {
 }
 
 /**
- * "Sold in bunches of 5 stems", or null when there is no minimum. The noun comes only from the product's own
- * `unit` field; a unit that is itself a bunch word, or none, leaves it off.
+ * "Minimum order: 4 stems", or null when there is no minimum. The backend enforces only a minimum (not multiples),
+ * so this is the truthful wording. The noun comes only from the product's own `unit` field; a unit that is itself
+ * a bunch word, or none, leaves it off.
  */
-export function bunchCopy(min: number, unit?: string | null): string | null {
+export function minOrderCopy(min: number, unit?: string | null): string | null {
   if (!(min > 1)) return null;
   const u = (unit ?? '').trim().toLowerCase();
   const noun = !u || /^(bunch|bunches|bundle|bundles)$/.test(u) ? '' : ` ${pluralUnit(u)}`;
-  return `Sold in bunches of ${min}${noun}`;
+  return `Minimum order: ${min}${noun}`;
+}
+
+/** Next quantity when stepping up: by the minimum order, but the last step lands exactly on stock. */
+export function stepUp(quantity: number, min: number, stock: number): number {
+  const next = quantity + min;
+  return stock > 0 ? Math.min(stock, next) : next;
+}
+
+/** Next quantity when stepping down: by the minimum order, never below it. */
+export function stepDown(quantity: number, min: number): number {
+  return Math.max(min, quantity - min);
 }
 
 export type CartItemInput = Pick<

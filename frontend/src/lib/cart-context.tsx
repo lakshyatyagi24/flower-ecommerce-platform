@@ -35,8 +35,8 @@ interface CartState {
   setQuantity: (productId: number, quantity: number) => void;
   remove: (productId: number) => void;
   clear: () => void;
-  /** Swaps in lines produced by reconcileCart (fresh price, stock and clamped quantity). */
-  replaceItems: (items: CartItem[]) => void;
+  /** Functional update of the bag (used to apply a reconcile result without overwriting concurrent edits). */
+  replaceWith: (update: (prev: CartItem[]) => CartItem[]) => void;
   isOpen: boolean;
   open: () => void;
   close: () => void;
@@ -112,7 +112,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const clear = useCallback(() => setItems([]), []);
-  const replaceItems = useCallback((next: CartItem[]) => setItems(next), []);
+  const replaceWith = useCallback((update: (prev: CartItem[]) => CartItem[]) => setItems((prev) => update(prev)), []);
 
   const count = useMemo(() => items.reduce((sum, i) => sum + i.quantity, 0), [items]);
   const subtotal = useMemo(() => items.reduce((sum, i) => sum + i.quantity * i.price, 0), [items]);
@@ -135,13 +135,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setQuantity,
       remove,
       clear,
-      replaceItems,
+      replaceWith,
       isOpen,
       open: () => setIsOpen(true),
       close: () => setIsOpen(false),
       toggle: () => setIsOpen((v) => !v),
     }),
-    [items, count, subtotal, gstTotal, add, setQuantity, remove, clear, replaceItems, isOpen],
+    [items, count, subtotal, gstTotal, add, setQuantity, remove, clear, replaceWith, isOpen],
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

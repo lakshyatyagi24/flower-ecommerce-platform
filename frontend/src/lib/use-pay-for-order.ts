@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { ApiError, api, type ApiOrder } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useCart } from "@/lib/cart-context";
-import { getLastOrderEmail } from "@/lib/guest-order";
+import { clearLastOrderEmail, getLastOrderEmail } from "@/lib/guest-order";
 import { resolveOrderLocally } from "@/lib/pending-order";
 import { payForOrder, type PayHandlers } from "@/lib/razorpay-flow";
 
@@ -57,11 +57,21 @@ export function usePayForOrder({ orderId, onResolved }: UsePayForOrderOptions) {
   const cb = useRef(onResolved);
   cb.current = onResolved;
   const idOf = (id?: number) => (id ?? orderId) as number;
-  // A guest is identified by the email on the order (kept in sessionStorage, never the URL); a signed-in customer by token.
-  const guestEmail = (): string | undefined => (user ? undefined : getLastOrderEmail() ?? undefined);
+  // The email of an order placed as a guest (sessionStorage, never the URL). It is passed even after the shopper
+  // signs in mid-flow: a guest order (no owner) is reachable by that email with or without a token, while an
+  // account order ignores it and needs the token.
+  const guestEmail = (): string | undefined => getLastOrderEmail() ?? undefined;
   const fetchOrder = async (oid: number): Promise<ApiOrder> => {
-    if (user) return api.getMyOrder(oid);
     const email = guestEmail();
+    if (user) {
+      try {
+        return await api.getMyOrder(oid);
+      } catch (e) {
+        // Signed in after placing a guest order: it is not "mine", so read it the guest way instead.
+        if (email && e instanceof ApiError && (e.status === 403 || e.status === 404)) return api.trackOrder(oid, email);
+        throw e;
+      }
+    }
     if (!email) throw new Error(GUEST_NO_EMAIL_COPY);
     return api.trackOrder(oid, email);
   };
@@ -82,6 +92,7 @@ export function usePayForOrder({ orderId, onResolved }: UsePayForOrderOptions) {
     }
     if (cancelled || o.paymentStatus === "REFUNDED") {
       resolveOrderLocally(o.id);
+      if (!user) clearLastOrderEmail(); // nothing left to pay or check: the guest key is spent
       setConfirming(false);
       cb.current?.("expired", o.id, expiredKindOf(o));
       return true;
@@ -101,6 +112,7 @@ export function usePayForOrder({ orderId, onResolved }: UsePayForOrderOptions) {
         // page that says "pay on delivery": keep the page and explain the refund inline.
         clear();
         resolveOrderLocally(id);
+        if (!user) clearLastOrderEmail();
         setConfirming(false);
         setShowCheck(false);
         setSwitched(true);
@@ -163,7 +175,7 @@ export function usePayForOrder({ orderId, onResolved }: UsePayForOrderOptions) {
       // Re-check first: a payment may have completed while the modal was closed.
       const o = await fetchOrder(oid);
       if (applyOrder(o)) return;
-      await api.setOrderPaymentMethod(oid, user ? user.email : guestEmail());
+      await api.setOrderPaymentMethod(oid, guestEmail() ?? user?.email);
       resolve(oid, "cod");
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {

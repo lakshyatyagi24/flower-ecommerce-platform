@@ -24,7 +24,7 @@ const cart = {
   count: 2,
   clear: vi.fn(),
   remove: vi.fn(),
-  replaceItems: vi.fn(),
+  replaceWith: vi.fn(),
 }
 const auth = { user: { id: 1, email: 'a@b.co', name: 'Asha', phone: '9999911111' }, loading: false }
 
@@ -70,8 +70,8 @@ beforeEach(() => {
   router.push.mockReset()
   cart.clear.mockReset()
   cart.remove.mockReset()
-  cart.replaceItems.mockReset().mockImplementation((next: Line[]) => {
-    cart.items = next
+  cart.replaceWith.mockReset().mockImplementation((update: (prev: Line[]) => Line[]) => {
+    cart.items = update(cart.items)
   })
   createOrder.mockReset()
   fn(api.getSettings).mockReset().mockResolvedValue({ 'shipping.flatRate': '50' })
@@ -95,27 +95,28 @@ function fill(container: HTMLElement) {
 }
 const placeBtn = () => screen.getByRole('button', { name: /place order/i }) as HTMLButtonElement
 const changes = () => screen.getByTestId('checkout-changes')
+const live = () => screen.getByTestId('checkout-changes-live')
 
 describe('checkout stock gating', () => {
   it('nothing changed: no notices and Pay is enabled', async () => {
     await renderForm()
-    expect(within(changes()).queryByRole('heading')).toBeNull()
+    expect(screen.queryByTestId('checkout-changes')).toBeNull()
     expect(placeBtn().disabled).toBe(false)
-    expect(cart.replaceItems).not.toHaveBeenCalled()
+    expect(cart.replaceWith).not.toHaveBeenCalled()
   })
 
   it('an out-of-stock line blocks Pay with a clear message and a Remove button; nothing is deleted for the shopper', async () => {
     getProduct.mockResolvedValue(freshRose({ stock: 0 }))
     const { container } = await renderForm()
     fill(container)
-    await within(changes()).findByText(/out of stock/i)
+    await within(await screen.findByTestId('checkout-changes')).findByText(/out of stock/i)
     expect(within(changes()).getByRole('heading', { name: /some items need attention/i })).toBeInTheDocument()
     expect(placeBtn().disabled).toBe(true)
     expect(placeBtn()).toHaveAccessibleDescription(/remove the items that can.t be ordered/i)
     fireEvent.submit(container.querySelector('form')!)
     await new Promise((r) => setTimeout(r, 0))
     expect(createOrder).not.toHaveBeenCalled()
-    expect(cart.replaceItems).not.toHaveBeenCalled()
+    expect(cart.replaceWith).not.toHaveBeenCalled()
     fireEvent.click(within(changes()).getByRole('button', { name: /remove rose from your bag/i }))
     expect(cart.remove).toHaveBeenCalledWith(1)
   })
@@ -123,49 +124,53 @@ describe('checkout stock gating', () => {
   it('a product that no longer exists (404) blocks the same way', async () => {
     getProduct.mockRejectedValue(new ApiError('not found', 404, null))
     await renderForm()
-    await within(changes()).findByText(/no longer available/i)
+    await within(await screen.findByTestId('checkout-changes')).findByText(/no longer available/i)
     expect(placeBtn().disabled).toBe(true)
   })
 
   it('a product that became enquiry-only blocks', async () => {
     getProduct.mockResolvedValue(freshRose({ saleMode: 'ENQUIRY' }))
     await renderForm()
-    await within(changes()).findByText(/enquiry only/i)
+    await within(await screen.findByTestId('checkout-changes')).findByText(/enquiry only/i)
     expect(placeBtn().disabled).toBe(true)
   })
 
-  it('the notice region is a polite status region, never an alert', async () => {
+  it('only a short summary sits in the polite status region; the panel itself is plain content outside it', async () => {
     getProduct.mockResolvedValue(freshRose({ stock: 0 }))
     await renderForm()
-    expect(changes()).toHaveAttribute('role', 'status')
-    expect(changes()).toHaveAttribute('aria-live', 'polite')
-    await within(changes()).findByText(/out of stock/i)
-    expect(within(changes()).queryByRole('alert')).toBeNull()
+    expect(live()).toHaveAttribute('role', 'status')
+    expect(live()).toHaveAttribute('aria-live', 'polite')
+    await within(await screen.findByTestId('checkout-changes')).findByText(/out of stock/i)
+    expect(live()).toHaveTextContent("One item in your bag can't be ordered right now.")
+    expect(live().contains(changes())).toBe(false)
+    expect(changes().closest('[role=status]')).toBeNull()
+    expect(screen.queryByRole('alert')).toBeNull()
   })
 
   it('a changed price is applied to the bag, shown, and must be accepted before Pay is enabled', async () => {
     getProduct.mockResolvedValue(freshRose({ price: 120 }))
     await renderForm()
-    await within(changes()).findByText(/price changed from ₹100 to ₹120 each/i)
-    expect(cart.replaceItems).toHaveBeenCalled()
+    await within(await screen.findByTestId('checkout-changes')).findByText(/price changed from ₹100 to ₹120 each/i)
+    expect(cart.replaceWith).toHaveBeenCalled()
     expect(cart.items[0].price).toBe(120)
     expect(within(changes()).getByRole('heading', { name: /your order changed/i })).toBeInTheDocument()
     expect(placeBtn().disabled).toBe(true)
     expect(placeBtn()).toHaveAccessibleDescription(/review and accept the changes/i)
     // The summary already shows the amount that will be charged.
     expect(screen.getAllByText('Rs240').length).toBeGreaterThan(0)
-    expect(screen.getByText(/some prices were updated/i)).toBeInTheDocument()
+    expect(live()).toHaveTextContent(/one update needs your review/i)
+    expect(screen.queryByText(/some prices were updated/i)).toBeNull()
 
     fireEvent.click(within(changes()).getByRole('button', { name: /accept changes/i }))
     await waitFor(() => expect(placeBtn().disabled).toBe(false))
-    expect(within(changes()).queryByRole('heading')).toBeNull()
+    expect(screen.queryByTestId('checkout-changes')).toBeNull()
   })
 
   it('a quantity above stock is lowered and must be accepted', async () => {
     cart.items = [{ ...baseLine(), quantity: 8 }]
     getProduct.mockResolvedValue(freshRose({ stock: 3 }))
     await renderForm()
-    await within(changes()).findByText(/only 3 left\. quantity lowered from 8 to 3/i)
+    await within(await screen.findByTestId('checkout-changes')).findByText(/only 3 left\. quantity lowered from 8 to 3/i)
     expect(cart.items[0].quantity).toBe(3)
     expect(placeBtn().disabled).toBe(true)
     fireEvent.click(within(changes()).getByRole('button', { name: /accept changes/i }))
@@ -175,7 +180,7 @@ describe('checkout stock gating', () => {
   it('a raised minimum order lifts the quantity and says so', async () => {
     getProduct.mockResolvedValue(freshRose({ minOrderQty: 5, stock: 20 }))
     await renderForm()
-    await within(changes()).findByText(/minimum order is 5\. quantity raised from 2 to 5/i)
+    await within(await screen.findByTestId('checkout-changes')).findByText(/minimum order is 5\. quantity raised from 2 to 5/i)
     expect(cart.items[0]).toMatchObject({ quantity: 5, minOrderQty: 5 })
   })
 
@@ -193,7 +198,7 @@ describe('checkout re-checks right before placing the order', () => {
     fill(container)
     getProduct.mockResolvedValue(freshRose({ price: 130 }))
     fireEvent.submit(container.querySelector('form')!)
-    await within(changes()).findByText(/price changed from ₹100 to ₹130 each/i)
+    await within(await screen.findByTestId('checkout-changes')).findByText(/price changed from ₹100 to ₹130 each/i)
     expect(createOrder).not.toHaveBeenCalled()
     expect(screen.getAllByText(/changed while you were checking out/i).length).toBeGreaterThan(0)
     expect(placeBtn().disabled).toBe(true)
@@ -212,7 +217,7 @@ describe('checkout re-checks right before placing the order', () => {
     fill(container)
     getProduct.mockResolvedValue(freshRose({ stock: 0 }))
     fireEvent.submit(container.querySelector('form')!)
-    await within(changes()).findByText(/out of stock/i)
+    await within(await screen.findByTestId('checkout-changes')).findByText(/out of stock/i)
     expect(createOrder).not.toHaveBeenCalled()
     expect(screen.getAllByText(/can.t be ordered right now/i).length).toBeGreaterThan(0)
   })
@@ -240,7 +245,7 @@ describe('checkout recovers from a server stock rejection', () => {
     fireEvent.submit(container.querySelector('form')!)
     await screen.findByText(/just went out of stock/i)
     await waitFor(() => expect(getProduct.mock.calls.length).toBeGreaterThan(callsBefore + 1))
-    await within(changes()).findByText(/only 1 left\. quantity lowered from 2 to 1/i)
+    await within(await screen.findByTestId('checkout-changes')).findByText(/only 1 left\. quantity lowered from 2 to 1/i)
     // The form is still there with what the shopper typed.
     expect((container.querySelector('textarea') as HTMLTextAreaElement).value).toBe('12 Rose Street')
     expect(placeBtn().disabled).toBe(true)

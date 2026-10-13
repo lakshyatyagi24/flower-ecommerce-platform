@@ -16,6 +16,7 @@ import { clearLastOrderEmail, getLastOrderEmail, setLastOrderEmail } from "@/lib
 import { fetchFreshProducts } from "@/lib/fresh-products";
 import {
   adjustmentNotices,
+  applyReconciled,
   blockingNotices,
   linesChanged,
   reconcileCart,
@@ -84,7 +85,7 @@ function dateHint(o: DeliveryOptions): string {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, count, clear, remove, replaceItems } = useCart();
+  const { items, count, clear, remove, replaceWith } = useCart();
   const { user, loading: authLoading } = useAuth();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -229,14 +230,22 @@ export default function CheckoutPage() {
       setRestoring(false);
       return;
     }
-    const guestEmail = user ? null : getLastOrderEmail();
+    const guestEmail = getLastOrderEmail();
     if (!user && !guestEmail) {
       clearPendingOrder();
       setRestoring(false);
       return;
     }
     let cancelled = false;
-    (user ? api.getMyOrder(id) : api.trackOrder(id, guestEmail as string))
+    // Signed in meanwhile: the account endpoint first; a guest order is not "mine" (403/404), so fall back to
+    // the email it was placed with.
+    (user
+      ? api.getMyOrder(id).catch((e: unknown) => {
+          if (guestEmail && e instanceof ApiError && (e.status === 403 || e.status === 404)) return api.trackOrder(id, guestEmail);
+          throw e;
+        })
+      : api.trackOrder(id, guestEmail as string)
+    )
       .then((o) => {
         if (cancelled) return;
         if (o.paymentStatus === "PAID" || o.paymentMethod === "COD") {
@@ -321,7 +330,7 @@ export default function CheckoutPage() {
   const applyFresh = (fresh: ApiProduct[]) => {
     const latest = itemsRef.current;
     const result = reconcileCart(latest, fresh);
-    if (linesChanged(latest, result.lines)) replaceItems(result.lines);
+    if (linesChanged(latest, result.lines)) replaceWith((prev) => applyReconciled(prev, latest, result.lines));
     noteAdjustments(adjustmentNotices(result.notices));
   };
   useEffect(() => {
@@ -333,6 +342,12 @@ export default function CheckoutPage() {
     [items, pricing],
   );
   const shownAdjustments = adjustments.filter((a) => items.some((i) => i.productId === a.productId));
+  const changesSummary =
+    blocking.length > 0
+      ? `${blocking.length === 1 ? "One item" : `${blocking.length} items`} in your bag can't be ordered right now.`
+      : shownAdjustments.length > 0
+        ? `Your order changed: ${shownAdjustments.length === 1 ? "one update needs" : `${shownAdjustments.length} updates need`} your review.`
+        : "";
   const gateMessage =
     blocking.length > 0
       ? "Remove the items that can't be ordered right now to continue."
@@ -531,7 +546,7 @@ export default function CheckoutPage() {
         const result = reconcileCart(items, latest.fresh);
         const newBlocking = blockingNotices(result.notices);
         const newAdjustments = adjustmentNotices(result.notices);
-        if (linesChanged(items, result.lines)) replaceItems(result.lines);
+        if (linesChanged(items, result.lines)) replaceWith((prev) => applyReconciled(prev, items, result.lines));
         noteAdjustments(newAdjustments);
         if (newBlocking.length > 0 || newAdjustments.length > 0) {
           reloadPrices();
@@ -632,11 +647,6 @@ export default function CheckoutPage() {
                   </li>
                 ))}
               </ul>
-              {shownAdjustments.some((a) => a.kind === "price-changed") && (
-                <p className="mt-6 border border-stone-light px-4 py-3 text-sm text-charcoal">
-                  Some prices were updated since you added these items. The total below reflects current pricing.
-                </p>
-              )}
               <dl className="mt-6 space-y-3 border-t border-stone-light pt-6 text-sm text-charcoal">
                 {!errors.deliveryDate && (
                   <div className="flex justify-between gap-4">
@@ -667,10 +677,12 @@ export default function CheckoutPage() {
           </aside>
 
           <form onSubmit={handleSubmit} noValidate className="space-y-12 lg:col-span-7 lg:row-start-1">
-            {/* Persistent polite region: changes that arrive after the page is up (submit-time re-check) are announced. */}
-            <div role="status" aria-live="polite" aria-atomic="false" data-testid="checkout-changes">
-              {(blocking.length > 0 || shownAdjustments.length > 0) && (
-                <section aria-labelledby="checkout-changes-title" className="border border-charcoal px-5 py-4 text-sm text-charcoal">
+            {/* Live region: only a short summary is announced; the full panel below is ordinary content. */}
+            <div role="status" aria-live="polite" aria-atomic="true" className="sr-only" data-testid="checkout-changes-live">
+              {changesSummary}
+            </div>
+            {(blocking.length > 0 || shownAdjustments.length > 0) && (
+                <section data-testid="checkout-changes" aria-labelledby="checkout-changes-title" className="border border-charcoal px-5 py-4 text-sm text-charcoal">
                   <h2 id="checkout-changes-title" className="font-display text-xl">
                     {blocking.length > 0 ? "Some items need attention" : "Your order changed"}
                   </h2>
@@ -709,7 +721,6 @@ export default function CheckoutPage() {
                   )}
                 </section>
               )}
-            </div>
 
             {!user && (
               <section aria-labelledby="guest-checkout-title" className="border border-stone-light px-5 py-4">

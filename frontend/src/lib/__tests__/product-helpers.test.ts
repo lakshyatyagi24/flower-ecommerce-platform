@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { availability, toCartItem, minQty, careCopy, uspsFromSettings, bunchCopy, isLowStock, LOW_STOCK_MAX } from '../product-helpers';
+import { availability, toCartItem, minQty, careCopy, uspsFromSettings, minOrderCopy, stepUp, stepDown, isLowStock, LOW_STOCK_MAX } from '../product-helpers';
 import { splitDescription, leadText } from '../description';
 import type { ApiProduct } from '../api';
 
@@ -76,26 +76,26 @@ describe('uspsFromSettings', () => {
   });
 });
 
-describe('bunchCopy', () => {
+describe('minOrderCopy', () => {
   it('is null when there is no minimum above 1', () => {
-    expect(bunchCopy(1, 'stem')).toBeNull();
-    expect(bunchCopy(0, 'stem')).toBeNull();
-    expect(bunchCopy(undefined as unknown as number, 'stem')).toBeNull();
+    expect(minOrderCopy(1, 'stem')).toBeNull();
+    expect(minOrderCopy(0, 'stem')).toBeNull();
+    expect(minOrderCopy(undefined as unknown as number, 'stem')).toBeNull();
   });
   it('uses the product unit word, pluralised, only when the data says so', () => {
-    expect(bunchCopy(10, 'stem')).toBe('Sold in bunches of 10 stems');
-    expect(bunchCopy(6, 'Piece')).toBe('Sold in bunches of 6 pieces');
-    expect(bunchCopy(4, 'box')).toBe('Sold in bunches of 4 boxes');
-    expect(bunchCopy(3, 'bouquet')).toBe('Sold in bunches of 3 bouquets');
-    expect(bunchCopy(3, 'berry')).toBe('Sold in bunches of 3 berries');
-    expect(bunchCopy(5, 'stems')).toBe('Sold in bunches of 5 stems');
+    expect(minOrderCopy(10, 'stem')).toBe('Minimum order: 10 stems');
+    expect(minOrderCopy(6, 'Piece')).toBe('Minimum order: 6 pieces');
+    expect(minOrderCopy(4, 'box')).toBe('Minimum order: 4 boxes');
+    expect(minOrderCopy(3, 'bouquet')).toBe('Minimum order: 3 bouquets');
+    expect(minOrderCopy(3, 'berry')).toBe('Minimum order: 3 berries');
+    expect(minOrderCopy(5, 'stems')).toBe('Minimum order: 5 stems');
   });
   it('never invents a unit: missing, blank or bunch-like units leave the noun off', () => {
-    expect(bunchCopy(10)).toBe('Sold in bunches of 10');
-    expect(bunchCopy(10, null)).toBe('Sold in bunches of 10');
-    expect(bunchCopy(10, '  ')).toBe('Sold in bunches of 10');
-    expect(bunchCopy(10, 'bunch')).toBe('Sold in bunches of 10');
-    expect(bunchCopy(10, 'Bundle')).toBe('Sold in bunches of 10');
+    expect(minOrderCopy(10)).toBe('Minimum order: 10');
+    expect(minOrderCopy(10, null)).toBe('Minimum order: 10');
+    expect(minOrderCopy(10, '  ')).toBe('Minimum order: 10');
+    expect(minOrderCopy(10, 'bunch')).toBe('Minimum order: 10');
+    expect(minOrderCopy(10, 'Bundle')).toBe('Minimum order: 10');
   });
 });
 
@@ -107,5 +107,24 @@ describe('isLowStock', () => {
     expect(isLowStock({ stock: 1 })).toBe(true);
     expect(isLowStock({ stock: 10 })).toBe(true);
     expect(isLowStock({ stock: 11 })).toBe(false);
+  });
+});
+
+describe('stepUp / stepDown (R23: minimum-only)', () => {
+  it('steps up by the minimum and the last step lands exactly on stock', () => {
+    expect(stepUp(3, 3, 10)).toBe(6);
+    expect(stepUp(9, 3, 10)).toBe(10);
+    expect(stepUp(4, 4, 6)).toBe(6);
+    expect(stepUp(1, 1, 5)).toBe(2);
+  });
+  it('never passes stock; unknown stock (0) steps freely', () => {
+    expect(stepUp(10, 3, 10)).toBe(10);
+    expect(stepUp(3, 3, 0)).toBe(6);
+  });
+  it('steps down by the minimum but never below it', () => {
+    expect(stepDown(10, 3)).toBe(7);
+    expect(stepDown(5, 3)).toBe(3);
+    expect(stepDown(3, 3)).toBe(3);
+    expect(stepDown(6, 4)).toBe(4);
   });
 });
