@@ -119,7 +119,7 @@ function OrdersView() {
   const [attentionFilter, setAttentionFilter] = useState<string>(
     (ATTENTION_VALUES as readonly string[]).includes(initialAttention) ? initialAttention : "",
   );
-  // "" = newest first; "deliveryDate" = soonest delivery date first (orders without one last).
+  // "" = newest first; "deliveryDate" = upcoming deliveries only (today onward), soonest first.
   const [sortBy, setSortBy] = useState<"" | "deliveryDate">("");
   const [selected, setSelected] = useState<AdminOrder | null>(null);
   const [edit, setEdit] = useState<EditState>(blankEdit);
@@ -340,7 +340,7 @@ function OrdersView() {
             className="mt-1 block p-2 border rounded text-sm"
           >
             <option value="">Newest first</option>
-            <option value="deliveryDate">Delivery date (soonest first)</option>
+            <option value="deliveryDate">Upcoming deliveries (soonest first)</option>
           </select>
         </div>
       </div>
