@@ -68,6 +68,7 @@ export default function EnquiryForm({
   const [focusTick, setFocusTick] = useState(0);
   const summaryRef = useRef<HTMLDivElement>(null);
   const sendingRef = useRef(false);
+  const sentRef = useRef<HTMLDivElement>(null);
 
   const errors = validateEnquiry(form, { messageRequired: contact });
   const fieldError = (k: EnquiryFieldName) => (touched[k] || attempted ? errors[k] : undefined);
@@ -78,6 +79,11 @@ export default function EnquiryForm({
   useEffect(() => {
     if (focusTick > 0) summaryRef.current?.focus();
   }, [focusTick]);
+
+  // Keep focus inside the form area (and the modal) when the form is replaced by the success panel.
+  useEffect(() => {
+    if (status === "sent") sentRef.current?.focus();
+  }, [status]);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) {
     const { name, value } = e.target;
@@ -154,7 +160,7 @@ export default function EnquiryForm({
       ) : null}
 
       {status === "sent" ? (
-        <div role="status" className={`border border-stone-light bg-ivory-deep p-6 ${gap}`}>
+        <div role="status" ref={sentRef} tabIndex={-1} className={`border border-stone-light bg-ivory-deep p-6 ${gap}`}>
           <p className="font-display text-2xl text-charcoal">Thank you</p>
           <p className="mt-2 text-base leading-relaxed text-stone-dark">
             We&apos;ve received your {contact ? "message" : "enquiry"} and will be in touch to confirm the details.
@@ -184,7 +190,7 @@ export default function EnquiryForm({
             <Input
               name="customerName"
               autoComplete="name"
-              maxLength={120}
+              maxLength={80}
               value={form.customerName}
               onChange={handleChange}
               onBlur={blur("customerName")}
@@ -216,7 +222,7 @@ export default function EnquiryForm({
 
           {!contact && (
             <>
-              <Field id={fid("quantity")} label="Quantity or size" optional hint="For example 50 stems or 10 bouquets" error={fieldError("quantity")}>
+              <Field id={fid("quantity")} label="Quantity or size" optional hint="Number of stems or bouquets" error={fieldError("quantity")}>
                 <Input
                   name="quantity"
                   type="number"
@@ -241,10 +247,10 @@ export default function EnquiryForm({
                 </Select>
               </Field>
               <Field id={fid("city")} label="City" optional>
-                <Input name="city" autoComplete="address-level2" placeholder="Delhi NCR" value={form.city} onChange={handleChange} />
+                <Input name="city" maxLength={80} autoComplete="address-level2" placeholder="Delhi NCR" value={form.city} onChange={handleChange} />
               </Field>
               <Field id={fid("address")} label="Delivery address" optional className="sm:col-span-2">
-                <Textarea name="address" rows={2} autoComplete="street-address" value={form.address} onChange={handleChange} />
+                <Textarea name="address" rows={2} maxLength={500} autoComplete="street-address" value={form.address} onChange={handleChange} />
               </Field>
             </>
           )}

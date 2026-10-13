@@ -8,7 +8,7 @@ export default function ContactForm() {
       mode="contact"
       source="contact-page"
       heading="Send a message"
-      description="Questions about an order, a custom bouquet or an event? Write to us here."
+      description=""
       submitLabel="Send message"
     />
   );
