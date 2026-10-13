@@ -4,8 +4,9 @@
 import { existsSync } from 'node:fs';
 import { measureBuild } from './bundle-budget.mjs';
 
-if (!existsSync('.next/app-build-manifest.json')) {
-  console.error('No .next build output found. Run `npm run build` first.');
+if (!existsSync('.next/BUILD_ID') || !existsSync('.next/app-build-manifest.json')) {
+  console.error('check:bundle needs a completed production build (.next/BUILD_ID or .next/app-build-manifest.json is missing).');
+  console.error('Run `npm run build` first; `next dev` output does not count.');
   process.exit(2);
 }
 const rows = measureBuild().sort((a, b) => b.kb - a.kb);

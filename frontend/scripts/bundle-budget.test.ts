@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { gzipSync } from 'node:zlib';
-import { BUDGETS_KB, budgetFor, firstLoadKb } from './bundle-budget.mjs';
+import { BUDGETS_KB, budgetFor, firstLoadKb, layoutEntries } from './bundle-budget.mjs';
 
 describe('bundle budget helpers', () => {
   it('sums gzip size of unique js files only', () => {
@@ -15,5 +15,9 @@ describe('bundle budget helpers', () => {
   });
   it('every budget is a sane positive number', () => {
     Object.values(BUDGETS_KB).forEach((v) => expect(v).toBeGreaterThan(80));
+  });
+  it('includes root and nested layouts for an entry', () => {
+    expect(layoutEntries('/page')).toEqual(['/layout']);
+    expect(layoutEntries('/checkout/success/page')).toEqual(['/layout', '/checkout/layout', '/checkout/success/layout']);
   });
 });
