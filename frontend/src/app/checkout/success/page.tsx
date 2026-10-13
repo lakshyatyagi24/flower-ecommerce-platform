@@ -187,7 +187,7 @@ function CheckoutSuccessView() {
   return (
     <main>
       <Container className="py-12 lg:py-20">
-        <div className="mx-auto max-w-2xl">
+        <div className="max-w-2xl">
           <h1 className="type-h1">Your order</h1>
           {orderId ? (
             <OrderSummary orderId={orderId} />

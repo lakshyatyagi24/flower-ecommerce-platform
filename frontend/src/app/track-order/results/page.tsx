@@ -54,7 +54,7 @@ function buildPhases(order: ApiOrder): { phases: Phase[]; currentIndex: number }
   return { phases, currentIndex };
 }
 
-const label = "text-xs font-medium uppercase tracking-[0.16em] text-stone-dark";
+const label = "font-sans text-xs font-medium uppercase tracking-[0.16em] text-stone-dark";
 
 function TrackOrderResultsView() {
   const params = useSearchParams();

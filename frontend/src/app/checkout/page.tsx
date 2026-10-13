@@ -293,7 +293,7 @@ export default function CheckoutPage() {
     return (
       <main>
         <Container className="py-12 lg:py-20">
-          <div className="mx-auto max-w-xl">
+          <div className="max-w-xl">
             <h1 className="type-h2">{pay.switched ? "Refund due" : "Payment pending"}</h1>
             {!pay.switched && (
               <p className="mt-4 text-base leading-relaxed text-stone-dark">
@@ -310,13 +310,13 @@ export default function CheckoutPage() {
   if (expired) {
     return (
       <main>
-        <Container className="py-12 text-center lg:py-20">
-          <div className="mx-auto max-w-xl">
+        <Container className="py-12 lg:py-20">
+          <div className="max-w-xl">
             <h1 className="type-h2">
               {expired === "unpaid" ? "Order expired" : expired === "refunded" ? "Payment refunded" : "Order cancelled"}
             </h1>
             <p className="mt-4 text-base leading-relaxed text-stone-dark">{EXPIRED_COPY[expired]}</p>
-            <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-center">
+            <div className="mt-8 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
               <Button type="button" onClick={() => setExpired(null)}>
                 Back to checkout
               </Button>
@@ -574,8 +574,10 @@ export default function CheckoutPage() {
               </div>
             </fieldset>
 
-            <fieldset className="min-w-0 space-y-3 border-0 border-t border-stone-light p-0 pt-12">
+            <div className="border-t border-stone-light pt-12">
+            <fieldset className="min-w-0 border-0 p-0">
               <SectionLegend n={2}>Payment</SectionLegend>
+              <div className="space-y-3">
               {onlineEnabled ? (
                 <RadioCard
                   name="paymentMethod"
@@ -594,7 +596,9 @@ export default function CheckoutPage() {
                 title="Cash on delivery"
                 description="Pay our courier when your bouquet arrives."
               />
+              </div>
             </fieldset>
+            </div>
 
             <div>
               <Button type="submit" size="lg" disabled={submitting} className="w-full">
