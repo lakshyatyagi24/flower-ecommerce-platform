@@ -44,8 +44,8 @@ export const categories: FaqCategory[] = [
         snapshot: true,
       },
       {
-        q: "How much does delivery cost, and when can it arrive?",
-        a: "Delivery charges and the available delivery dates are shown at checkout before you pay. If your order is time-sensitive, contact us before ordering and we will tell you honestly what is possible.",
+        q: "How much does delivery cost, and can I choose a date?",
+        a: "Delivery charges are shown at checkout before you pay. If you need flowers on a particular date, add it to the delivery notes or contact us before ordering and we will tell you honestly what is possible.",
         snapshot: true,
       },
       {

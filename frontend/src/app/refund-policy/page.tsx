@@ -17,7 +17,7 @@ export default function RefundPolicyPage() {
         <ul>
           <li>
             To cancel an order, contact us as soon as possible with your order number. An order that has not yet been
-            prepared or dispatched can usually be cancelled, and we will refund it to the original payment method.
+            prepared or dispatched can usually be cancelled, If you have already paid online, we will refund it to the original payment method.
           </li>
           <li>
             If your flowers arrive damaged or in poor condition, contact us promptly with your order number and clear
@@ -40,7 +40,7 @@ export default function RefundPolicyPage() {
       </LegalSection>
       <LegalSection heading="How refunds are paid">
         <p>
-          Approved refunds are returned to the original payment method. The time it takes to reach your account
+          Online payments are refunded to the original payment method; for cash on delivery orders we will agree the refund method with you. The time it takes to reach your account
           depends on your bank or payment provider.
         </p>
       </LegalSection>

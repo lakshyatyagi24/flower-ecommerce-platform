@@ -25,14 +25,16 @@ export default function PrivacyPage() {
       <LegalSection heading="3. Sharing">
         <p>
           We do not sell your personal information. We share your details with delivery partners only as far as is
-          needed to deliver your order. Online payments are processed by our payment gateway, which handles your card
-          or UPI details directly; we do not store them.
+          needed to deliver your order. We also use service providers, such as our hosting provider, our email
+          delivery service and our payment gateway, who process your details only to provide their service to us.
+          Online payments are processed by the payment gateway, which handles your card or UPI details directly; we
+          do not store them.
         </p>
       </LegalSection>
       <LegalSection heading="4. Cookies and local storage">
         <p>
-          We use cookies and your browser&apos;s local storage to keep your cart and your sign-in working from page to
-          page.
+          This site stores your sign-in and your cart in your browser&apos;s local storage so they keep working from page
+          to page. We do not use advertising or tracking cookies.
         </p>
       </LegalSection>
       <LegalSection heading="5. Your choices">
