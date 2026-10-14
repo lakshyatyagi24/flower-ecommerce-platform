@@ -417,7 +417,7 @@ export const adminApi = {
   // Coupons
   listCoupons: () => apiFetch<AdminCoupon[]>('/coupons'),
   createCoupon: (body: AdminCouponInput) => apiFetch<AdminCoupon>('/coupons', { method: 'POST', body }),
-  updateCoupon: (id: number, body: Omit<AdminCouponInput, 'code'>) =>
+  updateCoupon: (id: number, body: Partial<Omit<AdminCouponInput, 'code'>>) =>
     apiFetch<AdminCoupon>(`/coupons/${id}`, { method: 'PUT', body }),
   deleteCoupon: (id: number) => apiFetch<{ deleted: true }>(`/coupons/${id}`, { method: 'DELETE' }),
 

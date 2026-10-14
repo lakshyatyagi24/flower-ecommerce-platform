@@ -111,8 +111,8 @@ export default function CouponsPage() {
   const toggleActive = async (c: AdminCoupon) => {
     setBusyId(c.id);
     try {
-      const { code: _code, ...rest } = { ...formToInput(couponToForm(c)), active: !c.active }; // eslint-disable-line @typescript-eslint/no-unused-vars
-      await adminApi.updateCoupon(c.id, rest);
+      // Only the flag: the server merges the rest, so expiry, limits and value are never re-sent or rewritten.
+      await adminApi.updateCoupon(c.id, { active: !c.active });
       await load();
     } catch (error) {
       addToast({ type: 'error', title: 'Error', description: error instanceof ApiError ? error.message : 'Failed to update the coupon.' });
