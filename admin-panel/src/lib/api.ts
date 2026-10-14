@@ -179,6 +179,9 @@ export type AdminOrder = {
   subtotal: number;
   shipping: number;
   gst?: number;
+  /** Coupon applied at checkout and the rupees it took off the subtotal (0 / null on older orders). */
+  couponCode?: string | null;
+  discount?: number;
   total: number;
   status: 'PENDING' | 'PAID' | 'SHIPPED' | 'COMPLETED' | 'CANCELLED';
   paymentMethod: 'COD' | 'RAZORPAY' | string;
@@ -209,6 +212,31 @@ export type AdminOrder = {
     unitPrice: number;
   }[];
   user?: { id: number; email: string; name: string | null } | null;
+};
+
+export type AdminCoupon = {
+  id: number;
+  code: string;
+  type: 'PERCENT' | 'FLAT';
+  value: number;
+  minSubtotal: number;
+  maxDiscount: number | null;
+  expiresAt: string | null;
+  maxUses: number | null;
+  usedCount: number;
+  active: boolean;
+  createdAt: string;
+};
+
+export type AdminCouponInput = {
+  code?: string;
+  type: 'PERCENT' | 'FLAT';
+  value: number;
+  minSubtotal: number;
+  maxDiscount: number | null;
+  expiresAt: string | null;
+  maxUses: number | null;
+  active: boolean;
 };
 
 export type AdminOrderPatch = {
@@ -386,6 +414,13 @@ export const adminApi = {
     apiFetch<{ items: AdminSubscriber[]; total: number }>(`/newsletter?take=${take}&skip=${skip}`),
 
   // Categories
+  // Coupons
+  listCoupons: () => apiFetch<AdminCoupon[]>('/coupons'),
+  createCoupon: (body: AdminCouponInput) => apiFetch<AdminCoupon>('/coupons', { method: 'POST', body }),
+  updateCoupon: (id: number, body: Omit<AdminCouponInput, 'code'>) =>
+    apiFetch<AdminCoupon>(`/coupons/${id}`, { method: 'PUT', body }),
+  deleteCoupon: (id: number) => apiFetch<{ deleted: true }>(`/coupons/${id}`, { method: 'DELETE' }),
+
   listCategories: () => apiFetch<AdminCategory[]>('/categories/all'),
   listCategoriesPublic: () => apiFetch<AdminCategory[]>('/categories'),
   createCategory: (body: AdminCategoryInput) =>

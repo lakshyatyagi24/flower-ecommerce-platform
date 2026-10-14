@@ -486,6 +486,12 @@ function OrdersView() {
                     <span>Shipping</span>
                     <span>{selected.shipping === 0 ? "Free" : formatINR(selected.shipping)}</span>
                   </div>
+                  {selected.discount && selected.discount > 0 ? (
+                    <div className="flex justify-between" data-testid="order-discount">
+                      <span>Discount{selected.couponCode ? ` (${selected.couponCode})` : ""}</span>
+                      <span>-{formatINR(selected.discount)}</span>
+                    </div>
+                  ) : null}
                   {selected.gst && selected.gst > 0 ? (
                     <div className="flex justify-between">
                       <span>GST</span>

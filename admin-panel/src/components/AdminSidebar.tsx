@@ -18,6 +18,7 @@ import {
   Star,
   MessageSquare,
   Mail,
+  Ticket,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { adminApi } from "@/lib/api";
@@ -28,6 +29,7 @@ const menuItems = [
   { name: "Sliders", href: "/sliders", icon: Image, badgeKey: null },
   { name: "Products", href: "/products", icon: Package, badgeKey: null },
   { name: "Orders", href: "/orders", icon: ShoppingCart, badgeKey: null },
+  { name: "Coupons", href: "/coupons", icon: Ticket, badgeKey: null },
   { name: "Enquiries", href: "/enquiries", icon: MessageSquare, badgeKey: "openEnquiries" },
   { name: "Reviews", href: "/reviews", icon: Star, badgeKey: null },
   { name: "Customers", href: "/customers", icon: Users, badgeKey: null },
