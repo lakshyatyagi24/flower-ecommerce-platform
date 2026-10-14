@@ -23,8 +23,8 @@ import {
   type CartNotice,
 } from "@/lib/reconcile-cart";
 import { requestSignIn } from "@/lib/sign-in-request";
-import { useCoupon } from "@/lib/use-coupon";
-import { isCouponError, totalAfterDiscount } from "@/lib/coupon";
+import { UNCONFIRMED_NOTE, useCoupon } from "@/lib/use-coupon";
+import { gstAfterDiscount, isCouponError, totalAfterDiscount } from "@/lib/coupon";
 import CouponField from "@/components/CouponField";
 import { EXPIRED_COPY, reservedMessage, usePayForOrder, type ExpiredKind } from "@/lib/use-pay-for-order";
 import PaymentActions from "@/components/PaymentActions";
@@ -372,12 +372,6 @@ export default function CheckoutPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [items, freshPrices],
   );
-  const liveGstTotal = useMemo(
-    () => items.reduce((s, it) => s + (gstRateOf(it) ? (priceOf(it) * it.quantity * gstRateOf(it)) / 100 : 0), 0),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [items, freshPrices],
-  );
-
   useEffect(() => {
     if (user) {
       setForm((f) => ({
@@ -392,6 +386,12 @@ export default function CheckoutPage() {
 
   const coupon = useCoupon(liveSubtotal);
   const discount = coupon.discount;
+  // GST is charged on the value AFTER the discount, spread over the lines exactly as the server does it.
+  const liveGstTotal = useMemo(
+    () => gstAfterDiscount(items.map((it) => ({ lineTotal: priceOf(it) * it.quantity, gstRate: gstRateOf(it) })), discount),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [items, freshPrices, discount],
+  );
 
   // Mirrors the backend rule exactly (see lib/shipping.ts): threshold "0" => every order ships free.
   const flatRate = parseFlatRate(settings["shipping.flatRate"]);
@@ -400,7 +400,7 @@ export default function CheckoutPage() {
     if (count === 0) return 0;
     return shippingFor(liveSubtotal, flatRate, freeThreshold);
   }, [liveSubtotal, count, flatRate, freeThreshold]);
-  // R19: shipping was judged on the pre-discount subtotal above; the discount only reduces what is owed.
+  // R19: shipping was judged on the pre-discount subtotal above; the discount reduces the items and their GST.
   const total = totalAfterDiscount(liveSubtotal, discount, shipping, liveGstTotal);
 
   if (authLoading) {
@@ -694,6 +694,12 @@ export default function CheckoutPage() {
                   <dt>Subtotal</dt>
                   <dd>{formatINR(liveSubtotal)}</dd>
                 </div>
+                {coupon.applied && coupon.unconfirmed && (
+                  <div className="flex justify-between gap-4" data-testid="checkout-discount">
+                    <dt>Discount ({coupon.applied.code})</dt>
+                    <dd className="text-right text-stone-dark">{UNCONFIRMED_NOTE}</dd>
+                  </div>
+                )}
                 {discount > 0 && coupon.applied && (
                   <div className="flex justify-between gap-4" data-testid="checkout-discount">
                     <dt>Discount ({coupon.applied.code})</dt>

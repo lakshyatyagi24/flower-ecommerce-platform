@@ -179,9 +179,9 @@ describe('checkout coupon field', () => {
     cart.items = [{ ...line, quantity: 2 }]
     cart.count = 2
     view.rerender(<CheckoutPage />)
-    await waitFor(() => expect(validateCoupon).toHaveBeenLastCalledWith('SAVE10', 200))
+    await waitFor(() => expect(validateCoupon).toHaveBeenLastCalledWith('SAVE10', 200), { timeout: 3000 })
     // 200 - 20 + 50 = 230
-    await waitFor(() => expect(totalText()).toContain('Rs230'))
+    await waitFor(() => expect(totalText()).toContain('Rs230'), { timeout: 3000 })
   })
 
   it('drops the coupon, with the reason, when the changed cart no longer qualifies', async () => {
@@ -191,20 +191,67 @@ describe('checkout coupon field', () => {
     cart.items = [{ ...line, quantity: 2 }]
     cart.count = 2
     view.rerender(<CheckoutPage />)
-    expect(await screen.findByText('Add Rs500 more to use this coupon')).toBeInTheDocument()
+    expect(await screen.findByText('Add Rs500 more to use this coupon', {}, { timeout: 3000 })).toBeInTheDocument()
     expect(screen.queryByTestId('checkout-discount')).toBeNull()
     expect(screen.getByTestId('coupon-live')).toHaveTextContent(/SAVE10 removed/)
   })
 
-  it('keeps the coupon when re-validation fails for a non-coupon reason (the server decides at order time)', async () => {
+  it('on a non-coupon failure (429 / offline) keeps the coupon, hides the preview amount and says it will be confirmed', async () => {
     const view = await renderForm()
     await applyCode()
     validateCoupon.mockRejectedValue(new ApiError('Too many requests', 429, null))
     cart.items = [{ ...line, quantity: 2 }]
     cart.count = 2
     view.rerender(<CheckoutPage />)
-    await waitFor(() => expect(validateCoupon).toHaveBeenCalledTimes(2))
-    expect(screen.getByTestId('checkout-discount')).toBeInTheDocument()
+    await waitFor(() => expect(validateCoupon).toHaveBeenCalledTimes(2), { timeout: 3000 })
+    const row = await screen.findByTestId('checkout-discount')
+    expect(row).toHaveTextContent('Discount (SAVE10)')
+    expect(row).toHaveTextContent('Discount will be confirmed when you place the order')
+    expect(row).not.toHaveTextContent('-Rs')
+    // no preview discount in the total: 200 + 50 shipping
+    expect(totalText()).toContain('Rs250')
+    expect(screen.getByTestId('coupon-live')).toHaveTextContent('Discount will be confirmed when you place the order.')
+    // the coupon is still sent, the server decides
+    createOrder.mockResolvedValue({ id: 7, total: 230, discount: 20, couponCode: 'SAVE10', paymentMethod: 'COD', items: [] })
+    fireEvent.submit(view.container.querySelector('form')!)
+  })
+
+  it('debounces subtotal-driven re-validation: quick consecutive changes cost one request', async () => {
+    const view = await renderForm()
+    await applyCode()
+    validateCoupon.mockClear()
+    validateCoupon.mockResolvedValue(ok10('SAVE10', 30))
+    for (const q of [2, 3, 4]) {
+      cart.items = [{ ...line, quantity: q }]
+      cart.count = q
+      view.rerender(<CheckoutPage />)
+    }
+    expect(validateCoupon).not.toHaveBeenCalled() // still waiting out the debounce
+    await waitFor(() => expect(validateCoupon).toHaveBeenCalledTimes(1), { timeout: 3000 })
+    expect(validateCoupon).toHaveBeenCalledWith('SAVE10', 400)
+    // no more calls follow
+    await new Promise((r) => setTimeout(r, 700))
+    expect(validateCoupon).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('checkout coupon and GST', () => {
+  it('shows GST on the discounted value, so the total equals what the server charges', async () => {
+    cart.items = [{ ...line, price: 1000, gstRate: 18 }]
+    fn(api.getProductBySlug).mockResolvedValue({ id: 1, price: 1000, gstRate: 18, stock: 10, active: true })
+    validateCoupon.mockResolvedValue({ code: 'SAVE20', type: 'PERCENT', value: 20, discount: 200 })
+    const view = render(<CheckoutPage />)
+    await waitFor(() => expect(view.container.querySelector('form')).not.toBeNull())
+    // before the coupon: 1000 + 50 shipping + 180 GST
+    await waitFor(() => expect(totalText()).toContain('Rs1230'))
+    openDisclosure()
+    set(codeBox(), 'save20')
+    fireEvent.click(screen.getByRole('button', { name: /^apply$/i }))
+    await screen.findByText(/applied/i, { selector: 'span' })
+    // 1000 - 200 + 50 + 18% of 800 (144)
+    await waitFor(() => expect(totalText()).toContain('Rs994'))
+    expect(totalText()).toContain('Rs144')
+    expect(totalText()).not.toContain('Rs180')
   })
 })
 
