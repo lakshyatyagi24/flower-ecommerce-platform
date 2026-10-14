@@ -125,6 +125,12 @@ export default function MyOrdersPage() {
                       <dt>Subtotal</dt>
                       <dd className="text-charcoal">{formatINR(o.subtotal)}</dd>
                     </div>
+                    {o.discount && o.discount > 0 ? (
+                      <div className="flex justify-between gap-4" data-testid="order-discount">
+                        <dt>Discount{o.couponCode ? ` (${o.couponCode})` : ""}</dt>
+                        <dd className="text-charcoal">-{formatINR(o.discount)}</dd>
+                      </div>
+                    ) : null}
                     <div className="flex justify-between gap-4">
                       <dt>Shipping</dt>
                       <dd className="text-charcoal">{o.shipping === 0 ? "Free" : formatINR(o.shipping)}</dd>

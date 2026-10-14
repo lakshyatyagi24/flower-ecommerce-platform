@@ -79,4 +79,21 @@ describe('My orders delivery date', () => {
     expect(withDate).toHaveTextContent('Delivery date: Wednesday, 14 October 2026')
     expect(without).not.toHaveTextContent('Delivery date')
   })
+
+  it('shows the coupon discount on an order that used one, not on one that did not', async () => {
+    const base = {
+      subtotal: 300, shipping: 50, gst: 0, createdAt: '2026-10-01T10:00:00Z', customerEmail: 'a@b.co', status: 'PENDING',
+      paymentMethod: 'COD', paymentStatus: 'UNPAID', items: [{ id: 1, productName: 'Rose', quantity: 1, unitPrice: 300 }],
+    }
+    list.mockResolvedValue([
+      { ...base, id: 7, total: 320, couponCode: 'SAVE10', discount: 30 },
+      { ...base, id: 8, total: 350, couponCode: null, discount: 0 },
+    ])
+    render(<MyOrdersPage />)
+    const used = (await screen.findByRole('heading', { name: 'Order #7' })).closest('article') as HTMLElement
+    const plain = screen.getByRole('heading', { name: 'Order #8' }).closest('article') as HTMLElement
+    expect(within(used).getByTestId('order-discount')).toHaveTextContent('Discount (SAVE10)')
+    expect(within(used).getByTestId('order-discount')).toHaveTextContent('-Rs30')
+    expect(within(plain).queryByTestId('order-discount')).toBeNull()
+  })
 })

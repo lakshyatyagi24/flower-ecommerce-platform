@@ -159,3 +159,20 @@ describe('Track order results delivery date', () => {
     expect(screen.queryByText('Delivery date')).toBeNull()
   })
 })
+
+describe('Track order results coupon', () => {
+  it('shows the coupon discount line when one was applied, and not otherwise', async () => {
+    search = '?orderId=12'
+    setTrackEmail('a@b.co')
+    trackOrder.mockResolvedValue({ ...order, couponCode: 'SAVE10', discount: 40 })
+    const { unmount } = render(<TrackOrderResults />)
+    await screen.findByRole('heading', { name: 'Order #12' })
+    expect(screen.getByTestId('order-discount')).toHaveTextContent('Discount (SAVE10)')
+    unmount()
+    setTrackEmail('a@b.co')
+    trackOrder.mockResolvedValue({ ...order, couponCode: null, discount: 0 })
+    render(<TrackOrderResults />)
+    await screen.findByRole('heading', { name: 'Order #12' })
+    expect(screen.queryByTestId('order-discount')).toBeNull()
+  })
+})

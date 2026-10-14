@@ -194,6 +194,12 @@ function OrderSummary({ orderId, guestEmail }: { orderId: number; guestEmail: st
           </li>
         ))}
       </ul>
+      {typeof order.discount === "number" && order.discount > 0 && (
+        <div className="mt-6 flex items-baseline justify-between text-sm text-charcoal" data-testid="order-discount">
+          <span>Discount{order.couponCode ? ` (${order.couponCode})` : ""}</span>
+          <span>-{formatINR(order.discount)}</span>
+        </div>
+      )}
       <div className="mt-6 flex items-baseline justify-between text-charcoal">
         <span className="text-sm uppercase tracking-[0.12em]">Total</span>
         <span className="font-display text-2xl">{formatINR(order.total)}</span>

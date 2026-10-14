@@ -234,6 +234,9 @@ export type ApiOrder = {
   subtotal: number;
   shipping: number;
   gst?: number;
+  /** Coupon applied at checkout and the rupees it took off the subtotal (absent / 0 on older orders). */
+  couponCode?: string | null;
+  discount?: number;
   total: number;
   status: 'PENDING' | 'PAID' | 'SHIPPED' | 'COMPLETED' | 'CANCELLED';
   paymentMethod: string;
@@ -309,6 +312,8 @@ export const api = {
     paymentMethod?: 'COD' | 'RAZORPAY';
     /** `YYYY-MM-DD` (India calendar date), required by the backend. */
     deliveryDate: string;
+    /** Optional; the server re-validates it and recomputes the discount. */
+    couponCode?: string;
   }) => apiFetch<ApiOrder>('/orders', { method: 'POST', body, auth: true }),
   listMyOrders: () => apiFetch<ApiOrder[]>('/orders/mine', { auth: true }),
   getMyOrder: (id: number) => apiFetch<ApiOrder>(`/orders/mine/${id}`, { auth: true }),
@@ -321,6 +326,14 @@ export const api = {
   // The email goes in the POST body, never the query string, so it stays out of access logs and history.
   trackOrder: (id: number, email: string) =>
     apiFetch<ApiOrder>(`/orders/track/${id}`, { method: 'POST', body: { email } }),
+
+  // Coupons: a preview only. The server recomputes the discount from its own prices when the order is created.
+  validateCoupon: (code: string, subtotal: number, signal?: AbortSignal) =>
+    apiFetch<{ code: string; type: 'PERCENT' | 'FLAT'; value: number; discount: number }>('/coupons/validate', {
+      method: 'POST',
+      body: { code, subtotal },
+      signal,
+    }),
 
   // Delivery
   checkPincode: (pincode: string, signal?: AbortSignal) =>

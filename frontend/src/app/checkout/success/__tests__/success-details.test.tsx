@@ -85,4 +85,19 @@ describe('Checkout success delivery date', () => {
     await screen.findByText(/payment received/i)
     expect(screen.queryByText('Delivery date')).toBeNull()
   })
+
+  it('shows the coupon and discount line only when a discount was applied', async () => {
+    getMyOrder.mockResolvedValue({ ...order, couponCode: 'SAVE10', discount: 25, total: 125 })
+    render(<CheckoutSuccessPage />)
+    await screen.findByText(/payment received/i)
+    expect(screen.getByTestId('order-discount')).toHaveTextContent('Discount (SAVE10)')
+    expect(screen.getByTestId('order-discount')).toHaveTextContent('-Rs25')
+  })
+
+  it('shows no discount line for orders without a coupon', async () => {
+    getMyOrder.mockResolvedValue({ ...order, couponCode: null, discount: 0 })
+    render(<CheckoutSuccessPage />)
+    await screen.findByText(/payment received/i)
+    expect(screen.queryByTestId('order-discount')).toBeNull()
+  })
 })

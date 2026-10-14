@@ -23,6 +23,9 @@ import {
   type CartNotice,
 } from "@/lib/reconcile-cart";
 import { requestSignIn } from "@/lib/sign-in-request";
+import { useCoupon } from "@/lib/use-coupon";
+import { isCouponError, totalAfterDiscount } from "@/lib/coupon";
+import CouponField from "@/components/CouponField";
 import { EXPIRED_COPY, reservedMessage, usePayForOrder, type ExpiredKind } from "@/lib/use-pay-for-order";
 import PaymentActions from "@/components/PaymentActions";
 import Container from "@/components/ui/Container";
@@ -75,6 +78,10 @@ function SectionLegend({ n, children }: { n: number; children: React.ReactNode }
       <span className="font-display text-2xl text-charcoal md:text-3xl">{children}</span>
     </legend>
   );
+}
+
+function amountsOf(o: { total: number; discount?: number; couponCode?: string | null }) {
+  return { total: o.total, discount: o.discount ?? 0, couponCode: o.couponCode ?? null };
 }
 
 function dateHint(o: DeliveryOptions): string {
@@ -194,6 +201,8 @@ export default function CheckoutPage() {
   const [pendingId, setPendingId] = useState<number | null>(null);
   const [expired, setExpired] = useState<ExpiredKind | null>(null);
   const [restoring, setRestoring] = useState(true);
+  // What the server recorded for the pending order (total after any coupon); shown on the pending panel.
+  const [pendingAmounts, setPendingAmounts] = useState<{ total: number; discount: number; couponCode: string | null } | null>(null);
 
   // Shared pay/switch/check behaviour: clears the cart and matching pending key
   // itself whenever an order resolves, then we just navigate or show expiry.
@@ -258,6 +267,7 @@ export default function CheckoutPage() {
           o.paymentMethod === "RAZORPAY" &&
           (o.paymentStatus === "UNPAID" || o.paymentStatus === "FAILED")
         ) {
+          setPendingAmounts(amountsOf(o));
           setPendingId(id);
           pay.setNotice({ text: reservedMessage(id), kind: "status" });
           pay.setShowCheck(true);
@@ -380,6 +390,9 @@ export default function CheckoutPage() {
     }
   }, [user]);
 
+  const coupon = useCoupon(liveSubtotal);
+  const discount = coupon.discount;
+
   // Mirrors the backend rule exactly (see lib/shipping.ts): threshold "0" => every order ships free.
   const flatRate = parseFlatRate(settings["shipping.flatRate"]);
   const freeThreshold = parseFreeThreshold(settings["shipping.freeThreshold"]);
@@ -387,7 +400,8 @@ export default function CheckoutPage() {
     if (count === 0) return 0;
     return shippingFor(liveSubtotal, flatRate, freeThreshold);
   }, [liveSubtotal, count, flatRate, freeThreshold]);
-  const total = liveSubtotal + shipping + liveGstTotal;
+  // R19: shipping was judged on the pre-discount subtotal above; the discount only reduces what is owed.
+  const total = totalAfterDiscount(liveSubtotal, discount, shipping, liveGstTotal);
 
   if (authLoading) {
     return (
@@ -425,6 +439,17 @@ export default function CheckoutPage() {
             {!pay.switched && (
               <p className="mt-4 text-base leading-relaxed text-stone-dark">
                 Your order #{pendingId} has been created and is waiting for payment. It stays reserved for 30 minutes.
+              </p>
+            )}
+            {pendingAmounts && (
+              <p className="mt-4 text-base text-charcoal" data-testid="pending-amounts">
+                Amount to pay: <strong className="font-medium">{formatINR(pendingAmounts.total)}</strong>
+                {pendingAmounts.discount > 0 && (
+                  <span className="block text-sm text-stone-dark">
+                    Includes a discount of {formatINR(pendingAmounts.discount)}
+                    {pendingAmounts.couponCode ? ` (coupon ${pendingAmounts.couponCode})` : ""}.
+                  </span>
+                )}
               </p>
             )}
             <PaymentActions pay={pay} orderId={pendingId} />
@@ -570,6 +595,7 @@ export default function CheckoutPage() {
         deliveryDate: form.deliveryDate,
         notes: form.notes.trim() || undefined,
         paymentMethod,
+        ...(coupon.applied ? { couponCode: coupon.applied.code } : {}),
       });
       // A guest finds their order again (pay, switch, success page) with the email they ordered with.
       if (!user) setLastOrderEmail(form.customerEmail.trim());
@@ -579,11 +605,20 @@ export default function CheckoutPage() {
         // Keep the cart until payment is confirmed. Remember the order so a
         // refresh shows the pending panel instead of a fresh, submittable form.
         savePendingOrder(order.id);
+        setPendingAmounts(amountsOf(order));
         setPendingId(order.id);
         void pay.payNow(order.id);
       }
     } catch (err) {
       const message = err instanceof ApiError ? err.message : err instanceof Error ? err.message : "Could not place order";
+      if (isCouponError(err)) {
+        // The server refused the coupon (expired, used up, below its minimum...). Drop it, say why next to the
+        // field, and let the shopper decide: the order is NOT retried without it.
+        coupon.reject(message);
+        setError("Your coupon could not be applied, so it was removed and no order was placed. Check the total and place the order again.");
+        setFocusTick((t) => t + 1);
+        return;
+      }
       setError(message);
       // The window moves with the clock (cut-off time): after a date rejection, re-read it so the field shows the new range.
       if (/delivery date|deliver on that date/i.test(message)) reloadOptions();
@@ -647,6 +682,7 @@ export default function CheckoutPage() {
                   </li>
                 ))}
               </ul>
+              <CouponField coupon={coupon} disabled={submitting} />
               <dl className="mt-6 space-y-3 border-t border-stone-light pt-6 text-sm text-charcoal">
                 {!errors.deliveryDate && (
                   <div className="flex justify-between gap-4">
@@ -658,6 +694,12 @@ export default function CheckoutPage() {
                   <dt>Subtotal</dt>
                   <dd>{formatINR(liveSubtotal)}</dd>
                 </div>
+                {discount > 0 && coupon.applied && (
+                  <div className="flex justify-between gap-4" data-testid="checkout-discount">
+                    <dt>Discount ({coupon.applied.code})</dt>
+                    <dd>-{formatINR(discount)}</dd>
+                  </div>
+                )}
                 <div className="flex justify-between gap-4">
                   <dt>Shipping</dt>
                   <dd>{shipping === 0 ? "Free" : formatINR(shipping)}</dd>
@@ -884,7 +926,7 @@ export default function CheckoutPage() {
               <Button
                 type="submit"
                 size="lg"
-                disabled={submitting || Boolean(gateMessage)}
+                disabled={submitting || Boolean(gateMessage) || coupon.busy}
                 aria-describedby={gateMessage ? "checkout-gate" : undefined}
                 className="w-full"
               >

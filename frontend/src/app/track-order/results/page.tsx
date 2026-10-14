@@ -247,6 +247,12 @@ function TrackOrderResultsView() {
                 <dt>Subtotal</dt>
                 <dd className="text-charcoal">{formatINR(order.subtotal)}</dd>
               </div>
+              {order.discount && order.discount > 0 ? (
+                <div className="flex justify-between gap-4" data-testid="order-discount">
+                  <dt>Discount{order.couponCode ? ` (${order.couponCode})` : ""}</dt>
+                  <dd className="text-charcoal">-{formatINR(order.discount)}</dd>
+                </div>
+              ) : null}
               <div className="flex justify-between gap-4">
                 <dt>Shipping</dt>
                 <dd className="text-charcoal">{order.shipping === 0 ? "Free" : formatINR(order.shipping)}</dd>
