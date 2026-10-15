@@ -115,3 +115,70 @@ describe("scrubEvent", () => {
     expect(isExpectedClientError(new Error("x"))).toBe(false);
   });
 });
+
+describe("scrubbing gaps (fix round)", () => {
+  it("strips query strings from request.url and transactions (order search carries phones)", () => {
+    const e = scrubEvent({
+      request: { url: "https://admin.freshpetalsindia.com/orders?q=9876543210" },
+      transaction: "/orders?q=9876543210",
+    });
+    expect(e.request.url).toBe("https://admin.freshpetalsindia.com/orders");
+    expect(e.transaction).toBe("/orders");
+  });
+
+  it("scrubs span description and data (url.full, http.query, http.url, db.statement)", () => {
+    const e = scrubEvent({
+      spans: [
+        {
+          description: "GET https://api.resend.com/emails?to=a@b.co",
+          data: {
+            "url.full": "https://x.test/orders?q=9876543210",
+            "http.query": "q=9876543210",
+            "http.url": "https://x.test/a?email=a@b.co",
+            "db.statement": "select 1 where phone = 9876543210",
+            "http.status_code": 200,
+          },
+        },
+      ],
+    });
+    const json = JSON.stringify(e);
+    expect(json.includes("9876543210")).toBe(false);
+    expect(json.includes("a@b.co")).toBe(false);
+    expect(e.spans[0].data["http.status_code"]).toBe(200);
+    expect(e.spans[0].description).toBe("GET https://api.resend.com/emails");
+  });
+
+  it("redacts Indian mobile numbers in every string field, in all common spellings", () => {
+    const e = scrubEvent({
+      message: "ring +91 98765 43210 or +91-9876543210 or 09876543210 or 9876543210",
+      exception: { values: [{ value: "bad phone 9876543210" }] },
+      breadcrumbs: [{ message: "sent to 8765432109", data: { note: "ring 7654321098" } }],
+      extra: { note: "phone is 6543210987" },
+    });
+    expect(JSON.stringify(e)).not.toMatch(/987654|876543|765432|654321/);
+    expect(redactString("order 1234567890123 total 99")).toBe("order 1234567890123 total 99");
+  });
+
+  it("truncates call arguments after 'invocation:' and caps exception values", () => {
+    const e = scrubEvent({
+      exception: {
+        values: [
+          { value: 'Invalid `prisma.order.create()` invocation:\n{ data: { name: "Jane Doe", address: "12 Rose Street" } }' },
+          { value: "x".repeat(2000) },
+        ],
+      },
+    });
+    expect(e.exception.values[0].value).not.toMatch(/Jane|Rose/);
+    expect(e.exception.values[0].value).toContain("invocation:");
+    expect(e.exception.values[1].value.length).toBeLessThanOrEqual(503);
+  });
+
+  it("still redacts e-mail addresses", () => {
+    expect(scrubEvent({ message: "fail jane@example.com" }).message).toBe(`fail ${REDACTED}`);
+  });
+
+  it("limits trace propagation to the targets passed in (never third parties by default)", () => {
+    expect(buildOptions("x", {}).tracePropagationTargets).toEqual([]);
+    expect(buildOptions("x", {}, ["http://127.0.0.1:3001"]).tracePropagationTargets).toEqual(["http://127.0.0.1:3001"]);
+  });
+});

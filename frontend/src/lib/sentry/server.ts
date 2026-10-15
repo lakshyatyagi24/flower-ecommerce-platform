@@ -8,7 +8,8 @@ import { buildOptions } from "./options";
  */
 export function initServerSentry(dsn: string) {
   Sentry.init({
-    ...buildOptions(dsn, process.env),
+    // Trace headers only to the in-container API loopback (API_BASE_INTERNAL), never third parties.
+    ...buildOptions(dsn, process.env, process.env.API_BASE_INTERNAL ? [process.env.API_BASE_INTERNAL] : []),
     integrations: [Sentry.captureConsoleIntegration({ levels: ["error"] })],
   });
 }

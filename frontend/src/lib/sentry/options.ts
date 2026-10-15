@@ -5,7 +5,15 @@ import { DENY_URLS, IGNORED_ERRORS, isExpectedClientError, scrubEvent, type AnyE
  * import here, so it can be built into either entry without pulling Sentry
  * into the first-load bundle.
  */
-export function buildOptions(dsn: string, env: Record<string, string | undefined>) {
+/**
+ * `tracePropagationTargets` limits which outgoing requests get sentry-trace/baggage headers. It is deliberately
+ * explicit (own API only) so those headers never reach Razorpay, Resend or Cloudinary.
+ */
+export function buildOptions(
+  dsn: string,
+  env: Record<string, string | undefined>,
+  tracePropagationTargets: Array<string | RegExp> = [],
+) {
   return {
     dsn,
     environment: env.SENTRY_ENVIRONMENT || env.NODE_ENV || "production",
@@ -13,6 +21,7 @@ export function buildOptions(dsn: string, env: Record<string, string | undefined
     sendDefaultPii: false,
     tracesSampleRate: 0.1,
     ignoreErrors: IGNORED_ERRORS,
+    tracePropagationTargets,
     denyUrls: DENY_URLS,
     maxBreadcrumbs: 30,
     beforeSend<T extends AnyEvent>(event: T, hint?: { originalException?: unknown }) {
