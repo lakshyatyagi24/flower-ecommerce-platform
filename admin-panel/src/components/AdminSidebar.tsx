@@ -31,7 +31,7 @@ const menuItems = [
   { name: "Orders", href: "/orders", icon: ShoppingCart, badgeKey: null },
   { name: "Coupons", href: "/coupons", icon: Ticket, badgeKey: null },
   { name: "Enquiries", href: "/enquiries", icon: MessageSquare, badgeKey: "openEnquiries" },
-  { name: "Reviews", href: "/reviews", icon: Star, badgeKey: null },
+  { name: "Reviews", href: "/reviews", icon: Star, badgeKey: "pendingReviews" },
   { name: "Customers", href: "/customers", icon: Users, badgeKey: null },
   { name: "Subscribers", href: "/subscribers", icon: Mail, badgeKey: null },
   { name: "Analytics", href: "/analytics", icon: BarChart3, badgeKey: null },
@@ -53,8 +53,20 @@ export function AdminSidebar() {
           if (!cancelled) setBadges((b) => ({ ...b, openEnquiries: res.open }));
         })
         .catch(() => {});
+    // Reviews waiting for approval (counts come back with any list call; take 1 keeps it cheap).
+    const refreshReviews = () =>
+      adminApi
+        .listReviews({ status: "PENDING", take: 1 })
+        .then((res) => {
+          if (!cancelled) setBadges((b) => ({ ...b, pendingReviews: res.counts.PENDING }));
+        })
+        .catch(() => {});
     refresh();
-    const t = setInterval(refresh, 60_000);
+    refreshReviews();
+    const t = setInterval(() => {
+      refresh();
+      refreshReviews();
+    }, 60_000);
     return () => {
       cancelled = true;
       clearInterval(t);

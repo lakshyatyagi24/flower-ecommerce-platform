@@ -296,6 +296,8 @@ export type AdminCategoryInput = {
   active?: boolean;
 };
 
+export type AdminReviewStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
 export type AdminReview = {
   id: number;
   productId: number;
@@ -303,9 +305,10 @@ export type AdminReview = {
   rating: number;
   title: string | null;
   body: string;
+  status: AdminReviewStatus;
   createdAt: string;
   updatedAt: string;
-  user?: { id: number; name: string | null } | null;
+  user?: { id: number; name: string | null; email?: string | null } | null;
   product?: { id: number; name: string; slug: string } | null;
 };
 
@@ -431,16 +434,23 @@ export const adminApi = {
     apiFetch<{ success: true } | AdminCategory>(`/categories/${id}`, { method: 'DELETE' }),
 
   // Reviews
-  listReviews: (params: { productId?: number; take?: number; skip?: number } = {}) => {
+  listReviews: (params: { productId?: number; status?: AdminReviewStatus; take?: number; skip?: number } = {}) => {
     const qs = new URLSearchParams();
     if (params.productId !== undefined) qs.set('productId', String(params.productId));
+    if (params.status !== undefined) qs.set('status', params.status);
     if (params.take !== undefined) qs.set('take', String(params.take));
     if (params.skip !== undefined) qs.set('skip', String(params.skip));
     const suffix = qs.toString();
-    return apiFetch<{ items: AdminReview[]; total: number; take: number; skip: number }>(
-      `/reviews${suffix ? `?${suffix}` : ''}`,
-    );
+    return apiFetch<{
+      items: AdminReview[];
+      total: number;
+      take: number;
+      skip: number;
+      counts: Record<AdminReviewStatus, number>;
+    }>(`/reviews${suffix ? `?${suffix}` : ''}`);
   },
+  setReviewStatus: (id: number, status: AdminReviewStatus) =>
+    apiFetch<AdminReview>(`/reviews/${id}/status`, { method: 'PATCH', body: { status } }),
   deleteReview: (id: number) =>
     apiFetch<{ success: true }>(`/reviews/${id}`, { method: 'DELETE' }),
 
