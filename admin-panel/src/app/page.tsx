@@ -1,31 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3, Package, ShoppingCart, Users, Loader2, MessageSquare, Clock, RotateCcw, AlertTriangle } from "lucide-react";
-import { adminApi, ApiError } from "@/lib/api";
+import { adminApi, ApiError, type AdminStats, type AdminStatsSeriesPoint } from "@/lib/api";
 import { useToast } from "@/components/ui/toast";
-
-interface Stats {
-  orderCount: number;
-  productCount: number;
-  customerCount: number;
-  revenue: number;
-  openEnquiries?: number;
-  unpaidOnline?: number;
-  refundsDue?: number;
-  mismatches?: number;
-  recentOrders: { id: number; customerName: string | null; total: number; status: string; createdAt: string }[];
-}
-
-function formatINR(amount: number): string {
-  try {
-    return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(amount);
-  } catch {
-    return `₹${amount.toFixed(0)}`;
-  }
-}
+import { SalesTrend } from "@/components/dashboard/SalesTrend";
+import { DEFAULT_RANGE, formatINR, rangeForDays, type RangeDays } from "@/lib/dashboard";
 
 // A missing/failed value must read as "unknown" (—), never as a reassuring 0.
 function numOrNull(v: number | undefined): number | null {
@@ -65,21 +47,30 @@ function PaymentCard({
 }
 
 export default function Dashboard() {
-  const [stats, setStats] = useState<Stats | null>(null);
+  const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [statsFailed, setStatsFailed] = useState(false);
+  const [days, setDays] = useState<RangeDays>(DEFAULT_RANGE);
+  // Series already fetched, keyed by range length, so toggling back and forth does not refetch.
+  const [seriesByDays, setSeriesByDays] = useState<Partial<Record<RangeDays, AdminStatsSeriesPoint[]>>>({});
+  const [seriesFailed, setSeriesFailed] = useState(false);
   const { addToast } = useToast();
 
   useEffect(() => {
     let cancelled = false;
     adminApi
-      .stats()
+      .stats(rangeForDays(DEFAULT_RANGE))
       .then((s) => {
-        if (!cancelled) setStats(s);
+        if (cancelled) return;
+        setStats(s);
+        if (s.series) setSeriesByDays({ [DEFAULT_RANGE]: s.series });
+        else setSeriesFailed(true);
       })
       .catch((err) => {
         if (cancelled) return;
         setStatsFailed(true);
+        setSeriesFailed(true);
+        if (err instanceof ApiError && err.status === 401) return; // the auth provider announces the expiry
         const message = err instanceof ApiError ? err.message : "Failed to load stats";
         addToast({ type: "error", title: "Error", description: message });
       })
@@ -90,6 +81,23 @@ export default function Dashboard() {
       cancelled = true;
     };
   }, [addToast]);
+
+  const loadSeries = useCallback(async (range: RangeDays) => {
+    setSeriesFailed(false);
+    try {
+      const res = await adminApi.stats(rangeForDays(range));
+      if (!res.series) throw new Error("No series");
+      setSeriesByDays((prev) => ({ ...prev, [range]: res.series }));
+    } catch {
+      setSeriesFailed(true);
+    }
+  }, []);
+
+  const changeDays = (next: RangeDays) => {
+    setDays(next);
+    if (!seriesByDays[next]) void loadSeries(next);
+    else setSeriesFailed(false);
+  };
 
   if (loading) {
     return (
@@ -114,7 +122,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats ? formatINR(stats.revenue) : "—"}</div>
-            <p className="text-xs text-muted-foreground">All-time, including pending orders</p>
+            <p className="text-xs text-muted-foreground">All-time: cash on delivery + paid online, excluding cancelled and refunded</p>
           </CardContent>
         </Card>
         <Card>
@@ -189,6 +197,14 @@ export default function Dashboard() {
           urgent
         />
       </div>
+
+      <SalesTrend
+        days={days}
+        onDaysChange={changeDays}
+        series={stats ? seriesByDays[days] : undefined}
+        failed={seriesFailed}
+        onRetry={() => (stats ? void loadSeries(days) : window.location.reload())}
+      />
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>

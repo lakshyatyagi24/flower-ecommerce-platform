@@ -63,7 +63,7 @@ interface ToastContainerProps {
 
 export function ToastContainer({ toasts, onRemove }: ToastContainerProps) {
   return (
-    <div className="fixed top-4 right-4 z-[100] space-y-2">
+    <div role="status" aria-live="polite" className="fixed top-4 right-4 z-[100] space-y-2">
       {toasts.map((toast) => (
         <Toast
           key={toast.id}
