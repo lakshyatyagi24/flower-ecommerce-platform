@@ -42,7 +42,7 @@ Developer workflows (commands)
   - Install deps: `cd flower-backend && npm install`
   - Dev (watch): `npm run start:dev` (set PORT via PowerShell: `$env:PORT=3001; npm run start:dev`)
   - Build: `npm run build` (a `postbuild` script may copy generated Prisma client into `dist/generated`)
-  - Prod start: `npm run start:prod` (runs `node dist/src/main.js`)
+  - Prod start: `npm run start:prod` (runs `node dist/main.js`)
 - Frontend
   - Dev: `cd frontend && npm run dev` (Next default at port 3000)
 

@@ -74,7 +74,7 @@ Do not point the suite at a database you care about: it creates and cancels orde
 
 ```bash
 # backend (flower-backend)
-NODE_ENV=test ENABLE_TEST_ENDPOINTS=1 JWT_SECRET=<32+ chars> DATABASE_URL=... PORT=3001 node dist/src/main.js
+NODE_ENV=test ENABLE_TEST_ENDPOINTS=1 JWT_SECRET=<32+ chars> DATABASE_URL=... PORT=3001 node dist/main.js
 # storefront (frontend): the API base is baked in at build time
 NEXT_PUBLIC_API_BASE=http://localhost:3001 API_BASE_INTERNAL=http://localhost:3001 npm run build && npm run start
 # tests
