@@ -80,6 +80,16 @@ export async function uploadImage(
   return payload;
 }
 
+/**
+ * The session is gone (expired 12h admin token, revoked, or invalid): drop the stored token and tell the auth
+ * provider, which shows a toast and returns to /login. The event carries no data (nothing sensitive is kept).
+ */
+export function notifyUnauthorized(): void {
+  if (typeof window === 'undefined') return;
+  setStoredToken(null);
+  window.dispatchEvent(new CustomEvent('admin-auth:unauthorized'));
+}
+
 export async function apiFetch<T = unknown>(path: string, opts: FetchOptions = {}): Promise<T> {
   const url = `${API_BASE}${path.startsWith('/') ? '' : '/'}${path}`;
   const headers: Record<string, string> = { ...(opts.headers || {}) };
@@ -106,10 +116,7 @@ export async function apiFetch<T = unknown>(path: string, opts: FetchOptions = {
     // Centralized mid-session 401: clear the token and bounce the admin to
     // login from wherever the failing request originated, instead of leaving
     // them on a dashboard where every request 401s with no recovery path.
-    if (res.status === 401 && opts.auth !== false && typeof window !== 'undefined') {
-      setStoredToken(null);
-      window.dispatchEvent(new CustomEvent('admin-auth:unauthorized'));
-    }
+    if (res.status === 401 && opts.auth !== false) notifyUnauthorized();
     const message = extractErrorMessage(payload, res.status);
     throw new ApiError(message, res.status, payload);
   }
@@ -239,6 +246,58 @@ export type AdminCouponInput = {
   active: boolean;
 };
 
+export type AdminSlider = {
+  id: number;
+  title?: string | null;
+  eyebrow?: string | null;
+  subtitle?: string | null;
+  alt?: string | null;
+  image?: string | null;
+  href?: string | null;
+  config?: Record<string, unknown> | null;
+  sortOrder: number;
+  active: boolean;
+};
+
+export type AdminSliderInput = {
+  title?: string;
+  eyebrow?: string;
+  subtitle?: string;
+  alt?: string;
+  image?: string;
+  href?: string;
+  config?: Record<string, unknown>;
+  sortOrder?: number;
+  active?: boolean;
+};
+
+export type AdminStatsSeriesPoint = { date: string; orders: number; revenue: number };
+
+export type AdminStats = {
+  orderCount: number;
+  productCount: number;
+  customerCount: number;
+  revenue: number;
+  openEnquiries: number;
+  unpaidOnline?: number;
+  refundsDue?: number;
+  mismatches?: number;
+  recentOrders: { id: number; customerName: string | null; total: number; status: string; createdAt: string }[];
+  /** One point per IST day in the requested range (zero-filled). */
+  series?: AdminStatsSeriesPoint[];
+  range?: { from: string; to: string };
+};
+
+export type AdminOrderFilters = {
+  status?: string;
+  paymentStatus?: string;
+  paymentMethod?: string;
+  attention?: string;
+  sort?: 'deliveryDate';
+  /** Free-text search: order id, customer email / name / phone. */
+  q?: string;
+};
+
 export type AdminOrderPatch = {
   status?: string;
   trackingNumber?: string | null;
@@ -312,6 +371,17 @@ export type AdminReview = {
   product?: { id: number; name: string; slug: string } | null;
 };
 
+function orderFilterParams(params: AdminOrderFilters): URLSearchParams {
+  const qs = new URLSearchParams();
+  if (params.status) qs.set('status', params.status);
+  if (params.paymentStatus) qs.set('paymentStatus', params.paymentStatus);
+  if (params.paymentMethod) qs.set('paymentMethod', params.paymentMethod);
+  if (params.attention) qs.set('attention', params.attention);
+  if (params.sort) qs.set('sort', params.sort);
+  if (params.q && params.q.trim()) qs.set('q', params.q.trim());
+  return qs;
+}
+
 export const adminApi = {
   // Auth
   login: (email: string, password: string) =>
@@ -343,23 +413,8 @@ export const adminApi = {
     apiFetch<{ success: true } | AdminProduct>(`/products/${id}`, { method: 'DELETE' }),
 
   // Orders
-  listOrders: (
-    params: {
-      status?: string;
-      paymentStatus?: string;
-      paymentMethod?: string;
-      attention?: string;
-      sort?: 'deliveryDate';
-      take?: number;
-      skip?: number;
-    } = {},
-  ) => {
-    const qs = new URLSearchParams();
-    if (params.status) qs.set('status', params.status);
-    if (params.paymentStatus) qs.set('paymentStatus', params.paymentStatus);
-    if (params.paymentMethod) qs.set('paymentMethod', params.paymentMethod);
-    if (params.attention) qs.set('attention', params.attention);
-    if (params.sort) qs.set('sort', params.sort);
+  listOrders: (params: AdminOrderFilters & { take?: number; skip?: number } = {}) => {
+    const qs = orderFilterParams(params);
     if (params.take !== undefined) qs.set('take', String(params.take));
     if (params.skip !== undefined) qs.set('skip', String(params.skip));
     const suffix = qs.toString();
@@ -372,18 +427,13 @@ export const adminApi = {
     apiFetch<AdminOrder>(`/orders/${id}/status`, { method: 'PUT', body: { status } }),
   updateOrder: (id: number, patch: AdminOrderPatch) =>
     apiFetch<AdminOrder>(`/orders/${id}`, { method: 'PUT', body: patch }),
-  stats: () =>
-    apiFetch<{
-      orderCount: number;
-      productCount: number;
-      customerCount: number;
-      revenue: number;
-      openEnquiries: number;
-      unpaidOnline?: number;
-      refundsDue?: number;
-      mismatches?: number;
-      recentOrders: { id: number; customerName: string | null; total: number; status: string; createdAt: string }[];
-    }>('/orders/stats'),
+  stats: (range: { from?: string; to?: string } = {}) => {
+    const qs = new URLSearchParams();
+    if (range.from) qs.set('from', range.from);
+    if (range.to) qs.set('to', range.to);
+    const suffix = qs.toString();
+    return apiFetch<AdminStats>(`/orders/stats${suffix ? `?${suffix}` : ''}`);
+  },
 
   // Enquiries
   listEnquiries: (params: { status?: string; take?: number; skip?: number } = {}) => {
@@ -454,6 +504,14 @@ export const adminApi = {
   deleteReview: (id: number) =>
     apiFetch<{ success: true }>(`/reviews/${id}`, { method: 'DELETE' }),
 
+  // Sliders (the list is public; includeInactive shows drafts to the admin)
+  listSliders: (includeInactive: boolean) =>
+    apiFetch<AdminSlider[]>(`/sliders?includeInactive=${includeInactive}`),
+  createSlider: (body: AdminSliderInput) => apiFetch<AdminSlider>('/sliders', { method: 'POST', body }),
+  updateSlider: (id: number, body: AdminSliderInput) =>
+    apiFetch<AdminSlider>(`/sliders/${id}`, { method: 'PUT', body }),
+  deleteSlider: (id: number) => apiFetch<unknown>(`/sliders/${id}`, { method: 'DELETE' }),
+
   // Uploads
   uploadImage,
 
@@ -463,26 +521,52 @@ export const adminApi = {
     apiFetch<Record<string, string>>('/settings', { method: 'PUT', body: values }),
 };
 
-/** Downloads the subscribers CSV with the bearer token (a plain link cannot send it). */
-export async function downloadSubscribersCsv(): Promise<void> {
+export type CsvDownload = { filename: string; rows: number | null; total: number | null; truncated: boolean };
+
+/** Downloads a CSV with the bearer token (a plain link cannot send it; the token never goes in a URL). */
+async function downloadCsv(path: string, fallbackName: string): Promise<CsvDownload> {
   const token = getStoredToken();
-  const res = await fetch(`${API_BASE}/newsletter/export.csv`, {
+  const res = await fetch(`${API_BASE}${path}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
   if (!res.ok) {
+    if (res.status === 401) notifyUnauthorized();
     const payload = await res.json().catch(() => null);
     throw new ApiError(extractErrorMessage(payload, res.status), res.status, payload);
   }
+  const disposition = res.headers.get('content-disposition') || '';
+  const filename = /filename="?([^";]+)"?/i.exec(disposition)?.[1] || fallbackName;
+  const num = (name: string) => {
+    const v = res.headers.get(name);
+    return v !== null && /^\d+$/.test(v) ? parseInt(v, 10) : null;
+  };
+  const meta: CsvDownload = {
+    filename,
+    rows: num('x-export-rows'),
+    total: num('x-export-total'),
+    truncated: res.headers.get('x-export-truncated') === 'true',
+  };
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   try {
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'subscribers.csv';
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     a.remove();
   } finally {
     URL.revokeObjectURL(url);
   }
+  return meta;
+}
+
+export async function downloadSubscribersCsv(): Promise<void> {
+  await downloadCsv('/newsletter/export.csv', 'subscribers.csv');
+}
+
+/** Orders CSV for the SAME filters as the list (search, status, payment, attention, upcoming). */
+export function downloadOrdersCsv(filters: AdminOrderFilters): Promise<CsvDownload> {
+  const qs = orderFilterParams(filters).toString();
+  return downloadCsv(`/orders/export.csv${qs ? `?${qs}` : ''}`, 'orders.csv');
 }
