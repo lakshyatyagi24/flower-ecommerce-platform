@@ -8,6 +8,8 @@ const OG_ASSETS = [
 const nextConfig = {
   output: "standalone",
   poweredByHeader: false,
+  // Pin the public DSN to a literal ("" when unset) so the lazy Sentry import is statically dead without it.
+  env: { NEXT_PUBLIC_SENTRY_DSN_WEB: process.env.NEXT_PUBLIC_SENTRY_DSN_WEB || "" },
   async headers() {
     // /_next/static/* is already `immutable` (content-hashed). Files copied verbatim from public/ are not
     // hashed, so cache them for a day and let stale copies serve for a week while revalidating.
@@ -31,6 +33,10 @@ const nextConfig = {
     formats: ["image/avif", "image/webp"],
   },
   experimental: {
+    // Loads src/instrumentation.ts (server-side Sentry; a no-op without SENTRY_DSN_WEB). Not needed on Next 15+.
+    instrumentationHook: true,
+    // Keep the SDK (and its OpenTelemetry deps) out of the webpack server bundle; they are traced into .next/standalone.
+    serverComponentsExternalPackages: ["@sentry/nextjs", "@sentry/node"],
     // The generated OG images read the Cormorant TTF with fs at request time, and next/og loads
     // yoga.wasm / resvg.wasm / the default Noto font next to its own bundle via a runtime-built
     // file URL that the file tracer cannot follow. List them all so the standalone output

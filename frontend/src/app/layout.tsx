@@ -71,9 +71,12 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const initialSettings = await getLayoutSettings();
+  // Build-time flag. With no DSN the branch is dead code, so the client component is never imported or bundled.
+  const SentryLoader = process.env.NEXT_PUBLIC_SENTRY_DSN_WEB ? (await import("@/components/SentryLoader")).default : null;
   return (
     <html lang="en" className={`${inter.variable} ${cormorant.variable}`}>
       <body className="antialiased">
+        {SentryLoader ? <SentryLoader /> : null}
         <JsonLd data={organizationJsonLd()} />
         <JsonLd data={websiteJsonLd()} />
         <SettingsProvider initialRaw={initialSettings}>
