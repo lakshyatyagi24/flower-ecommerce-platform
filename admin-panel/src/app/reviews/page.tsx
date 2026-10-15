@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Check, Loader2, RotateCcw, Star, Trash2, X } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
+import { REVIEWS_CHANGED_EVENT } from "@/lib/review-events";
 import { adminApi, AdminReview, AdminReviewStatus, AdminProduct, ApiError } from "@/lib/api";
 
 const TABS: { status: AdminReviewStatus; label: string; empty: string }[] = [
@@ -42,6 +43,7 @@ function StarRow({ value }: { value: number }) {
 export default function ReviewsPage() {
   const [tab, setTab] = useState<AdminReviewStatus>("PENDING");
   const [reviews, setReviews] = useState<AdminReview[]>([]);
+  const [shownTotal, setShownTotal] = useState(0);
   const [counts, setCounts] = useState<Record<AdminReviewStatus, number> | null>(null);
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [productFilter, setProductFilter] = useState<string>("");
@@ -61,6 +63,7 @@ export default function ReviewsPage() {
       const res = await adminApi.listReviews({ productId, status: tab, take: 200 });
       if (seq !== requestSeq.current) return; // a newer tab/filter request superseded this one
       setReviews(res.items);
+      setShownTotal(res.total);
       setCounts(res.counts);
       setLoadFailed(false);
     } catch (err) {
@@ -98,6 +101,7 @@ export default function ReviewsPage() {
       await adminApi.setReviewStatus(r.id, status);
       setLiveMessage(`Review by ${r.user?.name?.trim() || "a customer"} ${verb}.`);
       addToast({ type: "success", title: `Review ${verb}`, description: `Review #${r.id} is now ${status.toLowerCase()}.` });
+      window.dispatchEvent(new Event(REVIEWS_CHANGED_EVENT));
       await fetchReviews();
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to update the review";
@@ -112,6 +116,7 @@ export default function ReviewsPage() {
     try {
       await adminApi.deleteReview(id);
       addToast({ type: "success", title: "Review deleted", description: `Review #${id} removed.` });
+      window.dispatchEvent(new Event(REVIEWS_CHANGED_EVENT));
       await fetchReviews();
     } catch (err) {
       const message = err instanceof ApiError ? err.message : "Failed to delete review";
@@ -212,6 +217,12 @@ export default function ReviewsPage() {
           ) : reviews.length === 0 ? (
             <p className="text-muted-foreground text-sm">{current.empty}</p>
           ) : (
+            <>
+            {shownTotal > reviews.length && (
+              <p className="mb-3 text-sm text-muted-foreground">
+                Showing {reviews.length} of {shownTotal}.{tab === "PENDING" ? " Oldest first; approve or reject some to see the rest." : " Newest first; use the product filter to narrow the list."}
+              </p>
+            )}
             <Table>
               <TableHeader>
                 <TableRow>
@@ -295,6 +306,7 @@ export default function ReviewsPage() {
                 })}
               </TableBody>
             </Table>
+            </>
           )}
         </CardContent>
       </Card>

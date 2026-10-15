@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { adminApi } from "@/lib/api";
+import { REVIEWS_CHANGED_EVENT } from "@/lib/review-events";
 
 const menuItems = [
   { name: "Dashboard", href: "/", icon: Home, badgeKey: null as string | null },
@@ -63,6 +64,8 @@ export function AdminSidebar() {
         .catch(() => {});
     refresh();
     refreshReviews();
+    // The reviews page announces moderation actions so the badge updates now, not at the next poll.
+    window.addEventListener(REVIEWS_CHANGED_EVENT, refreshReviews);
     const t = setInterval(() => {
       refresh();
       refreshReviews();
@@ -70,6 +73,7 @@ export function AdminSidebar() {
     return () => {
       cancelled = true;
       clearInterval(t);
+      window.removeEventListener(REVIEWS_CHANGED_EVENT, refreshReviews);
     };
   }, [user]);
 

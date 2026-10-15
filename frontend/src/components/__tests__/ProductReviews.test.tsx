@@ -26,7 +26,7 @@ vi.mock('@/lib/api', () => {
 })
 import { api, ApiError } from '@/lib/api'
 import { requestSignIn } from '@/lib/sign-in-request'
-import ProductReviews, { NOT_ELIGIBLE_MESSAGE, THANKS_MESSAGE } from '../ProductReviews'
+import ProductReviews, { NOT_ELIGIBLE_MESSAGE, RATE_LIMIT_MESSAGE, THANKS_MESSAGE, UNCHANGED_MESSAGE } from '../ProductReviews'
 
 const list = api.listProductReviews as unknown as ReturnType<typeof vi.fn>
 const upsert = api.upsertProductReview as unknown as ReturnType<typeof vi.fn>
@@ -51,7 +51,7 @@ const LONG = 'Smelled lovely and lasted a week'
 beforeEach(() => {
   authUser = null
   list.mockReset().mockResolvedValue({ items: [], total: 0, take: 20, skip: 0, averageRating: 0, ownReview: null })
-  upsert.mockReset().mockResolvedValue({})
+  upsert.mockReset().mockResolvedValue({ status: 'PENDING' })
   del.mockReset().mockResolvedValue({})
   eligibility.mockReset().mockResolvedValue({ canReview: true, hasReview: false })
   vi.mocked(requestSignIn).mockReset()
@@ -176,7 +176,7 @@ describe('ProductReviews', () => {
 
   it('shows another server error in an alert', async () => {
     authUser = { id: 1 }
-    upsert.mockRejectedValue(new ApiError('Too many requests', 429, null))
+    upsert.mockRejectedValue(new ApiError('Too many requests', 500, null))
     const user = userEvent.setup()
     render(<ProductReviews productId={5} />)
     await screen.findByRole('button', { name: 'Submit review' })
@@ -237,6 +237,45 @@ describe('ProductReviews', () => {
     render(<ProductReviews productId={5} />)
     await user.click(await screen.findByRole('button', { name: 'Delete' }))
     expect(del).not.toHaveBeenCalled()
+    confirmSpy.mockRestore()
+  })
+
+  it('an identical re-submit that stays APPROVED gets a neutral note, not the thanks message', async () => {
+    authUser = { id: 9 }
+    const mine = review({ status: 'APPROVED' })
+    list.mockResolvedValue(listOf([mine], { ownReview: mine }))
+    upsert.mockResolvedValue({ ...mine, status: 'APPROVED' })
+    const user = userEvent.setup()
+    render(<ProductReviews productId={5} />)
+    await user.click(await screen.findByRole('button', { name: 'Update review' }))
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent(UNCHANGED_MESSAGE))
+    expect(screen.getByRole('status')).not.toHaveTextContent('quick check')
+  })
+
+  it('maps 429 to a friendly message, never the raw throttler text', async () => {
+    authUser = { id: 1 }
+    upsert.mockRejectedValue(new ApiError('ThrottlerException: Too Many Requests', 429, null))
+    const user = userEvent.setup()
+    render(<ProductReviews productId={5} />)
+    await screen.findByRole('button', { name: 'Submit review' })
+    await user.type(screen.getByLabelText(/^Your review/), LONG)
+    await user.click(screen.getByRole('button', { name: 'Submit review' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(RATE_LIMIT_MESSAGE)
+    expect(screen.queryByText(/Throttler/)).toBeNull()
+  })
+
+  it('own review but not eligible: heading is "Your review" and Delete is still offered', async () => {
+    authUser = { id: 9 }
+    eligibility.mockResolvedValue({ canReview: false, hasReview: true })
+    list.mockResolvedValue(listOf([], { total: 0, ownReview: review({ status: 'PENDING' }) }))
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const user = userEvent.setup()
+    render(<ProductReviews productId={5} />)
+    expect(await screen.findByRole('heading', { name: 'Your review' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Edit your review' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Update review' })).toBeNull()
+    await user.click(await screen.findByRole('button', { name: 'Delete your review' }))
+    await waitFor(() => expect(del).toHaveBeenCalledWith(1))
     confirmSpy.mockRestore()
   })
 })

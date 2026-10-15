@@ -71,6 +71,8 @@ const BODY_MAX = 1000;
 const BODY_MIN = 10;
 
 export const THANKS_MESSAGE = "Thanks — your review will appear after a quick check";
+export const UNCHANGED_MESSAGE = "Your review is unchanged.";
+export const RATE_LIMIT_MESSAGE = "You've sent a few in a row; please wait a minute.";
 export const NOT_ELIGIBLE_MESSAGE = "Reviews are open to customers who have received this product.";
 
 interface Props {
@@ -185,17 +187,20 @@ export default function ProductReviews({ productId, onStatsChange }: Props) {
     }
     setSubmitting(true);
     try {
-      await api.upsertProductReview(productId, {
+      const saved = await api.upsertProductReview(productId, {
         rating,
         title: title.trim() || null,
         body: body.trim(),
       });
-      setThanks(THANKS_MESSAGE);
+      // Only say "a quick check" when the review actually went into the queue; an identical re-submit keeps its status.
+      setThanks(saved?.status === "PENDING" ? THANKS_MESSAGE : UNCHANGED_MESSAGE);
       await load(true);
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
         // The server disagrees with the eligibility check: explain the rule rather than show a raw error.
         setEligibility({ canReview: false, hasReview: false });
+      } else if (err instanceof ApiError && err.status === 429) {
+        setSubmitError(RATE_LIMIT_MESSAGE);
       } else {
         setSubmitError(err instanceof ApiError ? err.message : "Failed to submit review");
       }
@@ -272,7 +277,7 @@ export default function ProductReviews({ productId, onStatsChange }: Props) {
         </div>
 
         <div>
-          <h3 className="type-h3 text-charcoal">{ownReview ? "Edit your review" : "Write a review"}</h3>
+          <h3 className="type-h3 text-charcoal">{ownReview ? (canWrite ? "Edit your review" : "Your review") : "Write a review"}</h3>
           {/* Always mounted so screen readers announce the text when it appears. */}
           <p role="status" aria-live="polite" className={thanks ? "mt-3 text-base leading-relaxed text-moss" : "sr-only"}>
             {thanks}
@@ -288,7 +293,15 @@ export default function ProductReviews({ productId, onStatsChange }: Props) {
           ) : checkingEligibility ? (
             <p className="mt-3 text-base text-stone-dark">Checking…</p>
           ) : !canWrite ? (
-            <p className="mt-3 text-base leading-relaxed text-stone-dark">{NOT_ELIGIBLE_MESSAGE}</p>
+            <div className="mt-3 space-y-4">
+              <p className="text-base leading-relaxed text-stone-dark">{NOT_ELIGIBLE_MESSAGE}</p>
+              {submitError && <FormError>{submitError}</FormError>}
+              {ownReview && (
+                <Button variant="ghost" onClick={handleDelete}>
+                  Delete your review
+                </Button>
+              )}
+            </div>
           ) : (
             <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-6">
               {ownReview?.status === "APPROVED" && (
