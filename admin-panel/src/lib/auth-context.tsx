@@ -1,8 +1,9 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { isPublicAdminRoute } from "./public-routes";
+import { useToast } from "@/components/ui/toast";
 import { adminApi, AdminUser, ApiError, getStoredToken, setStoredToken } from "./api";
 
 interface AuthState {
@@ -21,6 +22,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
+  const { addToast } = useToast();
+  const lastExpiredToastAt = useRef(0);
 
   const verify = useCallback(async () => {
     if (!getStoredToken()) {
@@ -56,16 +59,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     verify();
   }, [verify]);
 
-  // Mid-session 401 from any data request → clear user and return to login.
+  // Mid-session 401 from any data request (admin sessions last 12 hours) → the token has already been
+  // cleared by the API client; drop the user, say why, and return to login. Several requests can fail at
+  // once, so the toast is shown once; nothing about the old session is kept.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const onUnauthorized = () => {
       setUser(null);
+      const now = Date.now();
+      if (!isPublicAdminRoute(window.location.pathname) && now - lastExpiredToastAt.current > 5000) {
+        lastExpiredToastAt.current = now;
+        addToast({
+          type: "warning",
+          title: "Session expired",
+          description: "For your security you were signed out. Please sign in again.",
+        });
+      }
       router.replace("/login");
     };
     window.addEventListener("admin-auth:unauthorized", onUnauthorized);
     return () => window.removeEventListener("admin-auth:unauthorized", onUnauthorized);
-  }, [router]);
+  }, [router, addToast]);
 
   // route guard — redirect to /login if not authenticated
   useEffect(() => {
