@@ -328,7 +328,7 @@ function OrdersView() {
               placeholder="Order #, name, email or phone"
               autoComplete="off"
               maxLength={100}
-              className="pl-8 pr-8"
+              className="pl-8 pr-8 [&::-webkit-search-cancel-button]:hidden"
             />
             {searchInput && (
               <button
