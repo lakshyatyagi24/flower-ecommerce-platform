@@ -4,6 +4,13 @@ const OG_ASSETS = [
   "./node_modules/next/dist/compiled/@vercel/og/*.ttf",
 ];
 
+// Security (incident 2026-10-15): Next 14.2.x has no patched release for the image-optimiser advisories
+// (e.g. GHSA-2xp9-vwfh-vxw4, AVIF RCE). A bare "res.cloudinary.com/**" pattern lets anyone point /_next/image at
+// THEIR OWN Cloudinary account, so restrict the path to our cloud when its name is known at build time
+// (CLOUDINARY_CLOUD_NAME build arg; see Dockerfile). Unset (local dev, tests) keeps the permissive pattern.
+const CLOUD = (process.env.CLOUDINARY_CLOUD_NAME || "").trim();
+const CLOUDINARY_PATH = /^[A-Za-z0-9_-]+$/.test(CLOUD) ? `/${CLOUD}/**` : "/**";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
@@ -28,7 +35,7 @@ const nextConfig = {
     // Optimised variants are cached for a week (Next's default is 60 s, which re-encodes constantly).
     minimumCacheTTL: 604800,
     remotePatterns: [
-      { protocol: "https", hostname: "res.cloudinary.com", pathname: "/**" },
+      { protocol: "https", hostname: "res.cloudinary.com", pathname: CLOUDINARY_PATH },
     ],
     formats: ["image/avif", "image/webp"],
   },
