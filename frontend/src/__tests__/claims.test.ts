@@ -1,4 +1,5 @@
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { join, relative } from 'node:path';
 import { describe, it, expect } from 'vitest';
 
@@ -57,5 +58,24 @@ describe('claims scan', () => {
       expect(f, `${entry} no longer exists - remove it from ALLOWLIST`).toBeDefined();
       expect(hits(f!.text).length, `${entry} is clean - remove it from ALLOWLIST`).toBeGreaterThan(0);
     }
+  });
+});
+
+/**
+ * The 95 product descriptions live in the backend repo (prisma/data/product-copy.js) and are shown on product pages, so the
+ * same banned phrases apply to them. Runs only where the sibling repo is checked out next to this one; the backend has its
+ * own, stricter spec (src/catalog/product-copy.spec.ts) that always runs.
+ */
+const COPY_FILE = join(__dirname, '..', '..', '..', '..', 'flower-backend', 'prisma', 'data', 'product-copy.js');
+
+describe('product copy claims scan (sibling backend repo)', () => {
+  it.skipIf(!existsSync(COPY_FILE))('finds no banned phrase in any product description', () => {
+    const { PRODUCT_COPY } = createRequire(import.meta.url)(COPY_FILE) as { PRODUCT_COPY: Record<string, { description: string }> };
+    const entries = Object.entries(PRODUCT_COPY);
+    expect(entries.length).toBe(95);
+    const offenders = entries
+      .map(([slug, c]) => ({ slug, phrases: hits(c.description.toLowerCase()) }))
+      .filter((e) => e.phrases.length > 0);
+    expect(offenders).toEqual([]);
   });
 });

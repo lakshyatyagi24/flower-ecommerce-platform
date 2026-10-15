@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { pickHero, HERO_FALLBACK, safeHref } from '../hero';
+import { pickHero, HERO_FALLBACK, safeHref, isHeroImage } from '../hero';
 
 const good = {
   id: 1,
@@ -34,6 +34,16 @@ describe('pickHero', () => {
       { ...good, id: 4, title: 'Fourth' },
     ]);
     expect(h.title).toBe('Fourth');
+  });
+
+  it('accepts a local /images/hero/ photo from the public folder, but no other local or remote path', () => {
+    const local = pickHero([{ ...good, image: '/images/hero/hero-1.webp' }]);
+    expect(local.source).toBe('slider');
+    expect(local.image).toBe('/images/hero/hero-1.webp');
+    for (const bad of ['/images/products/a.webp', '/images/hero/../x.webp', '//evil.example/images/hero/a.webp', '/images/hero/a.svg', 'images/hero/a.webp', 'https://example.com/images/hero/a.webp', '/images/hero/']) {
+      expect([bad, isHeroImage(bad)]).toEqual([bad, false]);
+    }
+    expect(pickHero([{ ...good, image: '/images/hero/a b.webp' }])).toEqual(HERO_FALLBACK);
   });
 
   it('falls back to the static hero when nothing is usable', () => {

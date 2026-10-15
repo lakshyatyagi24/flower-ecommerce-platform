@@ -56,6 +56,15 @@ export function safeHref(href: unknown, siteUrl = process.env.NEXT_PUBLIC_SITE_U
   return '/products';
 }
 
+/**
+ * Hero photos are either Cloudinary uploads or files shipped in the storefront's public/ folder under /images/hero/
+ * (the draft slides from the backend's seed-sliders.js use the latter). Anything else is ignored.
+ */
+export function isHeroImage(src: string): boolean {
+  if (src.startsWith('https://res.cloudinary.com/')) return true;
+  return /^\/images\/hero\/[A-Za-z0-9][A-Za-z0-9._-]*\.(?:webp|jpe?g|png|avif)$/.test(src);
+}
+
 export function pickHero(raw: unknown): HeroContent {
   if (!Array.isArray(raw)) return HERO_FALLBACK;
   for (const s of raw) {
@@ -63,7 +72,7 @@ export function pickHero(raw: unknown): HeroContent {
     const r = s as Record<string, unknown>;
     if (r.active === false) continue;
     const image = typeof r.image === 'string' ? r.image.trim() : '';
-    if (!image.startsWith('https://res.cloudinary.com/')) continue;
+    if (!isHeroImage(image)) continue;
     const title = clean(r.title, LIMITS.title);
     if (!title) continue;
     const cfg = (r.config && typeof r.config === 'object' ? r.config : {}) as { overlay?: { cta?: { label?: unknown } } };
