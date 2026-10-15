@@ -1,15 +1,16 @@
 "use client";
 
-import React, { useCallback, useEffect, useId, useState } from "react";
-import { ApiError, ApiReview, api } from "@/lib/api";
+import React, { useCallback, useEffect, useId, useRef, useState } from "react";
+import { ApiError, ApiReview, ApiReviewEligibility, api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { requestSignIn } from "@/lib/sign-in-request";
 import Button from "@/components/ui/Button";
 import Eyebrow from "@/components/ui/Eyebrow";
 import Field from "@/components/ui/Field";
 import FormError from "@/components/ui/FormError";
 import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
-import { focusRing } from "@/components/ui/form-styles";
+import { focusRing, textLink } from "@/components/ui/form-styles";
 
 const Star: React.FC<{ filled?: boolean; size?: number }> = ({ filled = false, size = 16 }) => (
   <svg
@@ -65,15 +66,46 @@ function formatDate(iso: string): string {
   }
 }
 
+const TITLE_MAX = 100;
+const BODY_MAX = 1000;
+const BODY_MIN = 10;
+
+export const THANKS_MESSAGE = "Thanks — your review will appear after a quick check";
+export const NOT_ELIGIBLE_MESSAGE = "Reviews are open to customers who have received this product.";
+
 interface Props {
   productId: number;
   onStatsChange?: (stats: { averageRating: number; reviewCount: number }) => void;
+}
+
+/** The author's own review while it is not public (pending or rejected). Approved ones are in the list. */
+function OwnReviewNotice({ review }: { review: ApiReview }) {
+  if (review.status !== "PENDING" && review.status !== "REJECTED") return null;
+  const pending = review.status === "PENDING";
+  return (
+    <div className="mb-8 border border-stone p-5" data-testid="own-review">
+      <p className="text-sm font-medium text-charcoal">Your review</p>
+      <p className="mt-1 text-sm text-stone-dark">
+        {pending
+          ? "Awaiting approval. It will appear here once we have had a quick look."
+          : "This review wasn't published. You can edit it and send it in again."}
+      </p>
+      <div className="mt-3">
+        <StarRow value={review.rating} />
+      </div>
+      {review.title && <h3 className="mt-3 font-display text-xl text-charcoal">{review.title}</h3>}
+      <p className="mt-2 whitespace-pre-wrap break-words text-base leading-relaxed text-charcoal">{review.body}</p>
+    </div>
+  );
 }
 
 export default function ProductReviews({ productId, onStatsChange }: Props) {
   const { user } = useAuth();
   const uid = useId();
   const [items, setItems] = useState<ApiReview[]>([]);
+  const [ownReview, setOwnReview] = useState<ApiReview | null>(null);
+  const [eligibility, setEligibility] = useState<ApiReviewEligibility | null>(null);
+  const [eligibilityFailed, setEligibilityFailed] = useState(false);
   const [averageRating, setAverageRating] = useState(0);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -85,43 +117,70 @@ export default function ProductReviews({ productId, onStatsChange }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [bodyError, setBodyError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [thanks, setThanks] = useState("");
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await api.listProductReviews(productId, { take: 20 });
-      setItems(res.items);
-      setAverageRating(res.averageRating ?? 0);
-      setTotal(res.total);
-      onStatsChange?.({ averageRating: res.averageRating ?? 0, reviewCount: res.total });
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Failed to load reviews");
-    } finally {
-      setLoading(false);
-    }
-  }, [productId, onStatsChange]);
+  const userId = user?.id ?? null;
+  const statsCb = useRef(onStatsChange);
+  statsCb.current = onStatsChange;
+
+  const load = useCallback(
+    async (silent = false) => {
+      if (!silent) setLoading(true);
+      setError(null);
+      try {
+        const res = await api.listProductReviews(productId, { take: 20 });
+        setItems(res.items);
+        setOwnReview(userId ? (res.ownReview ?? null) : null);
+        setAverageRating(res.averageRating ?? 0);
+        setTotal(res.total);
+        statsCb.current?.({ averageRating: res.averageRating ?? 0, reviewCount: res.total });
+      } catch (err) {
+        setError(err instanceof ApiError ? err.message : "Failed to load reviews");
+      } finally {
+        setLoading(false);
+      }
+    },
+    [productId, userId],
+  );
 
   useEffect(() => {
     load();
   }, [load]);
 
-  const myReview = user ? items.find((r) => r.userId === user.id) : null;
+  // Can this person review? Asked of the API so a shopper who cannot is told why, instead of meeting a 403 after typing.
+  useEffect(() => {
+    setEligibility(null);
+    setEligibilityFailed(false);
+    if (userId === null) return;
+    let cancelled = false;
+    api
+      .getReviewEligibility(productId)
+      .then((e) => {
+        if (!cancelled) setEligibility(e);
+      })
+      .catch(() => {
+        if (!cancelled) setEligibilityFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [productId, userId]);
 
   useEffect(() => {
-    if (myReview) {
-      setRating(myReview.rating);
-      setTitle(myReview.title ?? "");
-      setBody(myReview.body);
+    if (ownReview) {
+      setRating(ownReview.rating);
+      setTitle(ownReview.title ?? "");
+      setBody(ownReview.body);
     }
-  }, [myReview?.id, myReview?.rating, myReview?.title, myReview?.body]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ownReview?.id, ownReview?.rating, ownReview?.title, ownReview?.body]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
     setBodyError(null);
-    if (!body.trim()) {
-      setBodyError("Please write a short review.");
+    setThanks("");
+    if (body.trim().length < BODY_MIN) {
+      setBodyError(body.trim() ? `Please write at least ${BODY_MIN} characters.` : "Please write a short review.");
       return;
     }
     setSubmitting(true);
@@ -131,27 +190,39 @@ export default function ProductReviews({ productId, onStatsChange }: Props) {
         title: title.trim() || null,
         body: body.trim(),
       });
-      await load();
+      setThanks(THANKS_MESSAGE);
+      await load(true);
     } catch (err) {
-      setSubmitError(err instanceof ApiError ? err.message : "Failed to submit review");
+      if (err instanceof ApiError && err.status === 403) {
+        // The server disagrees with the eligibility check: explain the rule rather than show a raw error.
+        setEligibility({ canReview: false, hasReview: false });
+      } else {
+        setSubmitError(err instanceof ApiError ? err.message : "Failed to submit review");
+      }
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!myReview) return;
+    if (!ownReview) return;
     if (!confirm("Delete your review?")) return;
     try {
-      await api.deleteReview(myReview.id);
+      await api.deleteReview(ownReview.id);
       setTitle("");
       setBody("");
       setRating(5);
-      await load();
+      setThanks("");
+      await load(true);
     } catch (err) {
       setSubmitError(err instanceof ApiError ? err.message : "Failed to delete review");
     }
   };
+
+  // The form shows unless we positively know this person cannot review. If the eligibility lookup itself failed,
+  // the server still decides on submit.
+  const canWrite = !!user && (eligibility ? eligibility.canReview : eligibilityFailed);
+  const checkingEligibility = !!user && !eligibility && !eligibilityFailed;
 
   return (
     <section className="mt-16 border-t border-stone-light pt-12 md:mt-24 md:pt-16" aria-labelledby={`${uid}-reviews`}>
@@ -170,13 +241,14 @@ export default function ProductReviews({ productId, onStatsChange }: Props) {
 
       <div className="mt-10 grid grid-cols-1 gap-12 lg:grid-cols-[7fr_4fr] lg:gap-20">
         <div>
+          {ownReview && <OwnReviewNotice review={ownReview} />}
           {loading ? (
             <p className="text-base text-stone-dark">Loading reviews…</p>
           ) : error ? (
             <p className="text-base text-danger">{error}</p>
           ) : items.length === 0 ? (
             <p className="text-base leading-relaxed text-stone-dark">
-              No reviews yet. Be the first to share your thoughts.
+              No reviews yet. Reviews from customers who have received this product will appear here.
             </p>
           ) : (
             <ul className="border-t border-stone-light">
@@ -191,7 +263,7 @@ export default function ProductReviews({ productId, onStatsChange }: Props) {
                       <StarRow value={r.rating} />
                     </div>
                     {r.title && <h3 className="mt-3 font-display text-xl text-charcoal">{r.title}</h3>}
-                    <p className="mt-2 whitespace-pre-wrap text-base leading-relaxed text-charcoal">{r.body}</p>
+                    <p className="mt-2 whitespace-pre-wrap break-words text-base leading-relaxed text-charcoal">{r.body}</p>
                   </article>
                 </li>
               ))}
@@ -200,13 +272,30 @@ export default function ProductReviews({ productId, onStatsChange }: Props) {
         </div>
 
         <div>
-          <h3 className="type-h3 text-charcoal">{myReview ? "Edit your review" : "Write a review"}</h3>
+          <h3 className="type-h3 text-charcoal">{ownReview ? "Edit your review" : "Write a review"}</h3>
+          {/* Always mounted so screen readers announce the text when it appears. */}
+          <p role="status" aria-live="polite" className={thanks ? "mt-3 text-base leading-relaxed text-moss" : "sr-only"}>
+            {thanks}
+          </p>
           {!user ? (
             <p className="mt-3 text-base leading-relaxed text-stone-dark">
-              Sign in to share your experience with this product.
+              {NOT_ELIGIBLE_MESSAGE}{" "}
+              <button type="button" className={textLink} onClick={(e) => requestSignIn(e.currentTarget)}>
+                Sign in
+              </button>{" "}
+              to review a product you have received.
             </p>
+          ) : checkingEligibility ? (
+            <p className="mt-3 text-base text-stone-dark">Checking…</p>
+          ) : !canWrite ? (
+            <p className="mt-3 text-base leading-relaxed text-stone-dark">{NOT_ELIGIBLE_MESSAGE}</p>
           ) : (
             <form onSubmit={handleSubmit} noValidate className="mt-6 space-y-6">
+              {ownReview?.status === "APPROVED" && (
+                <p className="text-sm leading-relaxed text-stone-dark">
+                  Editing your review sends it for a quick check again before it reappears.
+                </p>
+              )}
               {submitError && <FormError>{submitError}</FormError>}
               <fieldset>
                 <legend className="mb-1 block text-sm text-charcoal">Your rating</legend>
@@ -217,24 +306,24 @@ export default function ProductReviews({ productId, onStatsChange }: Props) {
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  maxLength={200}
+                  maxLength={TITLE_MAX}
                   placeholder="Loved the colours"
                 />
               </Field>
-              <Field label="Your review" error={bodyError}>
+              <Field label="Your review" error={bodyError} hint={`${BODY_MIN} to ${BODY_MAX} characters`}>
                 <Textarea
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
-                  maxLength={2000}
+                  maxLength={BODY_MAX}
                   rows={4}
                   placeholder="Share what you liked"
                 />
               </Field>
               <div className="flex flex-wrap items-center gap-6">
                 <Button type="submit" disabled={submitting}>
-                  {submitting ? "Saving…" : myReview ? "Update review" : "Submit review"}
+                  {submitting ? "Saving…" : ownReview ? "Update review" : "Submit review"}
                 </Button>
-                {myReview && (
+                {ownReview && (
                   <Button variant="ghost" onClick={handleDelete}>
                     Delete
                   </Button>

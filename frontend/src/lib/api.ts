@@ -197,6 +197,8 @@ export type ApiEnquiry = {
   product?: { id: number; name: string; slug: string } | null;
 };
 
+export type ApiReviewStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
 export type ApiReview = {
   id: number;
   productId: number;
@@ -204,6 +206,8 @@ export type ApiReview = {
   rating: number;
   title: string | null;
   body: string;
+  /** Present only on the caller's own review (public items are all approved and carry no status). */
+  status?: ApiReviewStatus;
   createdAt: string;
   updatedAt: string;
   user?: { id: number; name: string | null } | null;
@@ -215,7 +219,11 @@ export type ApiReviewList = {
   take: number;
   skip: number;
   averageRating: number;
+  /** The signed-in caller's own review in any status (never another user's). */
+  ownReview?: ApiReview | null;
 };
+
+export type ApiReviewEligibility = { canReview: boolean; hasReview: boolean };
 
 export type ApiOrderItem = {
   id: number;
@@ -380,10 +388,14 @@ export const api = {
     if (params.take !== undefined) qs.set('take', String(params.take));
     if (params.skip !== undefined) qs.set('skip', String(params.skip));
     const suffix = qs.toString();
+    // auth: the token (when there is one) lets the API include the caller's own pending/rejected review.
     return apiFetch<ApiReviewList>(
       `/products/${productId}/reviews${suffix ? `?${suffix}` : ''}`,
+      { auth: true },
     );
   },
+  getReviewEligibility: (productId: number) =>
+    apiFetch<ApiReviewEligibility>(`/products/${productId}/reviews/eligibility`, { auth: true }),
   upsertProductReview: (
     productId: number,
     body: { rating: number; title?: string | null; body: string },
