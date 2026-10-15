@@ -255,6 +255,53 @@ describe('checkout coupon and GST', () => {
   })
 })
 
+describe('checkout coupon total floor', () => {
+  it('holds the order with the coupon message when the preview total would be below the floor, and keeps the coupon', async () => {
+    // 100 item, free shipping not reached (flat 50)... make the discount swallow everything but shipping:
+    fn(api.getSettings).mockResolvedValue({ 'shipping.flatRate': '0' })
+    validateCoupon.mockResolvedValue({ code: 'ALL', type: 'PERCENT', value: 100, discount: 100, minTotal: 1 })
+    const view = render(<CheckoutPage />)
+    await waitFor(() => expect(view.container.querySelector('form')).not.toBeNull())
+    await waitFor(() => expect(totalText()).toContain('Rs100'))
+    openDisclosure()
+    set(codeBox(), 'all')
+    fireEvent.click(screen.getByRole('button', { name: /^apply$/i }))
+    await screen.findByText(/applied/i, { selector: 'span' })
+    const notice = await screen.findByTestId('coupon-notice')
+    expect(notice).toHaveTextContent('below ₹1')
+    expect(notice).not.toHaveAttribute('role')
+    // coupon is kept, the order is held
+    expect(screen.getByTestId('checkout-discount')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /place order/i })).toBeDisabled()
+    expect(document.getElementById('checkout-gate')).toHaveTextContent('below ₹1')
+    fireEvent.submit(view.container.querySelector('form')!)
+    expect(createOrder).not.toHaveBeenCalled()
+    // removing the coupon releases it
+    fireEvent.click(screen.getByRole('button', { name: /remove coupon all/i }))
+    await waitFor(() => expect(screen.getByRole('button', { name: /place order/i })).not.toBeDisabled())
+  })
+
+  it('uses the floor the server sends with the preview', async () => {
+    fn(api.getSettings).mockResolvedValue({ 'shipping.flatRate': '0' })
+    validateCoupon.mockResolvedValue({ code: 'BIG', type: 'FLAT', value: 40, discount: 40, minTotal: 70 })
+    const view = render(<CheckoutPage />)
+    await waitFor(() => expect(view.container.querySelector('form')).not.toBeNull())
+    await waitFor(() => expect(totalText()).toContain('Rs100'))
+    openDisclosure()
+    set(codeBox(), 'big')
+    fireEvent.click(screen.getByRole('button', { name: /^apply$/i }))
+    // total 60 < 70
+    expect(await screen.findByTestId('coupon-notice')).toHaveTextContent('below ₹70')
+  })
+
+  it('does not block when the total stays at or above the floor', async () => {
+    await renderForm()
+    await applyCode()
+    expect(screen.queryByTestId('coupon-notice')).toBeNull()
+    expect(screen.getByRole('button', { name: /place order/i })).not.toBeDisabled()
+  })
+})
+
 describe('checkout coupon at order time', () => {
   it('sends couponCode with the order and goes to success (COD)', async () => {
     createOrder.mockResolvedValue({ id: 7, total: 140, discount: 10, couponCode: 'SAVE10', paymentMethod: 'COD', items: [] })

@@ -337,7 +337,7 @@ export const api = {
 
   // Coupons: a preview only. The server recomputes the discount from its own prices when the order is created.
   validateCoupon: (code: string, subtotal: number, signal?: AbortSignal) =>
-    apiFetch<{ code: string; type: 'PERCENT' | 'FLAT'; value: number; discount: number }>('/coupons/validate', {
+    apiFetch<{ code: string; type: 'PERCENT' | 'FLAT'; value: number; discount: number; minTotal?: number }>('/coupons/validate', {
       method: 'POST',
       body: { code, subtotal },
       signal,

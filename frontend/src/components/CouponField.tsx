@@ -14,7 +14,16 @@ type CouponState = ReturnType<typeof useCoupon>;
  * an error to show. Errors are inline (Field), never role=alert; applied / removed changes are announced through
  * one polite live region.
  */
-export default function CouponField({ coupon, disabled = false }: { coupon: CouponState; disabled?: boolean }) {
+export default function CouponField({
+  coupon,
+  disabled = false,
+  notice = null,
+}: {
+  coupon: CouponState;
+  disabled?: boolean;
+  /** A problem with the applied coupon that is not a field error (for example the order total floor). */
+  notice?: string | null;
+}) {
   const panelId = useId();
   const [open, setOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -34,6 +43,7 @@ export default function CouponField({ coupon, disabled = false }: { coupon: Coup
         {announcement}
       </div>
       {applied ? (
+        <>
         <div className="flex items-center justify-between gap-4 text-sm text-charcoal">
           <span>
             Coupon <strong className="font-medium">{applied.code}</strong> applied
@@ -48,6 +58,12 @@ export default function CouponField({ coupon, disabled = false }: { coupon: Coup
             Remove
           </button>
         </div>
+        {notice && (
+          <p id="checkout-coupon-notice" className="mt-2 text-sm text-danger" data-testid="coupon-notice">
+            {notice}
+          </p>
+        )}
+        </>
       ) : (
         <>
           <button

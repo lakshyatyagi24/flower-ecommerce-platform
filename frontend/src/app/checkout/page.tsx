@@ -24,7 +24,7 @@ import {
 } from "@/lib/reconcile-cart";
 import { requestSignIn } from "@/lib/sign-in-request";
 import { UNCONFIRMED_NOTE, useCoupon } from "@/lib/use-coupon";
-import { gstAfterDiscount, isCouponError, totalAfterDiscount } from "@/lib/coupon";
+import { belowFloorMessage, gstAfterDiscount, isCouponError, totalAfterDiscount } from "@/lib/coupon";
 import CouponField from "@/components/CouponField";
 import { EXPIRED_COPY, reservedMessage, usePayForOrder, type ExpiredKind } from "@/lib/use-pay-for-order";
 import PaymentActions from "@/components/PaymentActions";
@@ -402,6 +402,11 @@ export default function CheckoutPage() {
   }, [liveSubtotal, count, flatRate, freeThreshold]);
   // R19: shipping was judged on the pre-discount subtotal above; the discount reduces the items and their GST.
   const total = totalAfterDiscount(liveSubtotal, discount, shipping, liveGstTotal);
+  // The server refuses a discounted order whose total is below the floor (Razorpay needs at least one rupee). Say so
+  // here and hold the order, but keep the coupon: the shopper can add items or remove it.
+  const couponFloorMessage =
+    coupon.applied && discount > 0 && total < coupon.applied.minTotal ? belowFloorMessage(coupon.applied.minTotal) : null;
+  const blockMessage = gateMessage ?? couponFloorMessage;
 
   if (authLoading) {
     return (
@@ -549,8 +554,8 @@ export default function CheckoutPage() {
       setFocusTick((t) => t + 1);
       return;
     }
-    if (gateMessage) {
-      setError(gateMessage);
+    if (blockMessage) {
+      setError(blockMessage);
       setFocusTick((t) => t + 1);
       return;
     }
@@ -682,7 +687,7 @@ export default function CheckoutPage() {
                   </li>
                 ))}
               </ul>
-              <CouponField coupon={coupon} disabled={submitting} />
+              <CouponField coupon={coupon} disabled={submitting} notice={couponFloorMessage} />
               <dl className="mt-6 space-y-3 border-t border-stone-light pt-6 text-sm text-charcoal">
                 {!errors.deliveryDate && (
                   <div className="flex justify-between gap-4">
@@ -932,15 +937,15 @@ export default function CheckoutPage() {
               <Button
                 type="submit"
                 size="lg"
-                disabled={submitting || Boolean(gateMessage) || coupon.busy}
-                aria-describedby={gateMessage ? "checkout-gate" : undefined}
+                disabled={submitting || Boolean(blockMessage) || coupon.busy}
+                aria-describedby={blockMessage ? "checkout-gate" : undefined}
                 className="w-full"
               >
                 {submitting ? "Placing order…" : paymentMethod === "RAZORPAY" ? "Place order & pay" : "Place order"}
               </Button>
-              {gateMessage && (
+              {blockMessage && (
                 <p id="checkout-gate" className="mt-3 text-sm text-charcoal">
-                  {gateMessage}
+                  {blockMessage}
                 </p>
               )}
               <ul className="mt-4 space-y-1 text-left text-sm text-stone-dark">

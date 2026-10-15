@@ -32,25 +32,26 @@ export interface TaxLine {
 }
 
 /**
- * Mirror of the server's allocateDiscount (backend src/coupons/discount-tax.ts): spread the discount over the lines
- * in proportion; the last line takes the rounding remainder so the parts add up to the discount exactly.
+ * Mirror of the server's allocateDiscount (backend src/coupons/discount-tax.ts), in whole paise: each line gets
+ * floor(discount * line / subtotal); the leftover paise go to the LARGEST line (ties: the later one), every share is
+ * clamped to [0, line value], and whatever does not fit moves to the next largest line with room. The shares add up
+ * to the discount exactly (itself clamped to the subtotal). Pinned by the same fixtures as the server.
  */
 export function allocateDiscount(lineTotals: number[], discount: number): number[] {
-  const bases = lineTotals.map(round2);
-  const subtotal = bases.reduce((s, b) => s + b, 0);
-  if (!(discount > 0) || !(subtotal > 0) || bases.length === 0) return bases.map(() => 0);
-  const out: number[] = [];
-  let allocated = 0;
-  bases.forEach((b, i) => {
-    if (i === bases.length - 1) {
-      out.push(round2(discount - allocated));
-    } else {
-      const part = round2((discount * b) / subtotal);
-      out.push(part);
-      allocated += part;
-    }
-  });
-  return out;
+  const cents = lineTotals.map((l) => Math.max(Math.round(round2(l) * 100), 0));
+  const subtotal = cents.reduce((s, c) => s + c, 0);
+  const want = Math.min(Math.max(Math.round(round2(discount) * 100), 0), subtotal);
+  if (want === 0 || subtotal === 0) return cents.map(() => 0);
+  const share = cents.map((c) => Math.floor((want * c) / subtotal));
+  let left = want - share.reduce((s, x) => s + x, 0);
+  const order = cents.map((_, i) => i).sort((a, b) => cents[b] - cents[a] || b - a);
+  for (const i of order) {
+    if (left <= 0) break;
+    const add = Math.min(left, cents[i] - share[i]);
+    share[i] += add;
+    left -= add;
+  }
+  return share.map((x) => x / 100);
 }
 
 /** GST per line on the value AFTER the discount (same rule and rounding as the server). */
@@ -61,4 +62,11 @@ export function gstPerLine(lines: TaxLine[], discount: number): number[] {
 
 export function gstAfterDiscount(lines: TaxLine[], discount: number): number {
   return round2(gstPerLine(lines, discount).reduce((a, b) => a + b, 0));
+}
+
+/** Lowest total a discounted order may have; the server sends the real value as `minTotal` with the preview. */
+export const DEFAULT_MIN_TOTAL = 1;
+
+export function belowFloorMessage(minTotal: number): string {
+  return `This coupon would bring your total below ₹${minTotal}. Add more items to use it.`;
 }

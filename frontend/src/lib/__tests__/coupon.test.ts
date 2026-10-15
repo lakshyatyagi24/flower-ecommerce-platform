@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest'
+import fixtures from './discount-fixtures.json'
 import { allocateDiscount, gstAfterDiscount, gstPerLine, isCouponError, normalizeCouponInput, round2, totalAfterDiscount } from '../coupon'
 
 describe('coupon helpers', () => {
@@ -76,6 +77,64 @@ describe('GST on the discounted value (parity with the server)', () => {
     ] as Array<[number[], number]>) {
       const sum = allocateDiscount(lines, d).reduce((a, b) => a + b, 0)
       expect(Math.round(sum * 100)).toBe(Math.round(d * 100))
+    }
+  })
+})
+
+// discount-fixtures.json is byte-identical to the backend's src/coupons/discount-fixtures.json, so the storefront and
+// the server split the discount and tax it the same way, paisa for paisa.
+describe('shared fixtures (parity with the server)', () => {
+  it.each(fixtures.allocations.map((c) => [JSON.stringify(c.lines) + ' / ' + c.discount, c] as const))('allocate %s', (_n, c) => {
+    expect(allocateDiscount(c.lines, c.discount)).toEqual(c.shares)
+  })
+
+  it.each(fixtures.gst.map((c) => [JSON.stringify(c.lines) + ' / ' + c.discount, c] as const))('gst %s', (_n, c) => {
+    expect(gstPerLine(c.lines, c.discount)).toEqual(c.gst)
+  })
+
+  it('the near-zero line case that used to give -0.01 on the last line', () => {
+    const shares = allocateDiscount([4181.78, 755.7, 3.34, 0], 2749.95)
+    expect(shares).toEqual([2327.5, 420.6, 1.85, 0])
+  })
+
+  it('an oversized discount is clamped to the subtotal', () => {
+    expect(allocateDiscount([10, 20], 999)).toEqual([10, 20])
+    expect(allocateDiscount([0, 0], 10)).toEqual([0, 0])
+  })
+})
+
+function mulberry32(seed: number) {
+  let a = seed >>> 0
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0
+    let t = a
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+describe('discount split invariants (seeded fuzz, same generator and seed as the server)', () => {
+  it(`holds for ${fixtures.fuzz.baskets} random baskets`, () => {
+    const paise = (n: number) => Math.round(n * 100)
+    const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0)
+    const rnd = mulberry32(fixtures.fuzz.seed)
+    const rates = [0, 5, 12, 18, 28]
+    for (let b = 0; b < fixtures.fuzz.baskets; b++) {
+      const n = 1 + Math.floor(rnd() * 6)
+      const lines = Array.from({ length: n }, () => ({
+        lineTotal: (rnd() < 0.1 ? 0 : 1 + Math.floor(rnd() * 500000)) / 100,
+        gstRate: rates[Math.floor(rnd() * rates.length)],
+      }))
+      const subtotalPaise = sum(lines.map((l) => paise(l.lineTotal)))
+      const discountPaise = rnd() < 0.1 ? subtotalPaise : Math.floor(rnd() * (subtotalPaise + 1))
+      const discount = discountPaise / 100
+      const ctx = JSON.stringify({ lines, discount })
+      const shares = allocateDiscount(lines.map((l) => l.lineTotal), discount)
+      expect([ctx, paise(sum(shares))]).toEqual([ctx, discountPaise])
+      shares.forEach((s, i) => expect([ctx, s >= 0 && paise(s) <= paise(lines[i].lineTotal)]).toEqual([ctx, true]))
+      const gst = gstPerLine(lines, discount)
+      expect([ctx, paise(gstAfterDiscount(lines, discount))]).toEqual([ctx, paise(sum(gst))])
     }
   })
 })

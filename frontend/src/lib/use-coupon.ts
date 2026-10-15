@@ -1,9 +1,9 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, api } from "@/lib/api";
-import { normalizeCouponInput } from "@/lib/coupon";
+import { DEFAULT_MIN_TOTAL, normalizeCouponInput } from "@/lib/coupon";
 
-export type AppliedCoupon = { code: string; discount: number };
+export type AppliedCoupon = { code: string; discount: number; minTotal: number };
 
 const UNREACHABLE = "We couldn't check that code right now. Please try again.";
 const RATE_LIMITED = "Too many attempts. Please wait a minute and try again.";
@@ -47,7 +47,7 @@ export function useCoupon(subtotal: number) {
       if (mine !== seq.current) return false;
       setCheckedFor(subtotal);
       setUnconfirmed(false);
-      setApplied({ code: res.code, discount: res.discount });
+      setApplied({ code: res.code, discount: res.discount, minTotal: res.minTotal ?? DEFAULT_MIN_TOTAL });
       setInput("");
       setAnnouncement(`Coupon ${res.code} applied.`);
       return true;
@@ -102,7 +102,7 @@ export function useCoupon(subtotal: number) {
           if (mine !== seq.current) return;
           setCheckedFor(subtotal);
           setUnconfirmed(false);
-          setApplied({ code: res.code, discount: res.discount });
+          setApplied({ code: res.code, discount: res.discount, minTotal: res.minTotal ?? DEFAULT_MIN_TOTAL });
         })
         .catch((err: unknown) => {
           if (mine !== seq.current) return;
