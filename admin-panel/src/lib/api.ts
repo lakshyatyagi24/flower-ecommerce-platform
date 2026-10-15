@@ -76,7 +76,10 @@ export async function uploadImage(
     body: fd,
   });
   const payload = await res.json().catch(() => null);
-  if (!res.ok) throw new ApiError(extractErrorMessage(payload, res.status), res.status, payload);
+  if (!res.ok) {
+    if (res.status === 401) notifyUnauthorized();
+    throw new ApiError(extractErrorMessage(payload, res.status), res.status, payload);
+  }
   return payload;
 }
 
@@ -504,7 +507,7 @@ export const adminApi = {
   deleteReview: (id: number) =>
     apiFetch<{ success: true }>(`/reviews/${id}`, { method: 'DELETE' }),
 
-  // Sliders (the list is public; includeInactive shows drafts to the admin)
+  // Sliders (the list is public; includeInactive only takes effect with the admin bearer token)
   listSliders: (includeInactive: boolean) =>
     apiFetch<AdminSlider[]>(`/sliders?includeInactive=${includeInactive}`),
   createSlider: (body: AdminSliderInput) => apiFetch<AdminSlider>('/sliders', { method: 'POST', body }),
@@ -556,7 +559,8 @@ async function downloadCsv(path: string, fallbackName: string): Promise<CsvDownl
     a.click();
     a.remove();
   } finally {
-    URL.revokeObjectURL(url);
+    // Revoking immediately can cancel the download in Firefox/Safari; give the browser time to start it.
+    setTimeout(() => URL.revokeObjectURL(url), 10_000);
   }
   return meta;
 }

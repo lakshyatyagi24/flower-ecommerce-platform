@@ -53,7 +53,8 @@ export default function Dashboard() {
   const [days, setDays] = useState<RangeDays>(DEFAULT_RANGE);
   // Series already fetched, keyed by range length, so toggling back and forth does not refetch.
   const [seriesByDays, setSeriesByDays] = useState<Partial<Record<RangeDays, AdminStatsSeriesPoint[]>>>({});
-  const [seriesFailed, setSeriesFailed] = useState(false);
+  // Ranges whose request failed: an error for one range must never hide valid data of another.
+  const [failedRanges, setFailedRanges] = useState<Partial<Record<RangeDays, true>>>({});
   const { addToast } = useToast();
 
   useEffect(() => {
@@ -64,12 +65,12 @@ export default function Dashboard() {
         if (cancelled) return;
         setStats(s);
         if (s.series) setSeriesByDays({ [DEFAULT_RANGE]: s.series });
-        else setSeriesFailed(true);
+        else setFailedRanges({ [DEFAULT_RANGE]: true });
       })
       .catch((err) => {
         if (cancelled) return;
         setStatsFailed(true);
-        setSeriesFailed(true);
+        setFailedRanges({ [DEFAULT_RANGE]: true });
         if (err instanceof ApiError && err.status === 401) return; // the auth provider announces the expiry
         const message = err instanceof ApiError ? err.message : "Failed to load stats";
         addToast({ type: "error", title: "Error", description: message });
@@ -83,20 +84,19 @@ export default function Dashboard() {
   }, [addToast]);
 
   const loadSeries = useCallback(async (range: RangeDays) => {
-    setSeriesFailed(false);
+    setFailedRanges((prev) => ({ ...prev, [range]: undefined }));
     try {
       const res = await adminApi.stats(rangeForDays(range));
       if (!res.series) throw new Error("No series");
       setSeriesByDays((prev) => ({ ...prev, [range]: res.series }));
     } catch {
-      setSeriesFailed(true);
+      setFailedRanges((prev) => ({ ...prev, [range]: true }));
     }
   }, []);
 
   const changeDays = (next: RangeDays) => {
     setDays(next);
     if (!seriesByDays[next]) void loadSeries(next);
-    else setSeriesFailed(false);
   };
 
   if (loading) {
@@ -202,7 +202,7 @@ export default function Dashboard() {
         days={days}
         onDaysChange={changeDays}
         series={stats ? seriesByDays[days] : undefined}
-        failed={seriesFailed}
+        failed={!!failedRanges[days] && !seriesByDays[days]}
         onRetry={() => (stats ? void loadSeries(days) : window.location.reload())}
       />
 
