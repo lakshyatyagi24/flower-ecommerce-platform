@@ -9,9 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Copy, Loader2 } from "lucide-react";
+import { Copy, Download, Loader2, Search, X } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
-import { adminApi, AdminOrder, ApiError } from "@/lib/api";
+import { adminApi, AdminOrder, ApiError, downloadOrdersCsv } from "@/lib/api";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { formatDeliveryDate } from "@/lib/delivery-date";
 import { hasCaptureTrace, paymentBadge, splitRefundNote } from "@/lib/refund-note";
 
@@ -121,6 +122,11 @@ function OrdersView() {
   );
   // "" = newest first; "deliveryDate" = upcoming deliveries only (today onward), soonest first.
   const [sortBy, setSortBy] = useState<"" | "deliveryDate">("");
+  // Free-text search (order id, name, email, phone). The box updates instantly; the list follows after a pause.
+  const [searchInput, setSearchInput] = useState("");
+  const debouncedSearch = useDebouncedValue(searchInput.trim(), 350);
+  const [total, setTotal] = useState(0);
+  const [exporting, setExporting] = useState(false);
   const [selected, setSelected] = useState<AdminOrder | null>(null);
   const [edit, setEdit] = useState<EditState>(blankEdit);
   const [updatingStatus, setUpdatingStatus] = useState(false);
@@ -144,18 +150,21 @@ function OrdersView() {
         paymentMethod: paymentMethodFilter || undefined,
         attention: attentionFilter || undefined,
         sort: sortBy || undefined,
+        q: debouncedSearch || undefined,
         take: 200,
       });
       if (id !== reqRef.current) return;
       setOrders(res.items);
+      setTotal(res.total);
     } catch (err) {
       if (id !== reqRef.current) return;
+      if (err instanceof ApiError && err.status === 401) return; // announced by the auth provider
       const message = err instanceof ApiError ? err.message : "Failed to load orders";
       addToast({ type: "error", title: "Error", description: message });
     } finally {
       if (id === reqRef.current) setLoading(false);
     }
-  }, [statusFilter, paymentStatusFilter, paymentMethodFilter, attentionFilter, sortBy, addToast]);
+  }, [statusFilter, paymentStatusFilter, paymentMethodFilter, attentionFilter, sortBy, debouncedSearch, addToast]);
 
   useEffect(() => {
     fetchOrders();
@@ -183,6 +192,40 @@ function OrdersView() {
       addToast({ type: "success", title: "Copied", description: text });
     } catch {
       addToast({ type: "error", title: "Copy failed", description: "Select the text and copy it manually." });
+    }
+  };
+
+  const hasFilters = !!(statusFilter || paymentStatusFilter || paymentMethodFilter || attentionFilter || sortBy || debouncedSearch);
+
+  // Downloads exactly what the list is filtered to (same filters, no paging), capped by the server.
+  const exportCsv = async () => {
+    if (exporting) return;
+    setExporting(true);
+    const q = searchInput.trim();
+    setSearchInput(q); // the list and the file now agree even if the pause had not elapsed
+    try {
+      const res = await downloadOrdersCsv({
+        status: statusFilter || undefined,
+        paymentStatus: paymentStatusFilter || undefined,
+        paymentMethod: paymentMethodFilter || undefined,
+        attention: attentionFilter || undefined,
+        sort: sortBy || undefined,
+        q: q || undefined,
+      });
+      if (res.truncated) {
+        addToast({
+          type: "warning",
+          title: "Export is partial",
+          description: `Exported the first ${res.rows ?? ""} of ${res.total ?? "many"} orders. Narrow the filters to export the rest.`,
+        });
+      } else {
+        addToast({ type: "success", title: "Export ready", description: `${res.rows ?? 0} orders saved as ${res.filename}.` });
+      }
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) return; // announced by the auth provider
+      addToast({ type: "error", title: "Export failed", description: err instanceof Error ? err.message : "Could not export orders." });
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -272,7 +315,33 @@ function OrdersView() {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-4">
+      <div className="flex flex-wrap items-end gap-4">
+        <div className="min-w-64 flex-1 max-w-md">
+          <Label htmlFor="orderSearch">Search orders</Label>
+          <div className="relative mt-1">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+            <Input
+              id="orderSearch"
+              type="search"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Order #, name, email or phone"
+              autoComplete="off"
+              maxLength={100}
+              className="pl-8 pr-8"
+            />
+            {searchInput && (
+              <button
+                type="button"
+                aria-label="Clear search"
+                onClick={() => setSearchInput("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-0.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        </div>
         <div>
           <Label htmlFor="statusFilter">Order status</Label>
           <select
@@ -343,11 +412,22 @@ function OrdersView() {
             <option value="deliveryDate">Upcoming deliveries (soonest first)</option>
           </select>
         </div>
+        <Button type="button" variant="outline" onClick={exportCsv} disabled={exporting} aria-describedby="export-hint">
+          {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+          {exporting ? "Exporting…" : "Export CSV"}
+        </Button>
+        <span id="export-hint" className="sr-only">Downloads the orders matching the current search and filters, up to 5,000 rows.</span>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Orders ({orders.length})</CardTitle>
+          {!loading && total > orders.length && (
+            <p className="text-sm text-muted-foreground">
+              Showing the first {orders.length} of {total} matching orders. Search or filter to narrow them down.
+            </p>
+          )}
+          <p className="sr-only" role="status">{loading ? "Loading orders" : `${total} ${total === 1 ? "order" : "orders"} found`}</p>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -356,8 +436,8 @@ function OrdersView() {
             </div>
           ) : orders.length === 0 ? (
             <p className="text-muted-foreground text-sm">
-              {statusFilter || paymentStatusFilter || paymentMethodFilter || attentionFilter
-                ? "No orders match these filters."
+              {hasFilters
+                ? "No orders match this search or these filters."
                 : "No orders yet."}
             </p>
           ) : (
