@@ -119,3 +119,43 @@ export async function lastResetToken(email: string): Promise<string> {
   const { token } = await apiFetch<{ token: string }>(`/auth/_test/last-reset-token?email=${encodeURIComponent(email)}`);
   return token;
 }
+
+/** Orders for an email, newest first (admin list; the most recent 100 are scanned). */
+export async function findOrdersByEmail(email: string): Promise<Array<{ id: number; status: string }>> {
+  const res = await apiFetch<any>('/orders?take=100', { token: await adminToken() });
+  const rows: Array<{ id: number; status: string; customerEmail: string | null }> = Array.isArray(res) ? res : res.items ?? [];
+  return rows.filter((o) => o.customerEmail?.toLowerCase() === email.toLowerCase());
+}
+
+/** A purchasable product with an exact price (e.g. 799), so money assertions do not depend on the seed catalogue. */
+export async function createTestProduct(price: number): Promise<{ id: number; slug: string; name: string }> {
+  const token = await adminToken();
+  const categories = await apiFetch<Array<{ id: number }>>('/categories');
+  const stamp = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+  const name = `E2E Test Bloom ${price} ${stamp}`;
+  return apiFetch('/products', {
+    token,
+    body: {
+      name,
+      slug: `e2e-bloom-${String(price).replace('.', '-')}-${stamp}`,
+      price,
+      stock: 50,
+      gstRate: 0,
+      active: true,
+      saleMode: 'PURCHASE',
+      productType: 'CUT_FLOWER',
+      unit: 'stem',
+      minOrderQty: 1,
+      ...(categories[0] ? { categoryId: categories[0].id } : {}),
+    },
+  });
+}
+
+/** Deletes the product, or (when orders reference it) the API deactivates it so it disappears from the shop. */
+export async function removeProduct(id: number): Promise<void> {
+  try {
+    await apiFetch(`/products/${id}`, { method: 'DELETE', token: await adminToken() });
+  } catch (e) {
+    if (!(e instanceof ApiError && e.status === 404)) throw e;
+  }
+}

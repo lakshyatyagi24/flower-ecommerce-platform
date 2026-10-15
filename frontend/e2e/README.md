@@ -32,7 +32,9 @@ npm run e2e:local -- --skip-build                   # reuse the existing backend
    switched off. It probes `GET /auth/_test/last-reset-token` to confirm the test endpoint is mounted.
 4. Storefront: `next build` (with `NEXT_PUBLIC_API_BASE` and `API_BASE_INTERNAL` pointing at the backend), `next start` on 3000.
 5. `playwright test`, with `E2E_BASE_URL` / `E2E_API_BASE` set.
-6. Stops everything it started (also on failure, Ctrl+C or crash) and exits with the test result. A database that was
+6. Stops everything it started (also on failure, Ctrl+C or crash) and exits with the test result. It only ever stops
+   the process trees of children it spawned itself (never by name or command-line match); the embedded Postgres is
+   stopped with `pg_ctl stop -m fast` first, and on POSIX services get SIGTERM then SIGKILL. A database that was
    already running is left running. Service logs are in `e2e/.run/*.log` (git-ignored).
 
 ### Environment
@@ -40,7 +42,10 @@ npm run e2e:local -- --skip-build                   # reuse the existing backend
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `E2E_DATABASE_URL` | `postgresql://postgres:pw@localhost:5433/flower` | local database only; the script refuses non-local hosts |
-| `E2E_PG_EMBED_DIR` | unset | folder with `start.mjs` booting an embedded Postgres on the URL's port |
+| `E2E_PG_EMBED_DIR` | unset | folder with `start.mjs` booting an embedded Postgres on the URL's port (not a drive root or your home folder) |
+| `E2E_PG_DATA_DIR` | `<E2E_PG_EMBED_DIR>/pgdata` | that Postgres' data directory (graceful stop) |
+| `E2E_ALLOW_DB_PORT` | unset | `1` allows a local database on port 5432 (refused by default) |
+| `E2E_ALLOW_HOST` | unset | exact non-local host to allow as a target (see below) |
 | `E2E_BACKEND_DIR` | `../../flower-backend` | backend checkout |
 | `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD` | the local seed admin (`prisma/seed.js` dev defaults) | admin login used by the specs to create coupons and edit settings |
 | `E2E_JWT_SECRET` | random per run | backend JWT secret (>= 32 chars) |
@@ -78,24 +83,45 @@ npm run e2e
 
 `npm run e2e` expects the stack to be up and fails fast with a clear message if it is not.
 
-## `E2E_BASE_URL` and other targets (Task 5.8)
+## Targets, `E2E_BASE_URL` and the safety guards (Task 5.8)
 
 `playwright.config.ts` takes the storefront URL from `E2E_BASE_URL` (default `http://localhost:3000`) and the specs call
 the backend directly at `E2E_API_BASE` (default `http://localhost:3001`).
 
+**The suite writes data** (guest orders, users, coupons, test products, and a temporary change to
+`delivery.supportedPincodes`) and cleans up after itself. It is for a local stack only:
+
+- Allowed hosts (an allowlist, checked for both URLs by `support/host-guard.ts`): `localhost`, `127.0.0.1`, `[::1]`,
+  `*.localhost`, `*.test`. Hostnames are lower-cased and trailing dots stripped; percent-encoded hosts, credentials in
+  the URL, non-http(s) schemes and every other IP literal are refused.
+- Anything else needs an explicit opt-in naming the exact host, e.g. `E2E_ALLOW_HOST=qa.internal.example`, and is for
+  a disposable QA stack you own. **`freshpetalsindia.com` (any subdomain) and the production VPS IP are refused
+  even with `E2E_ALLOW_HOST`.** Task 5.8 will use a separate read-only smoke spec for production.
+- Browser guard: every spec uses the `test` from `support/fixtures.ts`, which aborts any browser request to a
+  non-allowlisted host (and anything matching `freshpetalsindia.com`) and fails the test if one was attempted.
+- Build guard: `global-setup.ts` reads the storefront's pages and scripts and refuses to run if they reference
+  `api.freshpetalsindia.com` (a build made with the production `NEXT_PUBLIC_API_BASE`, whose browser would send its
+  writes there).
+- `npm run e2e:local` additionally refuses a database on port 5432 (unless `E2E_ALLOW_DB_PORT=1`) or on a non-local host.
+
+Example for a disposable QA stack that is not on localhost:
+
 ```bash
-E2E_BASE_URL=https://staging.example.com E2E_API_BASE=https://api.staging.example.com \
-E2E_ADMIN_EMAIL=... E2E_ADMIN_PASSWORD=... npm run e2e
+E2E_ALLOW_HOST=qa.internal.example E2E_BASE_URL=https://qa.internal.example E2E_API_BASE=https://qa.internal.example:3001 E2E_ADMIN_EMAIL=... E2E_ADMIN_PASSWORD=... npm run e2e
 ```
 
-- **The suite writes data** (guest orders, users, coupons, and a temporary change to `delivery.supportedPincodes`), then
-  cancels/deletes/restores them. Only use a stack you can afford to touch.
-- **Production is refused**: `global-setup.ts` aborts if either URL is on `freshpetalsindia.com`. Do not work around it.
-  For the Task 5.8 production check, write a separate read-only smoke (home, product page, SEO) that places no orders.
+The `E2E_ALLOW_HOST` opt-in matches ONE exact host, so a storefront and API on different hosts cannot both be allowed
+that way: keep them on one host (different ports) or run the stack locally.
+
 - `forgot-reset.spec.ts` needs the backend test endpoint, which exists only with `NODE_ENV=test` and
-  `ENABLE_TEST_ENDPOINTS=1`. Anything else (staging included, unless started that way) will fail that spec by design:
-  run `--grep-invert "forgot password"` there.
+  `ENABLE_TEST_ENDPOINTS=1`. Any stack not started that way fails that spec by design (`--grep-invert "forgot password"`).
 - The coupon spec needs an admin login and a backend whose delivery settings it may edit.
+
+### CI artifacts contain secrets (Task 5.6)
+
+Playwright traces and `e2e/.run/backend.log` contain reset tokens, the session JWTs and the admin password the run used.
+Never upload `test-results/`, `playwright-report/` or `e2e/.run/` from a CI job that uses real credentials; in CI they
+are only acceptable because the stack, database and credentials are throwaway and discarded with the job.
 
 ## Test-only backend endpoint (why it is safe)
 
@@ -110,9 +136,12 @@ the stored token is still the SHA-256 hash only.
 - Accessible locators (`getByRole`, `getByLabel`) throughout; the only test ids are the app's own `checkout-discount`
   and `order-discount`.
 - Delivery date: the earliest date is read from the date input's `min`, so the cut-off time cannot flip a run.
-- Re-runnable: every run uses fresh emails and coupon codes. Orders are cancelled through the admin API (this
-  restocks and returns the coupon use), then the coupon is deleted (deactivated if the delete is refused), and the
-  PIN setting is restored in `afterAll`.
+- Re-runnable: every run uses fresh emails, coupon codes and test products (exact prices 799 and 1233, so money
+  assertions do not depend on the seed). Order ids are recorded the moment `POST /orders` answers. Orders are cancelled
+  through the admin API (this restocks and returns the coupon use), then the coupon is deleted (deactivated if the
+  delete is refused) and the test products removed (deactivated by the API if an order references them). The original
+  PIN setting is saved to `e2e/.run/settings-original.json` BEFORE it is changed and restored in `afterAll`, in
+  Playwright's global teardown, and at the start of the next run if a run was killed.
 - Rate limits: the API throttles `login` to 10/min, `forgot-password` to 5/min and `register` to 10/min per IP
   (in memory, reset when the backend restarts). A full run uses about 5 logins, 2 reset requests and 2 registrations.
   Repeated runs against one long-lived backend within a minute can trip them; `npm run e2e:local` restarts the backend

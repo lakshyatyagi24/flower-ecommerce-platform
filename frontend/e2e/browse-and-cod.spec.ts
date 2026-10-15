@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './support/fixtures';
 import { cancelOrder, uniqueEmail } from './support/api';
 import {
   addToBagFromPdp,
@@ -6,19 +6,23 @@ import {
   goToCheckout,
   openFirstProduct,
   shopper,
+  trackCreatedOrders,
 } from './support/storefront';
 
 test.describe('guest browse -> cash on delivery -> track', () => {
   let orderId: number | undefined;
+  const created: number[] = [];
 
   test.afterEach(async () => {
     // Give the stock back so the suite is re-runnable against the same database.
-    if (orderId) await cancelOrder(orderId);
+    for (const id of new Set([...created, ...(orderId ? [orderId] : [])])) await cancelOrder(id);
+    created.length = 0;
     orderId = undefined;
   });
 
   test('a guest finds flowers by occasion, orders with COD and tracks the order', async ({ page }) => {
     const email = uniqueEmail('cod');
+    trackCreatedOrders(page, created);
 
     // Home -> occasion page
     await page.goto('/');

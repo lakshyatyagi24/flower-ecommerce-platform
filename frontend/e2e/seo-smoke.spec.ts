@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './support/fixtures';
 
 test.describe('SEO smoke', () => {
   test('robots.txt allows the shop, hides checkout and points at the sitemap', async ({ request }) => {

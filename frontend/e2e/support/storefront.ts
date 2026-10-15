@@ -97,3 +97,29 @@ export async function bagFirstProductAndCheckout(page: Page): Promise<string> {
   await goToCheckout(page);
   return name;
 }
+
+/**
+ * Records the id of every order the page successfully creates (POST /orders) the moment the response arrives,
+ * so cleanup still knows about it if a later assertion or the redirect times out.
+ */
+export function trackCreatedOrders(page: Page, sink: number[]) {
+  page.on('response', async (res) => {
+    try {
+      if (res.request().method() !== 'POST' || !res.ok()) return;
+      if (!/\/orders\/?$/.test(new URL(res.url()).pathname)) return;
+      const body = await res.json();
+      if (typeof body?.id === 'number') sink.push(body.id);
+    } catch {
+      /* not JSON / page closed */
+    }
+  });
+}
+
+/** Counts POST /orders requests the page attempts (used to prove a blocked checkout sent nothing). */
+export function countOrderPosts(page: Page): { count: () => number } {
+  let n = 0;
+  page.on('request', (req) => {
+    if (req.method() === 'POST' && /\/orders\/?$/.test(new URL(req.url()).pathname)) n++;
+  });
+  return { count: () => n };
+}

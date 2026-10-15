@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './support/fixtures';
 import { ApiError, apiFetch, lastResetToken, login, registerUser, uniqueEmail } from './support/api';
 
 const OLD_PASSWORD = 'old-password-123';

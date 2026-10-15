@@ -1,3 +1,5 @@
+import { assertAllowedUrl } from './host-guard';
+
 /** Central place for the environment the suite reads. */
 export const BASE_URL = (process.env.E2E_BASE_URL || 'http://localhost:3000').replace(/\/+$/, '');
 export const API_BASE = (process.env.E2E_API_BASE || 'http://localhost:3001').replace(/\/+$/, '');
@@ -13,21 +15,10 @@ export const E2E_PINCODE = process.env.E2E_PINCODE || '110001';
 export const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || 'admin@flowershop.local';
 export const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || 'admin1234';
 
-/** Hosts the suite must never run against: it creates orders, users and coupons and edits settings. */
-const PRODUCTION_HOST = /(^|\.)freshpetalsindia\.com$/i;
-
+/** Throws unless both targets are allowlisted hosts (see host-guard.ts). Also runs when this module is imported. */
 export function assertNotProduction(): void {
-  for (const [name, url] of [['E2E_BASE_URL', BASE_URL], ['E2E_API_BASE', API_BASE]] as const) {
-    let host = '';
-    try {
-      host = new URL(url).hostname;
-    } catch {
-      throw new Error(`${name} is not a valid URL: ${url}`);
-    }
-    if (PRODUCTION_HOST.test(host)) {
-      throw new Error(
-        `${name} (${url}) points at production. This suite writes data and must only run against a local/staging stack.`,
-      );
-    }
-  }
+  assertAllowedUrl('E2E_BASE_URL', BASE_URL);
+  assertAllowedUrl('E2E_API_BASE', API_BASE);
 }
+
+assertNotProduction();
