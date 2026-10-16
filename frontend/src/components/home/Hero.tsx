@@ -20,7 +20,7 @@ export default function Hero({ hero }: { hero: HeroContent }) {
             height={HERO_IMAGE_SIZE.height}
             priority
             sizes="(min-width: 768px) 50vw, 100vw"
-            className="h-full w-full object-cover"
+            className="h-full w-full object-cover object-[35%_50%]"
           />
         </div>
         {/* lg: the text column starts at the same x as Container content (max 1280, px-8) so the h1 shares a left edge with section headings. */}
