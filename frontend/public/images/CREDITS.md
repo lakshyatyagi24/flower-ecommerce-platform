@@ -2,6 +2,8 @@
 
 Interim stock photographs, downloaded from Pexels (https://www.pexels.com) under the Pexels Licence (https://www.pexels.com/license/): free to use, no attribution required. They are credited here as a courtesy. They are NOT photos of Fresh Petals' own stock, so a few show a close relative of the product or a nearby shade; replace them with the shop's own photography when available. Files are resized and re-encoded to WebP with metadata removed; the photographs are otherwise unaltered (cropped only).
 
+One photo (products/px-snap-purple.webp) comes from Unsplash (https://unsplash.com) under the Unsplash License (https://unsplash.com/license): free to use, attribution not required, credited here as a courtesy.
+
 Product photos are 4:5 (1200x1500 or 800x1000 depending on source resolution); hero photos are 16:9 (1920x1080).
 
 | File | Subject | Photographer | Pexels page | Licence | Alt text | Used for |
@@ -80,3 +82,4 @@ Product photos are 4:5 (1200x1500 or 800x1000 depending on source resolution); h
 | products/px-chrys-purple.webp | chrysanthemum, purple | Yash Rai | https://www.pexels.com/photo/vibrant-purple-chrysanthemums-in-bloom-36150625/ | Pexels Licence | Purple chrysanthemums with dewdrops | chrysanthemum-royal-purple |
 | products/px-santini-purple.webp | chrysanthemum, lilac-purple daisy-type (nearest shade) | Andy Lee | https://www.pexels.com/photo/vibrant-purple-chrysanthemums-in-bloom-35678154/ | Pexels Licence | Lilac-purple daisy-type chrysanthemums with green centres | santini-chrysanthemums-purple |
 | products/px-rose-jumilla.webp | rose, white edged in deep pink (generic; the variety colour is not confirmed) | Irene Ästhetik | https://www.pexels.com/photo/elegant-white-roses-with-pink-edges-36341271/ | Pexels Licence | White roses with deep pink edges | jumilla-roses |
+| products/px-snap-purple.webp | snapdragon, violet-pink/lilac with cream throats (nearest shade) | Mallory Brisson | https://unsplash.com/photos/purple-and-white-snapdragon-flowers-blooming-in-a-garden-pyUiwskitFE | Unsplash License | Violet-pink and cream snapdragons in a garden | snapdragon-royal-purple |
