@@ -1,161 +1,79 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
-import Link from "next/link";
+import { useRef } from "react";
 import Button from "@/components/ui/Button";
-import { useCart, formatINR, type CartItem } from "@/lib/cart-context";
-import { fetchFreshProducts } from "@/lib/fresh-products";
-import { minOrderCopy, stepDown, stepUp } from "@/lib/product-helpers";
-import { productImage } from "@/lib/product-image";
-import { applyReconciled, linesChanged, reconcileCart, type CartNotice } from "@/lib/reconcile-cart";
+import { useCart } from "@/lib/cart-context";
 import { useSettings } from "@/lib/settings-context";
+import CartFooter, { freeShippingThreshold } from "./cart/CartFooter";
+import CartLine from "./cart/CartLine";
+import { useCartNotices } from "./cart/use-cart-notices";
 import { CloseIcon } from "./chrome/icons";
-import { focusRing, iconButton } from "./chrome/styles";
+import { iconButton } from "./chrome/styles";
 import { useModal } from "./chrome/use-modal";
 
-const stepButton = `flex h-11 w-11 items-center justify-center text-lg leading-none text-charcoal transition-colors hover:bg-ivory-deep aria-disabled:cursor-not-allowed aria-disabled:text-stone aria-disabled:hover:bg-transparent sm:h-9 sm:w-9 ${focusRing}`;
-
-/** Free-shipping threshold from settings (`shipping.freeThreshold`); null when it is not configured. */
-function freeShippingThreshold(raw: Record<string, string> | undefined): number | null {
-  const v = raw?.["shipping.freeThreshold"]?.trim();
-  if (!v) return null;
-  const n = parseFloat(v);
-  return Number.isFinite(n) && n > 0 ? n : null;
+function EmptyBag({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
+      <p className="font-display text-3xl text-charcoal">Your bag is empty</p>
+      <p className="mt-3 max-w-xs text-[15px] text-stone-dark">Fresh stems are a few clicks away.</p>
+      <Button href="/products" onClick={onClose} className="mt-8">
+        Browse flowers
+      </Button>
+    </div>
+  );
 }
 
-function Line({ it, notices, onQuantity }: { it: CartItem; notices: CartNotice[]; onQuantity: (productId: number, quantity: number) => void }) {
-  const { remove, close } = useCart();
-  const min = it.minOrderQty && it.minOrderQty > 0 ? it.minOrderQty : 1;
-  // Steps by the minimum order; the last step up lands exactly on stock (the server enforces only min..stock).
-  const stock = typeof it.stock === "number" && it.stock > 0 ? it.stock : 0;
-  const atMin = it.quantity <= min;
-  const atMax = stock > 0 && it.quantity >= stock;
-  const blocked = notices.some((n) => n.blocking);
-  const bunch = minOrderCopy(min, it.unit);
-  const noticeId = `cart-notice-${it.productId}`;
+function DrawerHeader({ count, onClose }: { count: number; onClose: () => void }) {
   return (
-    <li className="flex gap-4 border-b border-stone-light py-5">
-      <Link href={`/products/${it.slug}`} onClick={close} className={`relative block aspect-[4/5] w-[72px] shrink-0 overflow-hidden border border-stone-light bg-ivory-deep ${focusRing}`} tabIndex={-1} aria-hidden>
-        <Image src={productImage(it)} alt="" fill sizes="72px" className="object-cover" />
-      </Link>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex items-start justify-between gap-3">
-          <Link href={`/products/${it.slug}`} onClick={close} className={`font-display text-xl leading-snug text-charcoal hover:text-moss ${focusRing}`}>
-            {it.name}
-          </Link>
-          <span className="shrink-0 pt-0.5 text-[15px] text-charcoal">{formatINR(it.price * it.quantity)}</span>
-        </div>
-        <p className="mt-1 text-[13px] text-stone-dark">
-          {formatINR(it.price)} each{bunch ? ` · ${bunch}` : ""}
-        </p>
-        {notices.length > 0 && (
-          <div id={noticeId} data-testid="line-notice">
-            {notices.map((n) => (
-              <p key={n.kind} className="mt-1 text-[13px] text-charcoal">
-                {n.message}
-                {n.blocking ? " Remove it to check out." : ""}
-              </p>
-            ))}
-          </div>
-        )}
-        <div className="mt-auto flex items-center justify-between pt-3">
-          <div className="flex items-center border border-stone-light">
-            <button
-              type="button"
-              className={stepButton}
-              aria-disabled={atMin ? "true" : undefined}
-              aria-label={`Decrease quantity of ${it.name}`}
-              onClick={() => !atMin && onQuantity(it.productId, stepDown(it.quantity, min))}
-            >
-              −
-            </button>
-            <span aria-live="polite" aria-atomic="true" className="min-w-8 text-center text-sm tabular-nums text-charcoal">
-              {it.quantity}
-            </span>
-            <button
-              type="button"
-              className={stepButton}
-              aria-disabled={atMax ? "true" : undefined}
-              aria-label={`Increase quantity of ${it.name}`}
-              onClick={() => !atMax && onQuantity(it.productId, stepUp(it.quantity, min, stock))}
-            >
-              +
-            </button>
-          </div>
-          <button
-            type="button"
-            aria-label={`Remove ${it.name}`}
-            aria-describedby={notices.length > 0 ? noticeId : undefined}
-            data-remove
-            onClick={(e) => {
-              // The focused button is about to unmount: hand focus to the next line's Remove button, else the
-              // previous one, else the Close button.
-              const all = Array.from(
-                (e.currentTarget.closest("[role=dialog]") ?? document).querySelectorAll<HTMLElement>("[data-remove]"),
-              );
-              const i = all.indexOf(e.currentTarget);
-              const target =
-                all[i + 1] ?? all[i - 1] ?? (e.currentTarget.closest("[role=dialog]")?.querySelector("[data-autofocus]") as HTMLElement | null);
-              target?.focus();
-              remove(it.productId);
-            }}
-            className={`min-h-[44px] px-1 text-[13px] underline underline-offset-4 hover:text-charcoal ${blocked ? "font-medium text-charcoal" : "text-stone-dark"} ${focusRing}`}
-          >
-            Remove
-          </button>
-        </div>
+    <header className="flex h-14 shrink-0 items-center justify-between border-b border-stone-light pl-5 pr-2 sm:h-16 sm:pl-6 sm:pr-3">
+      <h2 id="cart-title" className="font-display text-2xl text-charcoal">
+        {count > 0 ? `Your bag (${count})` : "Your bag"}
+      </h2>
+      <button type="button" aria-label="Close bag" data-autofocus onClick={onClose} className={iconButton}>
+        <CloseIcon />
+      </button>
+    </header>
+  );
+}
+
+type BagContentsProps = { notices: ReturnType<typeof useCartNotices>; onClose: () => void };
+
+function BagContents({ notices, onClose }: BagContentsProps) {
+  const { items, subtotal, gstTotal, setQuantity } = useCart();
+  const settings = useSettings();
+  const { liveNotices, noticesFor, blockedCount, answerNotices } = notices;
+  const changeQuantity = (productId: number, quantity: number) => {
+    answerNotices(productId);
+    setQuantity(productId, quantity);
+  };
+  return (
+    <>
+      {/* Always mounted so a screen reader announces notices that arrive after the lookup finishes. */}
+      <div role="status" aria-live="polite" aria-atomic="true" className="sr-only" data-testid="cart-notices-live">
+        {liveNotices.map((n) => `${n.name}: ${n.message}`).join(" ")}
       </div>
-    </li>
+      <ul className="flex-1 overflow-y-auto px-5 sm:px-6">
+        {items.map((it) => (
+          <CartLine key={it.productId} it={it} notices={noticesFor(it.productId)} onQuantity={changeQuantity} />
+        ))}
+      </ul>
+      <CartFooter
+        subtotal={subtotal}
+        gstTotal={gstTotal}
+        threshold={freeShippingThreshold(settings.raw)}
+        blockedCount={blockedCount}
+        onClose={onClose}
+      />
+    </>
   );
 }
 
 function Drawer() {
-  const { items, close, count, subtotal, gstTotal, replaceWith, setQuantity } = useCart();
-  const settings = useSettings();
+  const { items, close, count, replaceWith } = useCart();
   const ref = useRef<HTMLDivElement>(null);
   useModal(true, ref, close);
-
-  // Revalidate the bag against current product data each time the drawer opens (it mounts on open). This also
-  // runs when cart.add opens the drawer; that re-fetch is cheap because fetchFreshProducts dedupes slugs, limits
-  // parallelism to 3 and serves answers younger than 15s from a cache. A failed lookup never blocks anything:
-  // that line just stays as it is.
-  const itemsRef = useRef(items);
-  itemsRef.current = items;
-  const [notices, setNotices] = useState<CartNotice[]>([]);
-  useEffect(() => {
-    const started = itemsRef.current;
-    if (started.length === 0) return;
-    let cancelled = false;
-    fetchFreshProducts(started)
-      .then(({ fresh, unverified }) => {
-        if (cancelled) return;
-        const latest = itemsRef.current;
-        const asked = new Set(started.map((l) => l.productId));
-        // A line added while the lookup was running was never asked about: leave it alone.
-        const skip = [...unverified, ...latest.filter((l) => !asked.has(l.productId)).map((l) => l.productId)];
-        const result = reconcileCart(latest, fresh, { unverified: skip });
-        if (linesChanged(latest, result.lines)) replaceWith((prev) => applyReconciled(prev, latest, result.lines));
-        setNotices(result.notices);
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  // Changing a quantity answers the adjustment notice for that line (it described the old quantity).
-  const changeQuantity = (productId: number, quantity: number) => {
-    setNotices((prev) => prev.filter((n) => n.productId !== productId || n.blocking));
-    setQuantity(productId, quantity);
-  };
-  const liveNotices = notices.filter((n) => items.some((i) => i.productId === n.productId));
-  const noticesFor = (id: number) => liveNotices.filter((n) => n.productId === id);
-  const blockedCount = new Set(liveNotices.filter((n) => n.blocking).map((n) => n.productId)).size;
-
-  const threshold = freeShippingThreshold(settings.raw);
-  const remaining = threshold !== null ? Math.max(0, threshold - subtotal) : 0;
-
+  // Runs once when the drawer opens, whether or not the bag is empty at that moment.
+  const notices = useCartNotices(items, replaceWith);
   return (
     <div className="fixed inset-0 z-[60]">
       <div data-testid="cart-overlay" aria-hidden="true" onClick={close} className="chrome-fade absolute inset-0 bg-charcoal/40" />
@@ -167,75 +85,8 @@ function Drawer() {
         tabIndex={-1}
         className="drawer-in absolute right-0 top-0 flex h-full w-full flex-col border-l border-stone-light bg-ivory outline-none sm:w-[440px]"
       >
-        <header className="flex h-14 shrink-0 items-center justify-between border-b border-stone-light pl-5 pr-2 sm:h-16 sm:pl-6 sm:pr-3">
-          <h2 id="cart-title" className="font-display text-2xl text-charcoal">
-            {count > 0 ? `Your bag (${count})` : "Your bag"}
-          </h2>
-          <button type="button" aria-label="Close bag" data-autofocus onClick={close} className={iconButton}>
-            <CloseIcon />
-          </button>
-        </header>
-
-        {items.length === 0 ? (
-          <div className="flex flex-1 flex-col items-center justify-center px-8 text-center">
-            <p className="font-display text-3xl text-charcoal">Your bag is empty</p>
-            <p className="mt-3 max-w-xs text-[15px] text-stone-dark">Fresh stems are a few clicks away.</p>
-            <Button href="/products" onClick={close} className="mt-8">
-              Browse flowers
-            </Button>
-          </div>
-        ) : (
-          <>
-            {/* Always mounted so a screen reader announces notices that arrive after the lookup finishes. */}
-            <div role="status" aria-live="polite" aria-atomic="true" className="sr-only" data-testid="cart-notices-live">
-              {liveNotices.map((n) => `${n.name}: ${n.message}`).join(" ")}
-            </div>
-            <ul className="flex-1 overflow-y-auto px-5 sm:px-6">
-              {items.map((it) => (
-                <Line key={it.productId} it={it} notices={noticesFor(it.productId)} onQuantity={changeQuantity} />
-              ))}
-            </ul>
-
-            <div data-testid="cart-footer" className="shrink-0 border-t border-stone-light bg-ivory px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5 sm:px-6">
-              {threshold !== null && (
-                <div className="mb-4">
-                  <p className="text-[13px] text-stone-dark">
-                    {remaining > 0
-                      ? `Add ${formatINR(remaining)} more for free shipping`
-                      : "Your order qualifies for free shipping"}
-                  </p>
-                  <div aria-hidden className="mt-2 h-1 w-full bg-stone-light">
-                    <div data-testid="shipping-progress-fill" className="h-full bg-moss" style={{ width: `${Math.min(100, (subtotal / threshold) * 100)}%` }} />
-                  </div>
-                </div>
-              )}
-              <dl className="space-y-1.5 text-[15px] text-charcoal">
-                <div className="flex justify-between">
-                  <dt>Subtotal</dt>
-                  <dd>{formatINR(subtotal)}</dd>
-                </div>
-                {gstTotal > 0 && (
-                  <div className="flex justify-between text-stone-dark">
-                    <dt>GST</dt>
-                    <dd>{formatINR(gstTotal)}</dd>
-                  </div>
-                )}
-              </dl>
-              <p className="mt-2 text-[13px] text-stone-dark">Shipping is calculated at checkout.</p>
-              {blockedCount > 0 && (
-                <p className="mt-2 text-[13px] text-charcoal">
-                  {blockedCount === 1 ? "One item in your bag" : `${blockedCount} items in your bag`} can&apos;t be ordered right now. Remove {blockedCount === 1 ? "it" : "them"} to check out.
-                </p>
-              )}
-              <Button href="/checkout" onClick={close} size="lg" className="mt-5 w-full">
-                Checkout
-              </Button>
-              <Button href="/products" onClick={close} variant="ghost" className="mt-1 w-full">
-                Continue shopping
-              </Button>
-            </div>
-          </>
-        )}
+        <DrawerHeader count={count} onClose={close} />
+        {items.length === 0 ? <EmptyBag onClose={close} /> : <BagContents notices={notices} onClose={close} />}
       </div>
     </div>
   );

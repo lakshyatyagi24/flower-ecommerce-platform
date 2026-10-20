@@ -4,25 +4,16 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ApiOrder, api } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
-import { formatINR } from "@/lib/cart-context";
-import { setTrackEmail } from "@/lib/track-order-session";
-import { usePayForOrder } from "@/lib/use-pay-for-order";
-import PaymentActions from "@/components/PaymentActions";
-import { canPayNow, paymentLabel } from "@/lib/order-labels";
-import { formatDeliveryDate } from "@/lib/delivery-date";
 import Container from "@/components/ui/Container";
 import Button from "@/components/ui/Button";
 import Skeleton from "@/components/ui/Skeleton";
 import ErrorState from "@/components/ui/ErrorState";
+import OrderCard from "./_components/OrderCard";
 
-// Pay now (and Check status after a problem) for one order. Resolving the order
-// clears the cart / pending key inside the hook, then we refresh the list.
-function OrderPayment({ order, onResolved }: { order: ApiOrder; onResolved: () => void }) {
-  const pay = usePayForOrder({ orderId: order.id, onResolved });
-  return <PaymentActions pay={pay} orderId={order.id} allowSwitch={false} />;
-}
+type OrdersQuery = { orders: ApiOrder[]; loading: boolean; error: string | null; reload: () => void };
 
-export default function MyOrdersPage() {
+/** The signed-in customer's orders; a signed-out visitor is sent to log in and back. */
+function useMyOrders(): OrdersQuery & { user: ReturnType<typeof useAuth>["user"]; authLoading: boolean } {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [orders, setOrders] = useState<ApiOrder[]>([]);
@@ -41,19 +32,39 @@ export default function MyOrdersPage() {
     setError(null);
     api
       .listMyOrders()
-      .then((items) => {
-        if (!cancelled) setOrders(items);
-      })
-      .catch((err: Error) => {
-        if (!cancelled) setError(err.message || "Could not load orders");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+      .then((items) => !cancelled && setOrders(items))
+      .catch((err: Error) => !cancelled && setError(err.message || "Could not load orders"))
+      .finally(() => !cancelled && setLoading(false));
     return () => {
       cancelled = true;
     };
   }, [user, authLoading, router, tick]);
+
+  return { user, authLoading, orders, loading, error, reload: () => setTick((t) => t + 1) };
+}
+
+function EmptyOrders() {
+  return (
+    <div className="mt-12 border-y border-stone-light py-16 text-center">
+      <p className="font-display text-2xl text-charcoal">You don&apos;t have any orders yet.</p>
+      <div className="mt-8">
+        <Button href="/products">Start shopping</Button>
+      </div>
+    </div>
+  );
+}
+
+function OrdersSkeleton() {
+  return (
+    <div className="mt-10 space-y-6" aria-busy="true">
+      <Skeleton className="h-28" />
+      <Skeleton className="h-28" />
+    </div>
+  );
+}
+
+export default function MyOrdersPage() {
+  const { user, authLoading, orders, loading, error, reload } = useMyOrders();
 
   if (authLoading || (!user && !error)) {
     return (
@@ -69,99 +80,14 @@ export default function MyOrdersPage() {
     <main>
       <Container className="py-12 lg:py-16">
         <h1 className="type-h1">My orders</h1>
-
-        {loading && (
-          <div className="mt-10 space-y-6" aria-busy="true">
-            <Skeleton className="h-28" />
-            <Skeleton className="h-28" />
-          </div>
-        )}
-        {error && <ErrorState message={error} onRetry={() => setTick((t) => t + 1)} />}
-
-        {!loading && orders.length === 0 && !error && (
-          <div className="mt-12 border-y border-stone-light py-16 text-center">
-            <p className="font-display text-2xl text-charcoal">You don&apos;t have any orders yet.</p>
-            <div className="mt-8">
-              <Button href="/products">Start shopping</Button>
-            </div>
-          </div>
-        )}
-
+        {loading && <OrdersSkeleton />}
+        {error && <ErrorState message={error} onRetry={reload} />}
+        {!loading && orders.length === 0 && !error && <EmptyOrders />}
         {orders.length > 0 && (
           <div className="mt-10 border-t border-stone-light">
-            {orders.map((o) => {
-              const units = o.items.reduce((n, it) => n + it.quantity, 0);
-              return (
-                <article key={o.id} className="border-b border-stone-light py-8">
-                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                    <div>
-                      <h2 className="font-display text-2xl text-charcoal">Order #{o.id}</h2>
-                      <p className="mt-1 text-sm text-stone-dark">
-                        {new Date(o.createdAt).toLocaleDateString(undefined, { dateStyle: "medium" })} · {units} {units === 1 ? "item" : "items"}
-                      </p>
-                      {o.deliveryDate && formatDeliveryDate(o.deliveryDate) && (
-                        <p className="mt-1 text-sm text-charcoal">Delivery date: {formatDeliveryDate(o.deliveryDate)}</p>
-                      )}
-                    </div>
-                    <div className="md:text-right">
-                      <p className="text-xs font-medium tracking-[0.16em] text-charcoal">{o.status}</p>
-                      <p className="mt-1 text-sm text-stone-dark">{paymentLabel(o)}</p>
-                    </div>
-                  </div>
-
-                  <ul className="mt-6 space-y-2 text-sm text-charcoal">
-                    {o.items.map((it) => (
-                      <li key={it.id} className="flex justify-between gap-4">
-                        <span>
-                          {it.quantity} × {it.productName}
-                        </span>
-                        <span className="shrink-0 whitespace-nowrap">{formatINR(it.unitPrice * it.quantity)}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <dl className="mt-6 space-y-2 border-t border-stone-light pt-4 text-sm text-stone-dark">
-                    <div className="flex justify-between gap-4">
-                      <dt>Subtotal</dt>
-                      <dd className="text-charcoal">{formatINR(o.subtotal)}</dd>
-                    </div>
-                    {o.discount && o.discount > 0 ? (
-                      <div className="flex justify-between gap-4" data-testid="order-discount">
-                        <dt>Discount{o.couponCode ? ` (${o.couponCode})` : ""}</dt>
-                        <dd className="text-charcoal">-{formatINR(o.discount)}</dd>
-                      </div>
-                    ) : null}
-                    <div className="flex justify-between gap-4">
-                      <dt>Shipping</dt>
-                      <dd className="text-charcoal">{o.shipping === 0 ? "Free" : formatINR(o.shipping)}</dd>
-                    </div>
-                    {o.gst && o.gst > 0 ? (
-                      <div className="flex justify-between gap-4">
-                        <dt>GST</dt>
-                        <dd className="text-charcoal">{formatINR(o.gst)}</dd>
-                      </div>
-                    ) : null}
-                    <div className="flex justify-between gap-4 pt-2 text-base text-charcoal">
-                      <dt>Total</dt>
-                      <dd className="font-display text-xl">{formatINR(o.total)}</dd>
-                    </div>
-                  </dl>
-
-                  <div className="mt-2">
-                    {canPayNow(o) && <OrderPayment order={o} onResolved={() => setTick((t) => t + 1)} />}
-                    <div className="mt-2">
-                      <Button
-                        variant="ghost"
-                        href={`/track-order/results?orderId=${o.id}`}
-                        onClick={() => setTrackEmail(o.customerEmail || user?.email || "")}
-                      >
-                        View details
-                      </Button>
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
+            {orders.map((o) => (
+              <OrderCard key={o.id} order={o} fallbackEmail={user?.email || ""} onResolved={reload} />
+            ))}
           </div>
         )}
       </Container>
